@@ -1,7 +1,7 @@
 # Afwijkingen van de spec
 
-Elke bewuste afwijking van `rekapp-spec-v2.md`, met reden. Keuzes die nog op
-een antwoord van Oscar wachten staan apart onderaan.
+Elke bewuste afwijking van `rekapp-spec-v2.md`, met reden, plus de keuzes
+waar de spec geen of een tegenstrijdig antwoord gaf.
 
 ## Aanvullingen (geen gedragsverschil)
 
@@ -24,35 +24,76 @@ Naast §9.2 regel 1–7 controleert `library.js` ook:
 deze velden; een mismatch zou een verkeerde weergave of tijd geven. De huidige
 bibliotheek voldoet aan alle drie.
 
-## Voorlopige keuzes (wachten op antwoord)
+### Bibliotheek: schakelaar "Groeperen per spiergroep" (M2)
+§6.1 vraagt een lijst gegroepeerd per regio en spiergroep, te sorteren op
+score, naam, R of tijd. Gegroepeerd sorteert de app binnen elke spiergroep
+(zoals §5). Met de extra schakelaar "Groeperen per spiergroep" uit wordt het
+één lijst over alle groepen. **Reden:** §3.3 noemt "sorteren op R" als
+oplossing voor het K-effect van de weging; binnen één spiergroep is R bijna
+overal gelijk, dus dat werkt alleen over alle groepen heen. Standaard staat
+groeperen aan.
+
+## Invulling van open punten in §6.1–6.2 (M2)
+
+Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
+
+- **Moment-filter:** "ochtend" toont oefeningen voor de ochtend én voor beide
+  momenten, "avond" idem, "beide" alleen oefeningen voor beide momenten.
+- **Materiaal-filter (meerdere):** een oefening telt mee als ze minstens één
+  gekozen materiaal gebruikt; "geen materiaal" toont oefeningen zonder
+  materiaal.
+- **Spiergroep-filter (meerdere):** kijkt naar de primaire doelen (gewicht 1).
+  Een oefening staat in de lijst onder haar eerste doelgroep, of bij een
+  spiergroepfilter onder de gekozen primaire groep (couch stretch staat bij
+  "Heupbuigers" dan ook onder Heupbuigers).
+- **Positie, type en minimum aantal sterren:** één keuze tegelijk (de spec
+  zegt alleen bij spiergroep en materiaal "meerdere").
+- **Sorteren op tijd:** de duur van de oefening met de standaarddosis, inclusief
+  kantwissels en zonder de 5 s voorbereiding (bv. 45 s per kant = 1:35).
+- **Illustratie bovenaan de kaart:** zolang er geen eigen stokfiguren per
+  oefening zijn (fase 2), toont de kaart een uitsnede van de lichaamskaart plus
+  het positie-icoon, zoals §6.2 voorschrijft.
+- **Knoppen die later komen:** "Toevoegen aan routine" (M4), "Probeer nu" (M3)
+  en "Ontgrendelen via 48-uurstest" (M5) staan al op de kaart, maar zijn
+  uitgeschakeld tot hun mijlpaal klaar is. Bij een vergrendelde oefening blijven
+  toevoegen en afspelen altijd uit (W1).
+
+## Keuzes bij open of tegenstrijdige punten (akkoord Oscar, 17-10-2026)
 
 ### PNF met "extra set zwakke kant"
 §6.4.1 telt bij een unilaterale stap met `extraWeakSide` een extra basis mee
 voor die kant, ook bij PNF. De pseudocode in §6.8.1 voegt de extra set alleen
-toe in de niet-PNF-tak. **Voorlopig:** de timeline voegt bij PNF ook een extra
+toe in de niet-PNF-tak. **Keuze:** de timeline voegt bij PNF ook een extra
 blok (kantwissel + rondes aan de zwakke kant) toe, zodat tijd en dosis met
 elkaar kloppen.
 
 ### Nieuwe blootstelling tijdens een lopende 24/48-uurscyclus
 W9 is oranje (informeert alleen). Wat er met de lopende cyclus gebeurt als je
-toch binnen 48 uur opnieuw rekt, staat niet in §6.6. **Voorlopig:** de lopende
+toch binnen 48 uur opnieuw rekt, staat niet in §6.6. **Keuze:** de lopende
 cyclus vervalt (telt niet als schoon, teller blijft staan) en de nieuwe cyclus
 loopt vanaf de laatste blootstelling.
 
 ### Afkoelperiode
 "Geen afkoelperiode actief" (§6.6) kan per oefening of voor alle oefeningen
-gelden. **Voorlopig:** voor alle oefeningen (strengste lezing).
+gelden. **Keuze:** voor alle oefeningen (strengste lezing).
 
 ### W6 of W7 bij alleen een bijbetrokken statische oefening
-**Voorlopig:** W7 alleen als géén statische of PNF-oefening de groep raakt, ook
+**Keuze:** W7 alleen als géén statische of PNF-oefening de groep raakt, ook
 niet als bijbetrokken doel; anders W6. Voor STANDAARD krijgen de heupbuigers
 daardoor W6 (157,5 s via rectus femoris zijlig) en geen W7.
 
 ### Reikwijdte en "per kant" bij W3, W5 en W6
-**Voorlopig:**
+**Keuze:**
 - W3 als één van beide kanten ≥ 60 s haalt; W5 en W6 kijken net als de
   dosismeter naar de laagste kant.
 - W5–W7 rekenen met de geplande weekdosis van alle actieve routines samen, maar
   verschijnen alleen bij de routine die eraan bijdraagt: W5 bij een routine die
   statische of PNF-tijd aan die groep toevoegt, W6/W7 bij een routine waarin de
   groep primair doel is.
+
+### Beginwaarde bij een blootstelling in een routine
+§6.6 noemt de beginwaarde ("kniepijn nu") alleen bij de begeleide proef.
+**Keuze:** start je een routine met een oefening in `test` of `voorlopig`, dan
+vraagt de app eerst "Kniepijn nu (0–10)". Die waarde is de beginwaarde van de
+nieuwe cyclus. Ligt hij boven 2/10, dan start de proef niet (zelfde grens als
+de bevestiging "kniepijn de afgelopen 7 dagen steeds ≤2/10").
