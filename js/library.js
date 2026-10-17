@@ -227,14 +227,15 @@ export function checkedLibrary(lib, schema) {
   return indexLibrary(lib);
 }
 
-// Browser: laadt en valideert bij elke start.
+// Browser: laadt en valideert bij elke start. Geeft de geïndexeerde
+// bibliotheek en het schema terug.
 export async function loadLibrary(base = './data/') {
-  const [lib, schema] = await Promise.all(
+  const [raw, schema] = await Promise.all(
     ['library.json', 'library.schema.json'].map(async (name) => {
       const res = await fetch(base + name);
       if (!res.ok) throw new Error(`${name} kon niet worden geladen (${res.status}).`);
       return res.json();
     }),
   );
-  return checkedLibrary(lib, schema);
+  return { lib: checkedLibrary(raw, schema), schema };
 }
