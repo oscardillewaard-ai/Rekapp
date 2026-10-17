@@ -1,0 +1,842 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rekapp-library-v2",
+  "title": "Rekapp bibliotheek v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "meta",
+    "groups",
+    "exercises",
+    "routines",
+    "tests",
+    "sources"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "2.0"
+    },
+    "meta": {
+      "$ref": "#/$defs/meta"
+    },
+    "groups": {
+      "type": "array",
+      "minItems": 24,
+      "maxItems": 24,
+      "items": {
+        "$ref": "#/$defs/group"
+      }
+    },
+    "exercises": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/exercise"
+      }
+    },
+    "routines": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/routine"
+      }
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/test"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "score15": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "meta": {
+      "type": "object",
+      "required": [
+        "generated",
+        "language",
+        "scoring",
+        "dose",
+        "knee",
+        "timing"
+      ],
+      "properties": {
+        "generated": {
+          "type": "string"
+        },
+        "language": {
+          "const": "nl"
+        },
+        "scoring": {
+          "type": "object",
+          "required": [
+            "weights",
+            "rounding",
+            "kneeGate",
+            "techniquePenalty",
+            "evidenceLabels"
+          ],
+          "properties": {
+            "weights": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "B",
+                "K",
+                "D",
+                "R",
+                "P"
+              ],
+              "properties": {
+                "B": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "K": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "D": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "R": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "P": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            },
+            "rounding": {
+              "const": "half_up_to_0.5"
+            },
+            "kneeGate": {
+              "type": "object",
+              "required": [
+                "maxK",
+                "maxStars"
+              ]
+            },
+            "techniquePenalty": {
+              "type": "object",
+              "required": [
+                "dynamic",
+                "active"
+              ]
+            },
+            "evidenceLabels": {
+              "type": "object"
+            }
+          }
+        },
+        "dose": {
+          "type": "object",
+          "required": [
+            "thresholdSec",
+            "plateauSec",
+            "secondaryWeight",
+            "countedTypes",
+            "windowHours"
+          ]
+        },
+        "knee": {
+          "type": "object",
+          "required": [
+            "maxDegUnlocked",
+            "flareMaxDeg",
+            "painMax",
+            "cleanCyclesToUnlock",
+            "cooldownDays",
+            "flareExitDays",
+            "exposureSpacingHours",
+            "checkWindowsHours"
+          ]
+        },
+        "timing": {
+          "type": "object",
+          "required": [
+            "prepSec",
+            "sideSwitchSec",
+            "transitionSec",
+            "positionClass"
+          ]
+        }
+      }
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "region",
+        "bBase",
+        "rBase",
+        "evidence",
+        "relevance",
+        "sources"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "type": "string"
+        },
+        "region": {
+          "enum": [
+            "Voet en onderbeen",
+            "Heup en bovenbeen",
+            "Romp en nek",
+            "Schouder en arm"
+          ]
+        },
+        "bBase": {
+          "$ref": "#/$defs/score15"
+        },
+        "rBase": {
+          "$ref": "#/$defs/score15"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "relevance": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "dose": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "perSideSec": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 180
+        },
+        "durationSec": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 180
+        },
+        "reps": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pnf": {
+          "$ref": "#/$defs/pnf"
+        }
+      }
+    },
+    "pnf": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rounds",
+        "contractSec",
+        "stretchSec"
+      ],
+      "properties": {
+        "rounds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "contractSec": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 10
+        },
+        "stretchSec": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 60
+        }
+      }
+    },
+    "exercise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "targets",
+        "type",
+        "sided",
+        "slot",
+        "position",
+        "equipment",
+        "kneeFlexionMaxDeg",
+        "kneeLoad",
+        "morningLumbarFlexion",
+        "scores",
+        "score",
+        "stars",
+        "locked",
+        "evidenceLevel",
+        "cues",
+        "pros",
+        "cons",
+        "pfpsNote",
+        "regression",
+        "progression",
+        "defaultDose",
+        "sources",
+        "svg"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 3
+        },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "group",
+              "weight"
+            ],
+            "properties": {
+              "group": {
+                "$ref": "#/$defs/id"
+              },
+              "weight": {
+                "enum": [
+                  1,
+                  0.5
+                ]
+              }
+            }
+          }
+        },
+        "type": {
+          "enum": [
+            "static",
+            "pnf",
+            "dynamic",
+            "active"
+          ]
+        },
+        "sided": {
+          "enum": [
+            "unilateral",
+            "bilateral",
+            "alternating"
+          ]
+        },
+        "slot": {
+          "enum": [
+            "ochtend",
+            "avond",
+            "beide"
+          ]
+        },
+        "position": {
+          "enum": [
+            "staand",
+            "stoel",
+            "vloer",
+            "liggend"
+          ]
+        },
+        "equipment": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "muur",
+              "deurpost",
+              "trede",
+              "leuning",
+              "stoel",
+              "bed",
+              "handdoek",
+              "band",
+              "kussen",
+              "mat",
+              "aanrecht",
+              "hoek",
+              "bank"
+            ]
+          }
+        },
+        "kneeFlexionMaxDeg": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 160
+        },
+        "kneeLoad": {
+          "enum": [
+            "geen",
+            "laag",
+            "matig",
+            "hoog"
+          ]
+        },
+        "morningLumbarFlexion": {
+          "type": "boolean"
+        },
+        "scores": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "B",
+            "K",
+            "D",
+            "R",
+            "P"
+          ],
+          "properties": {
+            "B": {
+              "$ref": "#/$defs/score15"
+            },
+            "K": {
+              "$ref": "#/$defs/score15"
+            },
+            "D": {
+              "$ref": "#/$defs/score15"
+            },
+            "R": {
+              "$ref": "#/$defs/score15"
+            },
+            "P": {
+              "$ref": "#/$defs/score15"
+            }
+          }
+        },
+        "bNote": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "stars": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5,
+          "multipleOf": 0.5
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "evidenceLevel": {
+          "enum": [
+            "sterk",
+            "matig",
+            "beperkt",
+            "zwak",
+            "geen"
+          ]
+        },
+        "cues": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string"
+          }
+        },
+        "pros": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string"
+          }
+        },
+        "cons": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string"
+          }
+        },
+        "pfpsNote": {
+          "type": "string"
+        },
+        "regression": {
+          "type": "string"
+        },
+        "progression": {
+          "type": "string"
+        },
+        "defaultDose": {
+          "$ref": "#/$defs/dose"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "svg": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "locked": {
+                "const": false
+              }
+            },
+            "required": [
+              "locked"
+            ]
+          },
+          "then": {
+            "properties": {
+              "kneeFlexionMaxDeg": {
+                "maximum": 90
+              },
+              "scores": {
+                "properties": {
+                  "K": {
+                    "minimum": 3
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "scores": {
+                "properties": {
+                  "K": {
+                    "maximum": 2
+                  }
+                }
+              }
+            },
+            "required": [
+              "scores"
+            ]
+          },
+          "then": {
+            "properties": {
+              "locked": {
+                "const": true
+              },
+              "stars": {
+                "maximum": 2
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "pnf"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "defaultDose": {
+                "required": [
+                  "pnf"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "sided": {
+                "const": "unilateral"
+              },
+              "type": {
+                "enum": [
+                  "static",
+                  "dynamic",
+                  "active"
+                ]
+              }
+            },
+            "required": [
+              "sided",
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "defaultDose": {
+                "required": [
+                  "perSideSec"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "sided": {
+                "enum": [
+                  "bilateral",
+                  "alternating"
+                ]
+              }
+            },
+            "required": [
+              "sided"
+            ]
+          },
+          "then": {
+            "properties": {
+              "defaultDose": {
+                "required": [
+                  "durationSec"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exerciseId"
+      ],
+      "properties": {
+        "exerciseId": {
+          "$ref": "#/$defs/id"
+        },
+        "perSideSec": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 180
+        },
+        "durationSec": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 180
+        },
+        "reps": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pnf": {
+          "$ref": "#/$defs/pnf"
+        },
+        "transitionAfterSec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "extraWeakSide": {
+          "enum": [
+            "L",
+            "R",
+            null
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "perSideSec"
+          ]
+        },
+        {
+          "required": [
+            "durationSec"
+          ]
+        },
+        {
+          "required": [
+            "pnf"
+          ]
+        }
+      ]
+    },
+    "routine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "slot",
+        "variant",
+        "template",
+        "timesPerWeek",
+        "preRun",
+        "steps",
+        "expectedTotalSec"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slot": {
+          "enum": [
+            "ochtend",
+            "avond",
+            "vrij"
+          ]
+        },
+        "variant": {
+          "enum": [
+            5,
+            10,
+            15
+          ]
+        },
+        "template": {
+          "const": true
+        },
+        "timesPerWeek": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 14
+        },
+        "preRun": {
+          "type": "boolean"
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "expectedTotalSec": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 900
+        }
+      }
+    },
+    "test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "unit",
+        "sided",
+        "groups",
+        "instructions",
+        "mdc",
+        "pfpsNote",
+        "sources"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "cm",
+            "graden"
+          ]
+        },
+        "sided": {
+          "type": "boolean"
+        },
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "instructions": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string"
+          }
+        },
+        "mdc": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pfpsNote": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "citation"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "citation": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -39,7 +39,7 @@ stellen en begeleid af te spelen. De volledige specificatie staat in
 `data/library.json` wordt nooit met de hand bewerkt. Na een nieuwe spec:
 
 ```bash
-node tools/extract-library.mjs   # haalt §10 uit rekapp-spec-v2.md en controleert de JSON
+node tools/extract-library.mjs   # haalt §10 en het schema uit §9.1 uit de spec en controleert de JSON
 ```
 
 ## Tests
@@ -47,7 +47,7 @@ node tools/extract-library.mjs   # haalt §10 uit rekapp-spec-v2.md en controlee
 Unit tests met `node:test`, zonder dependencies:
 
 ```bash
-node --test tests/
+node --test
 ```
 
 Alle tests moeten groen zijn vóór een commit. De testvectoren uit §11.1 (A t/m
