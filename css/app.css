@@ -136,7 +136,7 @@ img, svg { display: block; }
   min-width: 1.4rem; height: 1.4rem; padding: 0 .35rem; border-radius: .7rem;
   background: var(--accent); color: var(--accent-ink); font-size: .8125rem; line-height: 1.4rem;
 }
-.btn svg { width: 1.375rem; height: 1.375rem; flex: none; }
+.btn svg { width: 1.375rem; height: 1.375rem; flex: none; pointer-events: none; }
 
 /* ---------- Werkbalk onderaan (duimzone) ---------- */
 
@@ -329,9 +329,10 @@ legend { margin-bottom: .5rem; font-weight: 600; }
 .chipset button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
 
 .switch {
-  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem 1rem;
   min-height: var(--tap); padding: 0 .25rem; cursor: pointer;
 }
+.switch > span { flex: 1 1 9rem; min-width: 0; }
 .switch input {
   appearance: none; -webkit-appearance: none; flex: none; position: relative; margin: 0;
   width: 3.25rem; height: 2rem; border-radius: 1rem; background: var(--surface-3);
@@ -374,10 +375,11 @@ body.with-tabbar .screen { padding-bottom: calc(var(--toolbar-h) + var(--tabbar-
   background: var(--surface); border-top: 1px solid var(--line);
 }
 .tabbar a {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .125rem;
+  flex: 1; min-width: 0; padding: 0 .25rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .125rem;
   min-height: var(--tap-primary); color: var(--muted); text-decoration: none; font-size: .8125rem;
 }
 .tabbar a svg { width: 1.5rem; height: 1.5rem; }
+.tabbar a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tabbar a[aria-current="page"] { color: var(--accent); font-weight: 600; }
 
 /* ---------- Start ---------- */
@@ -405,7 +407,22 @@ textarea { width: 100%; padding: .75rem; margin-top: .75rem; font: inherit; }
 .slider { display: grid; gap: .25rem; margin: .5rem 0 1rem; }
 .slider span { display: flex; justify-content: space-between; }
 .slider output { font-weight: 700; font-variant-numeric: tabular-nums; }
-.slider input { width: 100%; height: var(--tap); accent-color: var(--accent); }
+/* Schuif volledig zelf getekend: geen systeemgrijs, ook niet in nachtmodus. */
+.slider input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: var(--tap); margin: 0; background: transparent; cursor: pointer;
+}
+.slider input[type="range"]::-webkit-slider-runnable-track {
+  height: .5rem; border-radius: .25rem;
+  background: linear-gradient(var(--accent), var(--accent)) 0 / var(--pct, 50%) 100% no-repeat, var(--bar);
+}
+.slider input[type="range"]::-moz-range-track { height: .5rem; border-radius: .25rem; background: var(--bar); }
+.slider input[type="range"]::-moz-range-progress { height: .5rem; border-radius: .25rem; background: var(--accent); }
+.slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 1.75rem; height: 1.75rem; margin-top: -.625rem;
+  border: 0; border-radius: 50%; background: var(--accent);
+}
+.slider input[type="range"]::-moz-range-thumb { width: 1.75rem; height: 1.75rem; border: 0; border-radius: 50%; background: var(--accent); }
+textarea::placeholder, input::placeholder { color: var(--muted); opacity: 1; }
 .section > .btn { margin-top: .5rem; }
 
 /* ---------- Speler ---------- */
@@ -424,6 +441,8 @@ textarea { width: 100%; padding: .75rem; margin-top: .75rem; font: inherit; }
 .player-side { font-size: 2.25rem; font-weight: 800; letter-spacing: .02em; color: var(--accent); min-height: 1.2em; }
 .player-label { color: var(--text-2); font-size: 1.0625rem; min-height: 1.4em; }
 .player-timer { position: relative; width: min(68vw, 30dvh, 17rem); min-width: 9.5rem; aspect-ratio: 1; }
+/* Drie cijfers (eigen houdtijd ≥ 100 s): ring breed genoeg voor 96 px. */
+.player-timer.wide { min-width: 12.5rem; }
 .ring { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring-track { fill: none; stroke: var(--surface-3); stroke-width: 6; }
 .ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; }
@@ -437,7 +456,7 @@ textarea { width: 100%; padding: .75rem; margin-top: .75rem; font: inherit; }
 .player.paused .player-digits { color: var(--muted); }
 .player-cue { margin: .25rem 0 0; font-size: 1.0625rem; max-width: 32rem; }
 .player-breath { margin: 0; color: var(--text-2); font-size: .9375rem; max-width: 32rem; }
-.player-next { margin: 0; color: var(--muted); }
+.player-next { margin: 0; color: var(--muted); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .player-controls {
   position: sticky; bottom: 0; display: flex; justify-content: center; align-items: center; gap: 1rem;
   padding: .75rem 0 calc(.75rem + var(--safe-b)); background: var(--bg);
@@ -451,7 +470,7 @@ textarea { width: 100%; padding: .75rem; margin-top: .75rem; font: inherit; }
 
 /* Korte schermen (bv. iPhone SE): compacter, zodat alles zonder scrollen past.
    De timercijfers blijven ≥ 96 px (§8.3). */
-@media (max-height: 740px) {
+@media (max-height: 900px) {
   .player-head { min-height: 3.25rem; }
   .player-main { gap: .25rem; padding-bottom: .5rem; }
   .player-visual .mini-lg { width: 2.5rem; height: 3.5rem; }
@@ -538,3 +557,9 @@ textarea { width: 100%; padding: .75rem; margin-top: .75rem; font: inherit; }
 .dose-table thead th { color: var(--muted); font-weight: 600; }
 .actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
 .actions .btn { flex: 1 1 7rem; }
+
+/* ---------- Meldingen bovenaan ---------- */
+
+.app-notices { max-width: 40rem; margin: 0 auto; padding: 0 1rem; }
+.app-notices:empty { display: none; }
+.app-notices .warn-bar { margin: calc(env(safe-area-inset-top, 0px) + .5rem) 0 .5rem; }

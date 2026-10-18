@@ -27,10 +27,12 @@ export function createAudio() {
     voicesLoaded = voicesLoaded || voices.length > 0;
     const nl = voices.filter((v) => (v.lang || '').toLowerCase().replace('_', '-').startsWith('nl'));
     voice = nl.find((v) => v.voiceURI === settings?.voiceURI) ?? nl[0] ?? null;
-    for (const fn of listeners) fn();
   }
   if (typeof speechSynthesis !== 'undefined') {
-    speechSynthesis.addEventListener?.('voiceschanged', pickVoice);
+    speechSynthesis.addEventListener?.('voiceschanged', () => {
+      pickVoice();
+      for (const fn of listeners) fn();
+    });
     pickVoice();
   }
 

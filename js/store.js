@@ -40,11 +40,18 @@ function openDb() {
 
 function idbBackend(db) {
   const tx = (store, mode) => db.transaction(store, mode).objectStore(store);
+  // Pas klaar als de transactie echt is vastgelegd (ook bij bv. een volle
+  // schijf komt de fout dan terug bij de aanroeper).
   const done = (t) => new Promise((resolve, reject) => {
     t.oncomplete = () => resolve();
-    t.onerror = () => reject(t.error);
-    t.onabort = () => reject(t.error);
+    t.onerror = () => reject(t.error ?? new DOMException('Opslaan mislukt', 'UnknownError'));
+    t.onabort = () => reject(t.error ?? new DOMException('Afgebroken', 'AbortError'));
   });
+  const write = (store, fn) => {
+    const os = tx(store, 'readwrite');
+    fn(os);
+    return done(os.transaction);
+  };
   return {
     get: (store, key) => request(tx(store, 'readonly').get(key)),
     getAll: (store) => request(tx(store, 'readonly').getAll()),
@@ -53,9 +60,9 @@ function idbBackend(db) {
       const [keys, values] = await Promise.all([request(os.getAllKeys()), request(os.getAll())]);
       return keys.map((k, i) => [k, values[i]]);
     },
-    put: (store, value, key) => request(STORES[store].keyPath ? tx(store, 'readwrite').put(value) : tx(store, 'readwrite').put(value, key)),
-    delete: (store, key) => request(tx(store, 'readwrite').delete(key)),
-    clear: (store) => request(tx(store, 'readwrite').clear()),
+    put: (store, value, key) => write(store, (os) => (STORES[store].keyPath ? os.put(value) : os.put(value, key))),
+    delete: (store, key) => write(store, (os) => os.delete(key)),
+    clear: (store) => write(store, (os) => os.clear()),
     // Meerdere schrijfacties in één transactie (alles of niets).
     batch: (stores, fn) => {
       const t = db.transaction(stores, 'readwrite');
@@ -88,7 +95,8 @@ function memoryBackend() {
 
 export async function openStore() {
   try {
-    return { persistent: true, ...idbBackend(await openDb()) };
+    const db = await openDb().catch(() => openDb()); // één keer opnieuw proberen
+    return { persistent: true, ...idbBackend(db) };
   } catch (e) {
     console.warn('Opslag valt terug op geheugen:', e);
     return { persistent: false, ...memoryBackend() };

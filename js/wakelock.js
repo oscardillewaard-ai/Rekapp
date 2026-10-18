@@ -9,11 +9,13 @@ export function createWakeLock(onStatus) {
   async function acquire() {
     if (!('wakeLock' in navigator)) { onStatus('niet-ondersteund'); return; }
     try {
-      lock = await navigator.wakeLock.request('screen');
+      const s = await navigator.wakeLock.request('screen');
+      // Intussen gestopt, of al een lock: deze meteen weer loslaten.
+      if (!wanted || lock) { s.release().catch(() => {}); return; }
+      lock = s;
+      s.addEventListener('release', () => { if (lock === s) lock = null; });
       onStatus('aan');
-      lock.addEventListener('release', () => { lock = null; });
     } catch {
-      lock = null;
       onStatus('mislukt');
     }
   }

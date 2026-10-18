@@ -6,6 +6,7 @@ import { icon } from './graphics.js';
 export function createSettingsScreen({ audio, getSettings, update }) {
   const root = h('section', { class: 'screen', 'aria-labelledby': 'settings-title' });
   const extra = h('div'); // secties van latere mijlpalen
+  let offVoices = null;
 
   function toggle(label, key, hint) {
     const input = h('input', { type: 'checkbox', role: 'switch' });
@@ -30,7 +31,8 @@ export function createSettingsScreen({ audio, getSettings, update }) {
       clear(wrap).append(h('label', { class: 'field' }, h('span', null, 'Stem'), select));
     };
     fill();
-    audio.onVoicesChanged(fill);
+    offVoices?.();
+    offVoices = audio.onVoicesChanged(fill);
     return wrap;
   }
 
@@ -38,7 +40,9 @@ export function createSettingsScreen({ audio, getSettings, update }) {
     const s = getSettings();
     const out = h('output', null, `${Math.round(s.beepVolume * 100)}%`);
     const input = h('input', { type: 'range', min: 0, max: 100, step: 10, value: Math.round(s.beepVolume * 100), 'aria-label': 'Piepvolume' });
-    input.addEventListener('input', () => { out.textContent = `${input.value}%`; });
+    const paint = () => input.style.setProperty('--pct', `${input.value}%`);
+    paint();
+    input.addEventListener('input', () => { out.textContent = `${input.value}%`; paint(); });
     input.addEventListener('change', () => update({ beepVolume: Number(input.value) / 100 }));
     return h('label', { class: 'slider' }, h('span', null, 'Piepvolume', out), input);
   }

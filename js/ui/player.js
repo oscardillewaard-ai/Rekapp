@@ -18,11 +18,13 @@ const RING_R = 45;
 const RING_C = 2 * Math.PI * RING_R;
 const WORKISH = new Set(['work', 'contract', 'relax']);
 
-// Resterende tijd: hele seconden naar boven, onder een minuut als "45".
+// Resterende tijd in hele seconden, naar boven afgerond. Een segment duurt
+// hoogstens 180 s, dus nooit meer dan drie cijfers (past in de ring bij
+// ≥ 96 px, §8.3). De spraak noemt de duur ook in seconden.
 function clock(ms) {
-  const s = Math.max(0, Math.ceil(ms / 1000));
-  return s < 60 ? String(s) : formatDuration(s);
+  return String(Math.max(0, Math.ceil(ms / 1000)));
 }
+const STARTUP_GUARD_MS = 400; // dubbel tikken op Start pauzeert niet meteen
 
 export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished }) {
   const root = h('section', { class: 'player', 'aria-label': 'Speler' });
@@ -32,6 +34,10 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
   let shownIndex = -1;
   let wakeStatus = 'onbekend';
   let finishing = false;
+  let shownPaused = null;
+  let shownTotal = '';
+  let beganAt = 0;
+  let sessionId = null;
 
   const wake = createWakeLock((st) => { wakeStatus = st; renderBanners(); });
 
@@ -97,6 +103,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
   // Aangeroepen in de click-handler van Start (gebruikersgebaar): audio is dan
   // al ontgrendeld, en de eerste spraak gebeurt nog binnen dat gebaar.
   function begin(playable, meta) {
+    if (state && ['running', 'paused', 'confirm'].includes(state.status)) return; // loopt al
     const settings = getSettings();
     routine = meta;
     const { segments, totalSec } = compileRoutine(playable, lib.exercises, { timing: lib.meta.timing, sideSwitchSec: settings.sideSwitchSec });
@@ -104,6 +111,10 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
     state = createPlayer(segments);
     finishing = false;
     shownIndex = -1;
+    shownPaused = null;
+    shownTotal = '';
+    sessionId = null;
+    beganAt = performance.now();
     runView.hidden = false;
     finishView.hidden = true;
     const now = performance.now();
@@ -132,6 +143,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
 
   function act(fn) {
     if (!state) return;
+    if (fn !== cancelStop && fn !== confirmStop && performance.now() - beganAt < STARTUP_GUARD_MS) return;
     const r = fn(state, performance.now());
     state = r.state;
     handle(r.events);
@@ -141,31 +153,51 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
 
   function togglePause() {
     if (!state) return;
-    if (state.status === 'running') act(pause);
-    else if (state.status === 'paused') { audio.unlock(); act(resume); }
+    if (state.status === 'running') {
+      audio.stopSpeech();
+      act(pause);
+    } else if (state.status === 'paused') {
+      audio.unlock();
+      // Een segment dat nog niet begonnen was (na ⏭/⏮ in pauze) wordt bij
+      // hervatten alsnog aangekondigd.
+      const seg = state.segments[state.segmentIndex];
+      const fresh = state.pausedRemainingMs === seg.durationSec * 1000;
+      act(resume);
+      if (fresh && state.status === 'running') announce(state.segmentIndex, false);
+    }
   }
 
   function askStop() {
     if (!state || !['running', 'paused'].includes(state.status)) return;
+    audio.stopSpeech();
+    const before = beganAt;
+    beganAt = 0; // stoppen mag altijd, ook vlak na de start
     act(requestStop);
+    beganAt = before;
     if (state.status === 'confirm') confirm.showModal();
   }
 
-  // Gebeurtenissen → geluid, spraak, trilling, flits. Bij een inhaalslag
-  // (scherm was verborgen) alleen het laatste segment aankondigen.
+  // Begin van een segment aankondigen: piep, spraak, en bij een kantwissel ook
+  // trilling (Android) en een flits. Na een inhaalslag alleen kant en naam,
+  // zonder startpiep en zonder de volle duur.
+  function announce(index, catchUp) {
+    const seg = state.segments[index];
+    if (!catchUp && WORKISH.has(seg.kind)) audio.beep('start');
+    if (seg.kind === 'switch' && !catchUp) {
+      audio.beep('switch');
+      vibrate(150);
+      doFlash();
+    }
+    audio.speak(speechFor(state.segments, index, lib.exercises, { catchUp }));
+  }
+
+  // Gebeurtenissen → geluid, spraak, trilling, flits. Alleen als de timer
+  // loopt (⏭/⏮ in pauze kondigt pas bij hervatten aan). Bij een inhaalslag
+  // (scherm was verborgen) alleen het laatste segment.
   function handle(events) {
     const segEvents = events.filter((e) => e.type === 'segment');
     const last = segEvents[segEvents.length - 1];
-    if (last) {
-      const seg = last.segment;
-      if (WORKISH.has(seg.kind)) audio.beep('start');
-      if (seg.kind === 'switch') {
-        audio.beep('switch');
-        vibrate(150);
-        doFlash();
-      }
-      audio.speak(speechFor(state.segments, last.index, lib.exercises));
-    }
+    if (last && state.status === 'running') announce(last.index, segEvents.length > 1);
     for (const e of events) {
       if (e.type === 'halfway') audio.beep('halfway');
       if (e.type === 'countdown') audio.beep('countdown');
@@ -191,7 +223,9 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
       items.push(h('p', { class: 'warn-bar' }, 'Zet automatisch vergrendelen tijdelijk uit'));
     }
     const settings = getSettings();
-    if (state && settings.voiceOn && audio.voicesKnown() && !audio.hasDutchVoice()) {
+    // Geen (Nederlandse) stem, of helemaal geen spraak: alleen piepjes plus
+    // deze melding (§7, §11.3).
+    if (state && settings.voiceOn && !audio.hasDutchVoice()) {
       items.push(h('p', { class: 'warn-bar' }, 'Geen Nederlandse stem gevonden. Je hoort alleen piepjes.'));
     }
     clear(banners).append(...items);
@@ -225,12 +259,20 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
     const frac = seg.durationSec ? Math.min(1, Math.max(0, v.remainingMs / (seg.durationSec * 1000))) : 0;
     ringFill.setAttribute('stroke-dashoffset', String(RING_C * (1 - frac)));
     const text = clock(v.remainingMs);
-    if (digits.textContent !== text) digits.textContent = text;
-    totalLeft.textContent = formatDuration(Math.ceil(v.totalRemainingMs / 1000));
+    if (digits.textContent !== text) {
+      digits.textContent = text;
+      timer.classList.toggle('wide', text.length > 2);
+    }
+    const total = formatDuration(Math.ceil(v.totalRemainingMs / 1000));
+    if (total !== shownTotal) { shownTotal = total; totalLeft.textContent = total; }
+    // Alleen bij een wissel opnieuw tekenen (anders vallen klikken op het icoon weg).
     const paused = state.status !== 'running';
-    btnPlay.replaceChildren(icon(paused ? 'play' : 'pause'));
-    btnPlay.setAttribute('aria-label', paused ? 'Hervatten' : 'Pauze');
-    root.classList.toggle('paused', paused);
+    if (paused !== shownPaused) {
+      shownPaused = paused;
+      btnPlay.replaceChildren(icon(paused ? 'play' : 'pause'));
+      btnPlay.setAttribute('aria-label', paused ? 'Hervatten' : 'Pauze');
+      root.classList.toggle('paused', paused);
+    }
   }
 
   // Tik op de tekening: uitleg, de timer loopt door.
@@ -258,12 +300,15 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
     finishing = true;
     cancelAnimationFrame(raf);
     wake.release();
+    audio.stopSpeech();
     if (confirm.open) confirm.close();
     if (detail.open) detail.close();
     const status = sessionStatus(state);
     const run = {
       startedAtMs: state.wallStart,
-      endedAtMs: state.wallStart + (state.endedAt - state.startedAt),
+      // performance.now() staat stil als het toestel slaapt: de eindtijd komt
+      // daarom van de gewone klok.
+      endedAtMs: Date.now() - (performance.now() - state.endedAt),
       plannedSec: routine.plannedSec,
       activeSec: activeSec(state),
       status,
@@ -274,23 +319,25 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
     const notes = h('textarea', { rows: 3, 'aria-label': 'Notitie', placeholder: 'Notitie (optioneel)' });
     const save = h('button', { class: 'btn primary', type: 'button' }, 'Opslaan');
     const error = h('p', { class: 'warn-bar', role: 'alert', hidden: true });
+    const showError = (e) => {
+      error.hidden = false;
+      error.textContent = `Opslaan is niet gelukt: ${e?.message ?? e}`;
+    };
+    // De sessie staat meteen in het logboek (DONE → LOG, §6.8.2), ook als de
+    // app nu wordt afgesloten. Opslaan vult intensiteit, kniepijn en notitie aan.
+    sessionId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+    const record = (finishValues) => buildSession({ id: sessionId, tz: localTimeZone(), routine, run, finish: finishValues });
+    onSave(record({ stretchIntensity: null, kneePainDuring: null, notes: '' })).catch(showError);
     save.addEventListener('click', async () => {
       save.disabled = true;
-      const session = buildSession({
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-        tz: localTimeZone(),
-        routine,
-        run,
-        finish: { stretchIntensity: intensity.value(), kneePainDuring: knee.value(), notes: notes.value.trim() },
-      });
       try {
-        await onSave(session);
+        await onSave(record({ stretchIntensity: intensity.value(), kneePainDuring: knee.value(), notes: notes.value.trim() }));
         state = null;
+        finishing = false;
         onFinished();
       } catch (e) {
         save.disabled = false;
-        error.hidden = false;
-        error.textContent = `Opslaan is niet gelukt: ${e?.message ?? e}`;
+        showError(e);
       }
     });
     clear(finishView).append(
@@ -310,7 +357,9 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
   function slider(text, initial) {
     const out = h('output', null, String(initial));
     const input = h('input', { type: 'range', min: 0, max: 10, step: 1, value: initial, 'aria-label': `${text} (0–10)` });
-    input.addEventListener('input', () => { out.textContent = input.value; });
+    const paint = () => input.style.setProperty('--pct', `${input.value * 10}%`);
+    paint();
+    input.addEventListener('input', () => { out.textContent = input.value; paint(); });
     return {
       el: h('label', { class: 'slider' }, h('span', null, `${text} (0–10)`, out), input),
       value: () => Number(input.value),
@@ -319,9 +368,12 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
 
   // ---------- Buitenwereld ----------
 
+  audio.onVoicesChanged(renderBanners);
+
   document.addEventListener('visibilitychange', () => {
     if (!state) return;
     if (document.visibilityState === 'hidden' && state.status === 'running' && getSettings().autoPauseOnHide) {
+      audio.stopSpeech();
       act(pause);
     }
     if (document.visibilityState === 'visible' && (state.status === 'running' || state.status === 'paused')) loop();
@@ -331,8 +383,13 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
     root,
     begin,
     askStop,
-    // Actief = er loopt een routine of het afrondscherm staat open.
-    isActive: () => state !== null,
+    // Er loopt een routine (ook gepauzeerd of bij de stopvraag).
+    isActive: () => state !== null && ['running', 'paused', 'confirm'].includes(state.status),
+    // Het afrondscherm staat open; de sessie is dan al opgeslagen.
+    isFinishing: () => state !== null && finishing,
+    // Weg van het afrondscherm zonder Opslaan: de sessie blijft zoals hij al
+    // bewaard is (zonder intensiteit en kniepijn).
+    leave() { state = null; finishing = false; },
     focus: () => (finishing ? finishView : runView).querySelector('h1')?.focus({ preventScroll: true }),
   };
 }

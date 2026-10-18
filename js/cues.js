@@ -23,7 +23,7 @@ const sentence = (t) => (/[.!?…]$/.test(t) ? t : `${t}.`);
 // Gesproken tekst bij het begin van een segment, of null.
 // segments: de hele timeline, voor de context (eerste ronde van een kant,
 // extra set). exercises: Map id → oefening.
-export function speechFor(segments, index, exercises) {
+export function speechFor(segments, index, exercises, { catchUp = false } = {}) {
   const seg = segments[index];
   const ex = exercises.get(seg.exerciseId);
   const side = seg.side ? `${SIDE_SPOKEN[seg.side]} ` : '';
@@ -32,7 +32,8 @@ export function speechFor(segments, index, exercises) {
     case 'prep':
       return ex ? `${SPOKEN.next} ${sentence(spokenName(ex))}` : null;
     case 'work':
-      return `${extra}${side}${sentence(spokenName(ex))} ${seg.durationSec} seconden.`;
+      // Na een inhaalslag is het blok al bezig: dan geen volle duur noemen.
+      return catchUp ? `${extra}${side}${sentence(spokenName(ex))}` : `${extra}${side}${sentence(spokenName(ex))} ${seg.durationSec} seconden.`;
     case 'contract': {
       const prev = segments[index - 1];
       const firstOfSide = !prev || prev.kind !== 'relax' || prev.side !== seg.side || prev.stepIndex !== seg.stepIndex;

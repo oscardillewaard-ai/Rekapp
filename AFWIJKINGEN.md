@@ -78,15 +78,31 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   oefeningen hebt overgeslagen); na ✕ en bevestigen = gedeeltelijk als er
   werk gedaan is, anders afgebroken.
 - **Terugknop van de browser of telefoon** tijdens een routine: vraagt eerst
-  "Stoppen?" in plaats van de speler stil te verlaten.
-- **Afronden:** de schuiven staan op rekintensiteit 5 (de cue "rek 5–6/10")
-  en kniepijn 0; je past ze aan voor je opslaat.
+  "Stoppen?" in plaats van de speler stil te verlaten. Op het afrondscherm mag
+  je wel weg: de sessie is dan al opgeslagen.
+- **Afronden:** de sessie staat meteen bij "Klaar!" of "Gestopt" in het
+  logboek (DONE → LOG, §6.8.2), ook als de app daarna wordt afgesloten.
+  "Opslaan" vult rekintensiteit, kniepijn en notitie aan. De schuiven staan
+  op rekintensiteit 5 (de cue "rek 5–6/10") en kniepijn 0. Ga je weg zonder
+  Opslaan, dan blijven die twee leeg.
+- **Timercijfers:** altijd hele seconden (een segment duurt hoogstens 180 s),
+  zodat ze ook op een klein scherm bij ≥ 96 px in de ring passen.
+- **Terug van de achtergrond** (auto-pauze uit): de speler springt naar het
+  juiste segment en noemt dan alleen kant en naam, niet de volle duur; piepjes
+  die al voorbij zijn, klinken niet meer.
+- **⏭/⏮ in pauze:** de aankondiging (spraak, piep) komt pas bij hervatten.
 - **"Probeer nu"** wordt ook als sessie opgeslagen (routine
   `probeer:<oefening>`, moment "vrij"), zodat de werkelijke dosis klopt.
 - **Instellingen:** knop "Test geluid" toegevoegd om piepjes en spraak op het
   toestel te controleren; kantwisselduur te kiezen uit 3, 5, 8 of 10 s.
 - **Blijvende opslag:** `navigator.storage.persist()` wordt al na de eerste
   opgeslagen sessie aangevraagd (§7); de status in de instellingen volgt in M7.
+- **Als IndexedDB niet werkt** (bv. sommige privévensters): de app draait
+  verder in het geheugen en zegt bovenaan dat er niets bewaard wordt.
+- **Kniestatus niet te lezen** (opslag werkt niet of leesfout): de knieregels
+  zijn hard, dus dan geldt de opvlammingsmodus (alles boven 45° uit, W8) met
+  een melding bovenaan, tot de opslag weer werkt. *Ter bevestiging aan Oscar
+  voorgelegd.*
 
 ## Keuzes bij open of tegenstrijdige punten (akkoord Oscar, 17-10-2026)
 

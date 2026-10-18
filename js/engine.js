@@ -110,6 +110,12 @@ export function tick(state, now) {
   const dur = durationMs(seg);
   const elapsed = now - s.segmentStartedAt;
   const remaining = dur - elapsed;
+  // Inhaalslag (scherm was verborgen): wat in dit segment al voorbij is, telt
+  // als gehad.
+  if (events.length && elapsed >= 1000) {
+    if (elapsed >= dur / 2) s.firedHalfway = true;
+    if (remaining <= 3000) s.firedCountdown = Math.ceil(remaining / 1000);
+  }
   if (!s.firedHalfway && HALFWAY_KINDS.has(seg.kind) && dur >= HALFWAY_MIN_MS && elapsed >= dur / 2) {
     s.firedHalfway = true;
     // Niet meer piepen als de tel al bijna begint.
