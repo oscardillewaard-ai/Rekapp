@@ -17,8 +17,11 @@ const TYPE_OPTIONS = [[null, 'Alle'], ...Object.entries(TYPE_LABELS).map(([k, v]
 const cap = (t) => t[0].toUpperCase() + t.slice(1);
 const plural = (n) => `${n} ${n === 1 ? 'oefening' : 'oefeningen'}`;
 
-export function createLibraryScreen({ lib, equipmentOrder }) {
-  const state = { filters: defaultFilters(), sort: 'score', grouped: true };
+export function createLibraryScreen({ lib, equipmentOrder, showLocked = true }) {
+  // "Vergrendelde oefeningen tonen" (§6.11) is de standaard van het filter.
+  let lockedDefault = showLocked;
+  const baseFilters = () => ({ ...defaultFilters(), showLocked: lockedDefault });
+  const state = { filters: baseFilters(), sort: 'score', grouped: true };
   const items = catalogItems(lib);
   const equipment = equipmentOptions(lib, equipmentOrder);
   const rows = new Map(); // oefening-id → <li>, eenmalig gebouwd
@@ -69,7 +72,7 @@ export function createLibraryScreen({ lib, equipmentOrder }) {
   function renderList() {
     const shown = visible();
     count.textContent = plural(shown.length);
-    const n = activeFilterCount(state.filters);
+    const n = activeFilterCount(state.filters, baseFilters());
     filterBadge.hidden = n === 0;
     filterBadge.textContent = String(n);
     filterButton.setAttribute('aria-label', n ? `Filters, ${n} actief` : 'Filters');
@@ -140,7 +143,7 @@ export function createLibraryScreen({ lib, equipmentOrder }) {
         switchRow(cap(FILTERS.onlyK4), () => f().onlyK4, (on) => { f().onlyK4 = on; }),
         switchRow(cap(FILTERS.showLocked), () => f().showLocked, (on) => { f().showLocked = on; }))),
     h('div', { class: 'sheet-foot' },
-      h('button', { class: 'btn', type: 'button', onclick: () => { state.filters = { ...defaultFilters(), query: state.filters.query }; update(); } }, 'Wis filters'),
+      h('button', { class: 'btn', type: 'button', onclick: () => { state.filters = { ...baseFilters(), query: state.filters.query }; update(); } }, 'Wis filters'),
       showButton,
       status));
 
@@ -170,6 +173,12 @@ export function createLibraryScreen({ lib, equipmentOrder }) {
     if (changed) window.scrollTo(0, 0);
   });
 
+  function setShowLocked(on) {
+    lockedDefault = on;
+    state.filters.showLocked = on;
+    update({ silent: true });
+  }
+
   renderList();
-  return { root, toolbar, sheet };
+  return { root, toolbar, sheet, setShowLocked };
 }

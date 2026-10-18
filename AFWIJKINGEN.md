@@ -58,6 +58,36 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   uitgeschakeld tot hun mijlpaal klaar is. Bij een vergrendelde oefening blijven
   toevoegen en afspelen altijd uit (W1).
 
+## Invulling van open punten in §6.8 (M3, speler)
+
+- **Schermen:** v2 beschrijft de schermen van de speler niet meer (sectie D uit
+  v1 is vervangen). Startscherm, routinepreview en speler volgen daarom de
+  wireframes uit v1 (D6): kaarten Ochtend/Avond met 5 · 10 · 15 min, preview
+  met totale tijd en grote Start-knop, speler met naam, kant, ringtimer
+  (cijfers ≥ 96 px), kerncue plus ademcue, "Volgende: …" en ⏮ ⏸/▶ ⏭ plus ✕.
+- **Gesproken naam:** zonder de toelichting tussen haakjes, zoals in het
+  voorbeeld van §6.8.2 ("Kuit tegen de muur", niet "… (gestrekte knie)").
+- **⏭ Volgende:** eerst naar de aangekondigde overgang ("Volgende: …"), vanuit
+  de overgang of de voorbereiding naar het begin van de volgende oefening.
+  **⏮ Terug:** naar het begin van de huidige oefening; tijdens een overgang is
+  dat de oefening die net klaar is.
+- **Piepjes:** de zachte piep halverwege alleen bij werkblokken van ≥ 10 s;
+  3-2-1 bij elk segment van ≥ 4 s, ook de voorbereiding, kantwissel en
+  overgang (aftellen naar de volgende houding).
+- **Status in het logboek:** tot het einde gespeeld = voltooid (ook als je
+  oefeningen hebt overgeslagen); na ✕ en bevestigen = gedeeltelijk als er
+  werk gedaan is, anders afgebroken.
+- **Terugknop van de browser of telefoon** tijdens een routine: vraagt eerst
+  "Stoppen?" in plaats van de speler stil te verlaten.
+- **Afronden:** de schuiven staan op rekintensiteit 5 (de cue "rek 5–6/10")
+  en kniepijn 0; je past ze aan voor je opslaat.
+- **"Probeer nu"** wordt ook als sessie opgeslagen (routine
+  `probeer:<oefening>`, moment "vrij"), zodat de werkelijke dosis klopt.
+- **Instellingen:** knop "Test geluid" toegevoegd om piepjes en spraak op het
+  toestel te controleren; kantwisselduur te kiezen uit 3, 5, 8 of 10 s.
+- **Blijvende opslag:** `navigator.storage.persist()` wordt al na de eerste
+  opgeslagen sessie aangevraagd (§7); de status in de instellingen volgt in M7.
+
 ## Keuzes bij open of tegenstrijdige punten (akkoord Oscar, 17-10-2026)
 
 ### PNF met "extra set zwakke kant"

@@ -22,8 +22,7 @@ export function defaultFilters() {
 }
 
 // Aantal filters dat afwijkt van de standaard (voor de knop "Filters (n)").
-export function activeFilterCount(f) {
-  const d = defaultFilters();
+export function activeFilterCount(f, d = defaultFilters()) {
   return ['groups', 'equipment'].filter((k) => f[k].length).length
     + ['slot', 'position', 'type', 'minStars', 'onlyK4', 'showLocked'].filter((k) => f[k] !== d[k]).length;
 }

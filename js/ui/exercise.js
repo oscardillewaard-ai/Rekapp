@@ -5,6 +5,7 @@ import { rate } from '../library.js';
 import { formatDose, evidenceLabel, SLOT_LABELS, TYPE_LABELS, SIDED_LABELS } from '../format.js';
 import { RUBRICS, BREATHING, CARD } from '../texts.js';
 import { WARNINGS } from '../warnings.js';
+import { access } from '../knee.js';
 
 const LETTERS = ['B', 'K', 'D', 'R', 'P'];
 const LETTER_NAMES = { B: 'Bewijs', K: 'Knieveiligheid', D: 'Doelgerichtheid', R: 'Relevantie', P: 'Praktisch' };
@@ -23,7 +24,7 @@ function sourceItem(src) {
     : src.citation);
 }
 
-export function createExerciseScreen({ lib, onBack }) {
+export function createExerciseScreen({ lib, onBack, getContext, onTry }) {
   const root = h('section', { class: 'screen' });
   const toolbar = h('div', { class: 'toolbar' });
   const rubricSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'rubric-title' });
@@ -134,15 +135,20 @@ export function createExerciseScreen({ lib, onBack }) {
         group.note ? h('p', null, h('strong', null, 'Let op: '), group.note) : null,
         group.sources.length ? h('ul', null, group.sources.map((k) => sourceItem(lib.sources.get(k)))) : null)));
 
-    // 8. Knoppen, onderaan in de duimzone. Een vergrendelde oefening kan niet
-    // worden toegevoegd of afgespeeld (W1).
-    const lockIcon = rating.locked ? icon('lock') : null;
+    // 8. Knoppen, onderaan in de duimzone. Een vergrendelde oefening (W1), of
+    // tijdens een opvlamming alles boven 45° (W8), kan niet worden toegevoegd
+    // of afgespeeld. Dezelfde poort (access) bewaakt ook de speler zelf.
+    const gate = access(ex, getContext().knee, lib.meta.knee);
+    const lockIcon = gate.allowed ? null : icon('lock');
     toolbar.append(
       h('button', { class: 'btn wrap', type: 'button', disabled: true }, lockIcon, CARD.addButton),
-      h('button', { class: 'btn primary wrap', type: 'button', disabled: true }, rating.locked ? icon('lock') : null, CARD.tryButton));
-    root.append(h('p', { class: 'note' }, rating.locked
-      ? WARNINGS.W1.text
-      : 'Toevoegen aan een routine en afspelen komen in een volgende versie.'));
+      h('button', {
+        class: 'btn primary wrap', type: 'button', disabled: !gate.allowed,
+        onclick: gate.allowed ? () => onTry(ex) : null,
+      }, gate.allowed ? null : icon('lock'), CARD.tryButton));
+    root.append(h('p', { class: 'note' }, gate.allowed
+      ? 'Toevoegen aan een routine komt in een volgende versie.'
+      : gate.codes.map((c) => WARNINGS[c].text).join(' ')));
   }
 
   return { root, toolbar, sheet: rubricSheet, render };

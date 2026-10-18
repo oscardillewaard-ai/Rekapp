@@ -1,0 +1,338 @@
+// Speler (§6.8): timeline afspelen met timer, kantwissels, geluid, spraak en
+// wake lock; daarna het afrondscherm (§6.9). De tijd komt uit tijdstempels
+// (engine.js); dit bestand tekent alleen en zet gebeurtenissen om in geluid.
+import { h, clear } from './dom.js';
+import { icon, bodyMap, positionIcon } from './graphics.js';
+import { compileRoutine } from '../timeline.js';
+import {
+  createPlayer, start, tick, pause, resume, next, back, requestStop, cancelStop, confirmStop, view, sessionStatus, activeSec,
+} from '../engine.js';
+import { speechFor, displayFor, nextExerciseAfter } from '../cues.js';
+import { buildSession, localTimeZone } from '../session.js';
+import { formatDuration } from '../format.js';
+import { BREATHING } from '../texts.js';
+import { vibrate } from '../audio.js';
+import { createWakeLock } from '../wakelock.js';
+
+const RING_R = 45;
+const RING_C = 2 * Math.PI * RING_R;
+const WORKISH = new Set(['work', 'contract', 'relax']);
+
+// Resterende tijd: hele seconden naar boven, onder een minuut als "45".
+function clock(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return s < 60 ? String(s) : formatDuration(s);
+}
+
+export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished }) {
+  const root = h('section', { class: 'player', 'aria-label': 'Speler' });
+  let state = null;
+  let routine = null;
+  let raf = 0;
+  let shownIndex = -1;
+  let wakeStatus = 'onbekend';
+  let finishing = false;
+
+  const wake = createWakeLock((st) => { wakeStatus = st; renderBanners(); });
+
+  // ---------- Elementen ----------
+  const title = h('div', { class: 'player-title' });
+  const totalLeft = h('div', { class: 'player-total', 'aria-hidden': 'true' });
+  const banners = h('div', { class: 'player-banners' });
+  const visual = h('button', { class: 'player-visual', type: 'button', 'aria-label': 'Uitleg van de oefening', onclick: () => openDetail() });
+  const live = h('div', { class: 'player-live', 'aria-live': 'polite' });
+  const exName = h('h1', { class: 'player-name', tabindex: '-1' });
+  const side = h('div', { class: 'player-side' });
+  const label = h('div', { class: 'player-label' });
+  live.append(exName, side, label);
+  const ringFill = (() => {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', '50'); c.setAttribute('cy', '50'); c.setAttribute('r', String(RING_R));
+    c.setAttribute('class', 'ring-fill');
+    c.setAttribute('stroke-dasharray', String(RING_C));
+    return c;
+  })();
+  const ring = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  ring.setAttribute('viewBox', '0 0 100 100');
+  ring.setAttribute('class', 'ring');
+  ring.setAttribute('aria-hidden', 'true');
+  const ringTrack = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  ringTrack.setAttribute('cx', '50'); ringTrack.setAttribute('cy', '50'); ringTrack.setAttribute('r', String(RING_R));
+  ringTrack.setAttribute('class', 'ring-track');
+  ring.append(ringTrack, ringFill);
+  const digits = h('div', { class: 'player-digits', role: 'timer', 'aria-live': 'off' });
+  const timer = h('div', { class: 'player-timer' }, ring, digits);
+  const cue = h('p', { class: 'player-cue' });
+  const breath = h('p', { class: 'player-breath' });
+  const upNext = h('p', { class: 'player-next' });
+
+  const btnBack = h('button', { class: 'btn ctrl', type: 'button', 'aria-label': 'Terug naar het begin van deze oefening', onclick: () => act(back) }, icon('prev'));
+  const btnPlay = h('button', { class: 'btn ctrl primary', type: 'button', onclick: () => togglePause() });
+  const btnNext = h('button', { class: 'btn ctrl', type: 'button', 'aria-label': 'Volgende oefening', onclick: () => act(next) }, icon('next'));
+  const btnStop = h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Stoppen', onclick: () => askStop() }, icon('cross'));
+  const flash = h('div', { class: 'flash', 'aria-hidden': 'true' });
+
+  const confirm = h('dialog', { class: 'sheet', 'aria-labelledby': 'stop-title' },
+    h('div', { class: 'sheet-body' },
+      h('h2', { id: 'stop-title' }, 'Stoppen?'),
+      h('p', null, 'Wat je al gedaan hebt, wordt opgeslagen in je logboek.')),
+    h('div', { class: 'sheet-foot' },
+      h('button', { class: 'btn', type: 'button', onclick: () => { confirm.close(); act(cancelStop); } }, 'Doorgaan'),
+      h('button', { class: 'btn danger', type: 'button', onclick: () => { confirm.close(); act(confirmStop); } }, 'Stoppen')));
+  confirm.addEventListener('cancel', (e) => { e.preventDefault(); confirm.close(); act(cancelStop); });
+
+  const detail = h('dialog', { class: 'sheet', 'aria-labelledby': 'detail-title' });
+  detail.addEventListener('click', (e) => { if (e.target === detail) detail.close(); });
+
+  const runView = h('div', { class: 'player-run' },
+    h('header', { class: 'player-head' }, btnStop, title, totalLeft),
+    banners,
+    h('div', { class: 'player-main' }, visual, live, timer, cue, breath, upNext),
+    h('div', { class: 'player-controls' }, btnBack, btnPlay, btnNext));
+  const finishView = h('div', { class: 'player-finish', hidden: true });
+  root.append(runView, finishView, flash, confirm, detail);
+
+  // ---------- Afspelen ----------
+
+  // Aangeroepen in de click-handler van Start (gebruikersgebaar): audio is dan
+  // al ontgrendeld, en de eerste spraak gebeurt nog binnen dat gebaar.
+  function begin(playable, meta) {
+    const settings = getSettings();
+    routine = meta;
+    const { segments, totalSec } = compileRoutine(playable, lib.exercises, { timing: lib.meta.timing, sideSwitchSec: settings.sideSwitchSec });
+    routine.plannedSec = totalSec;
+    state = createPlayer(segments);
+    finishing = false;
+    shownIndex = -1;
+    runView.hidden = false;
+    finishView.hidden = true;
+    const now = performance.now();
+    const r = start(state, now);
+    state = r.state;
+    state.wallStart = Date.now() - (performance.now() - now);
+    title.textContent = routine.name;
+    handle(r.events);
+    wake.request();
+    renderBanners();
+    loop();
+  }
+
+  function loop() {
+    cancelAnimationFrame(raf);
+    const frame = () => {
+      if (!state) return;
+      const r = tick(state, performance.now());
+      state = r.state;
+      handle(r.events);
+      render();
+      if (state.status === 'running' || state.status === 'paused' || state.status === 'confirm') raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+  }
+
+  function act(fn) {
+    if (!state) return;
+    const r = fn(state, performance.now());
+    state = r.state;
+    handle(r.events);
+    render();
+    if (state.status === 'running' || state.status === 'paused') loop();
+  }
+
+  function togglePause() {
+    if (!state) return;
+    if (state.status === 'running') act(pause);
+    else if (state.status === 'paused') { audio.unlock(); act(resume); }
+  }
+
+  function askStop() {
+    if (!state || !['running', 'paused'].includes(state.status)) return;
+    act(requestStop);
+    if (state.status === 'confirm') confirm.showModal();
+  }
+
+  // Gebeurtenissen → geluid, spraak, trilling, flits. Bij een inhaalslag
+  // (scherm was verborgen) alleen het laatste segment aankondigen.
+  function handle(events) {
+    const segEvents = events.filter((e) => e.type === 'segment');
+    const last = segEvents[segEvents.length - 1];
+    if (last) {
+      const seg = last.segment;
+      if (WORKISH.has(seg.kind)) audio.beep('start');
+      if (seg.kind === 'switch') {
+        audio.beep('switch');
+        vibrate(150);
+        doFlash();
+      }
+      audio.speak(speechFor(state.segments, last.index, lib.exercises));
+    }
+    for (const e of events) {
+      if (e.type === 'halfway') audio.beep('halfway');
+      if (e.type === 'countdown') audio.beep('countdown');
+      if (e.type === 'done') {
+        audio.beep('done');
+        vibrate([200, 100, 200]);
+      }
+    }
+    if (events.some((e) => e.type === 'done' || e.type === 'stopped')) finish();
+  }
+
+  function doFlash() {
+    flash.classList.remove('on');
+    void flash.offsetWidth; // animatie opnieuw starten
+    flash.classList.add('on');
+  }
+
+  // ---------- Tekenen ----------
+
+  function renderBanners() {
+    const items = [];
+    if (state && (wakeStatus === 'niet-ondersteund' || wakeStatus === 'mislukt')) {
+      items.push(h('p', { class: 'warn-bar' }, 'Zet automatisch vergrendelen tijdelijk uit'));
+    }
+    const settings = getSettings();
+    if (state && settings.voiceOn && audio.voicesKnown() && !audio.hasDutchVoice()) {
+      items.push(h('p', { class: 'warn-bar' }, 'Geen Nederlandse stem gevonden. Je hoort alleen piepjes.'));
+    }
+    clear(banners).append(...items);
+  }
+
+  function render() {
+    if (!state || state.status === 'done' || state.status === 'stopped') return;
+    const now = performance.now();
+    const v = view(state, now);
+    const idx = state.segmentIndex;
+    if (idx !== shownIndex) {
+      shownIndex = idx;
+      const d = displayFor(state.segments, idx, lib.exercises);
+      const ex = d.exercise;
+      exName.textContent = ex?.name ?? '';
+      side.textContent = d.sideLabel;
+      label.textContent = d.label;
+      clear(visual).append(
+        ex ? bodyMap(ex.targets, { crop: 'mini', aspect: 72 / 104, className: 'mini-lg' }) : null,
+        ex ? positionIcon(ex.position, 'pos-lg') : null);
+      cue.textContent = ex ? ex.cues[0] : '';
+      breath.textContent = ex ? BREATHING[ex.type] : '';
+      const after = nextExerciseAfter(state.segments, idx, lib.exercises);
+      upNext.textContent = after && after !== ex ? `Volgende: ${after.name}` : '';
+      const step = state.segments[idx].stepIndex;
+      const steps = new Set(state.segments.filter((x) => x.stepIndex !== null).map((x) => x.stepIndex)).size;
+      title.textContent = `${routine.name} · ${step === null ? 'start' : `${step + 1}/${steps}`}`;
+      root.dataset.kind = state.segments[idx].kind;
+    }
+    const seg = v.segment;
+    const frac = seg.durationSec ? Math.min(1, Math.max(0, v.remainingMs / (seg.durationSec * 1000))) : 0;
+    ringFill.setAttribute('stroke-dashoffset', String(RING_C * (1 - frac)));
+    const text = clock(v.remainingMs);
+    if (digits.textContent !== text) digits.textContent = text;
+    totalLeft.textContent = formatDuration(Math.ceil(v.totalRemainingMs / 1000));
+    const paused = state.status !== 'running';
+    btnPlay.replaceChildren(icon(paused ? 'play' : 'pause'));
+    btnPlay.setAttribute('aria-label', paused ? 'Hervatten' : 'Pauze');
+    root.classList.toggle('paused', paused);
+  }
+
+  // Tik op de tekening: uitleg, de timer loopt door.
+  function openDetail() {
+    const d = state ? displayFor(state.segments, state.segmentIndex, lib.exercises) : null;
+    const ex = d?.exercise;
+    if (!ex) return;
+    clear(detail).append(
+      h('div', { class: 'sheet-body' },
+        h('div', { class: 'sheet-head' }, h('h2', { id: 'detail-title' }, ex.name)),
+        bodyMap(ex.targets, { className: 'large' }),
+        h('ol', { class: 'cues' }, ex.cues.map((c) => h('li', null, c))),
+        h('p', null, h('strong', null, 'Ademhaling: '), BREATHING[ex.type]),
+        h('p', null, h('strong', null, 'Knie: '), `max ${ex.kneeFlexionMaxDeg}°. ${ex.pfpsNote}`),
+        h('p', null, h('strong', null, 'Regressie: '), ex.regression),
+        h('p', null, h('strong', null, 'Progressie: '), ex.progression)),
+      h('div', { class: 'sheet-foot' }, h('button', { class: 'btn primary', type: 'button', onclick: () => detail.close() }, 'Sluiten')));
+    detail.showModal();
+  }
+
+  // ---------- Afronden (§6.9) ----------
+
+  function finish() {
+    if (finishing) return;
+    finishing = true;
+    cancelAnimationFrame(raf);
+    wake.release();
+    if (confirm.open) confirm.close();
+    if (detail.open) detail.close();
+    const status = sessionStatus(state);
+    const run = {
+      startedAtMs: state.wallStart,
+      endedAtMs: state.wallStart + (state.endedAt - state.startedAt),
+      plannedSec: routine.plannedSec,
+      activeSec: activeSec(state),
+      status,
+      segmentsDone: state.segmentsDone,
+    };
+    const intensity = slider('Rekintensiteit', 5);
+    const knee = slider('Kniepijn tijdens', 0);
+    const notes = h('textarea', { rows: 3, 'aria-label': 'Notitie', placeholder: 'Notitie (optioneel)' });
+    const save = h('button', { class: 'btn primary', type: 'button' }, 'Opslaan');
+    const error = h('p', { class: 'warn-bar', role: 'alert', hidden: true });
+    save.addEventListener('click', async () => {
+      save.disabled = true;
+      const session = buildSession({
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        tz: localTimeZone(),
+        routine,
+        run,
+        finish: { stretchIntensity: intensity.value(), kneePainDuring: knee.value(), notes: notes.value.trim() },
+      });
+      try {
+        await onSave(session);
+        state = null;
+        onFinished();
+      } catch (e) {
+        save.disabled = false;
+        error.hidden = false;
+        error.textContent = `Opslaan is niet gelukt: ${e?.message ?? e}`;
+      }
+    });
+    clear(finishView).append(
+      h('div', { class: 'screen' },
+        h('header', { class: 'card-head' },
+          h('h1', { tabindex: '-1' }, status === 'voltooid' ? 'Klaar!' : 'Gestopt'),
+          h('p', { class: 'evidence' }, `${routine.name} · ${status} · actief ${formatDuration(run.activeSec)} van ${formatDuration(run.plannedSec)}`)),
+        h('section', { class: 'section' }, intensity.el, knee.el, notes),
+        error),
+      h('div', { class: 'toolbar' }, save));
+    runView.hidden = true;
+    finishView.hidden = false;
+    finishView.querySelector('h1').focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+  }
+
+  function slider(text, initial) {
+    const out = h('output', null, String(initial));
+    const input = h('input', { type: 'range', min: 0, max: 10, step: 1, value: initial, 'aria-label': `${text} (0–10)` });
+    input.addEventListener('input', () => { out.textContent = input.value; });
+    return {
+      el: h('label', { class: 'slider' }, h('span', null, `${text} (0–10)`, out), input),
+      value: () => Number(input.value),
+    };
+  }
+
+  // ---------- Buitenwereld ----------
+
+  document.addEventListener('visibilitychange', () => {
+    if (!state) return;
+    if (document.visibilityState === 'hidden' && state.status === 'running' && getSettings().autoPauseOnHide) {
+      act(pause);
+    }
+    if (document.visibilityState === 'visible' && (state.status === 'running' || state.status === 'paused')) loop();
+  });
+
+  return {
+    root,
+    begin,
+    askStop,
+    // Actief = er loopt een routine of het afrondscherm staat open.
+    isActive: () => state !== null,
+    focus: () => (finishing ? finishView : runView).querySelector('h1')?.focus({ preventScroll: true }),
+  };
+}

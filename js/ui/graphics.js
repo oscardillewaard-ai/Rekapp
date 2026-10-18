@@ -53,6 +53,14 @@ const ICONS = {
   back: [['path', { d: 'M15 5l-7 7 7 7' }]],
   knee: [['path', { d: 'M7 3.5l5 8.5-3 8.5' }], ['circle', { cx: 12, cy: 12, r: 1.6 }]],
   info: [['circle', { cx: 12, cy: 12, r: 8.5 }], ['path', { d: 'M12 11v5.5M12 7.6v.2' }]],
+  home: [['path', { d: 'M4 11l8-6.5 8 6.5M6.5 9.5V19h11V9.5' }]],
+  list: [['path', { d: 'M9 6.5h11M9 12h11M9 17.5h11' }], ['circle', { cx: 4.5, cy: 6.5, r: 1 }], ['circle', { cx: 4.5, cy: 12, r: 1 }], ['circle', { cx: 4.5, cy: 17.5, r: 1 }]],
+  gear: [['circle', { cx: 12, cy: 12, r: 3 }], ['path', { d: 'M12 3.5v2.5M12 18v2.5M3.5 12H6M18 12h2.5M6 6l1.8 1.8M16.2 16.2L18 18M6 18l1.8-1.8M16.2 7.8L18 6' }]],
+  play: [['path', { d: 'M8 5.5v13l10.5-6.5z' }]],
+  pause: [['path', { d: 'M8.5 5.5v13M15.5 5.5v13' }]],
+  prev: [['path', { d: 'M6.5 5.5v13M18 6l-8.5 6 8.5 6z' }]],
+  next: [['path', { d: 'M17.5 5.5v13M6 6l8.5 6L6 18z' }]],
+  speaker: [['path', { d: 'M4.5 9.5h3.5l4.5-4v13l-4.5-4H4.5zM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11' }]],
 };
 
 export function icon(name, cls = '') {
