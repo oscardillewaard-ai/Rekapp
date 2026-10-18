@@ -1,6 +1,6 @@
 // Routinebouwer (§6.3). Werkt op een kopie; Opslaan schrijft naar de opslag.
-import { h, clear } from './dom.js';
-import { icon, starsWithScore, bodyMap, positionIcon } from './graphics.js';
+import { h, fill } from './dom.js';
+import { icon, starsWithScore } from './graphics.js';
 import { rate } from '../library.js';
 import { formatDose, formatDuration } from '../format.js';
 import { autoTransitionSec } from '../timeline.js';
@@ -94,7 +94,7 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
         custom ? stepper('Overgang', step.transitionAfterSec, () => update(setTransition(step, step.transitionAfterSec - 5)), () => update(setTransition(step, step.transitionAfterSec + 5)), ' s') : null);
     }
 
-    clear(stepSheet).append(
+    fill(stepSheet, 
       h('div', { class: 'sheet-body' },
         h('div', { class: 'sheet-head' },
           h('h2', { id: 'step-title' }, ex.name),
@@ -177,8 +177,9 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
       const li = h('li', { class: 'step-row' });
       li.append(
         dragHandle(i, li, ex.name),
+        // §6.3: sleepgreep, naam, sterren, dosischip (tik om te bewerken),
+        // kniebadge, verwijderen. Geen minikaart: de naam heeft de ruimte nodig.
         h('button', { class: `row step-main${gate.allowed ? '' : ' locked'}`, type: 'button', onclick: () => openStep(i), 'aria-label': `${ex.name}, ${formatDose(step, ex)}. Tik om te bewerken.` },
-          bodyMap(ex.targets, { crop: 'mini', className: 'mini' }) ?? positionIcon(ex.position, 'mini'),
           h('div', { class: 'main' },
             h('div', { class: 'name' }, ex.name),
             h('div', { class: 'meta' }, starsWithScore(rate(ex, lib.meta, settings.weights)),
@@ -203,7 +204,7 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
         h('td', null, week ?? '–'));
     });
 
-    clear(root).append(
+    fill(root, 
       h('header', { class: 'card-head' }, h('h1', { tabindex: '-1' }, isNew ? 'Nieuwe routine' : 'Routine bewerken')),
       h('section', { class: 'section' },
         h('label', { class: 'field stack' }, h('span', null, 'Naam'), nameInput),
@@ -231,13 +232,13 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
           h('thead', null, h('tr', null, h('th', { scope: 'col' }, 'Spiergroep'), h('th', { scope: 'col' }, 'Per sessie'), h('th', { scope: 'col' }, 'Per week'))),
           h('tbody', null, doseRows))) : null,
       isNew ? null : h('section', { class: 'section actions' },
-        h('button', { class: 'btn', type: 'button', onclick: () => onDuplicate(r) }, 'Dupliceren'),
+        h('button', { class: 'btn', type: 'button', onclick: async () => { if (dirty()) await save(); onDuplicate(r); } }, 'Dupliceren'),
         h('button', { class: 'btn danger', type: 'button', onclick: () => confirmDelete() }, 'Verwijderen')));
     renderToolbar();
   }
 
   function renderToolbar() {
-    clear(toolbar).append(
+    fill(toolbar, 
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Terug', onclick: () => leave() }, icon('back')),
       h('button', { class: 'btn', type: 'button', disabled: !dirty(), onclick: () => save() }, 'Opslaan'),
       h('button', { class: 'btn primary', type: 'button', disabled: !r.steps.length, onclick: () => start() }, icon('play'), 'Start'));
@@ -267,20 +268,23 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
   }
 
   function confirmDelete() {
-    clear(leaveSheet).append(
+    fill(leaveSheet, 
       h('div', { class: 'sheet-body' }, h('h2', { id: 'leave-title' }, `"${r.name}" verwijderen?`), h('p', null, 'Je logboek blijft bewaard.')),
       h('div', { class: 'sheet-foot' },
         h('button', { class: 'btn', type: 'button', onclick: () => leaveSheet.close() }, 'Annuleren'),
-        h('button', { class: 'btn danger', type: 'button', onclick: async () => { leaveSheet.close(); await onDelete(r); } }, 'Verwijderen')));
+        h('button', { class: 'btn danger', type: 'button', onclick: async () => { leaveSheet.close(); const gone = r; forget(); await onDelete(gone); } }, 'Verwijderen')));
     leaveSheet.showModal();
   }
 
+  // Weg uit de bouwer. Met niet-opgeslagen wijzigingen eerst vragen; "Niet
+  // opslaan" laat de werkkopie los, zodat de router daarna vrij kan gaan.
+  function forget() { r = null; isNew = false; saved = ''; }
   function leave() {
-    if (!dirty() || !r.steps.length && isNew) { onBack(); return; }
-    clear(leaveSheet).append(
+    if (!dirty() || (!r.steps.length && isNew)) { forget(); onBack(); return; }
+    fill(leaveSheet, 
       h('div', { class: 'sheet-body' }, h('h2', { id: 'leave-title' }, 'Wijzigingen opslaan?')),
       h('div', { class: 'sheet-foot' },
-        h('button', { class: 'btn', type: 'button', onclick: () => { leaveSheet.close(); onBack(); } }, 'Niet opslaan'),
+        h('button', { class: 'btn', type: 'button', onclick: () => { leaveSheet.close(); forget(); onBack(); } }, 'Niet opslaan'),
         h('button', { class: 'btn primary', type: 'button', onclick: async () => { leaveSheet.close(); await save(); onBack(); } }, 'Opslaan')));
     leaveSheet.showModal();
   }
@@ -294,6 +298,7 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
       render();
     },
     isDirty: () => r !== null && dirty(),
+    currentId: () => r?.id ?? null,
     leave,
   };
 }

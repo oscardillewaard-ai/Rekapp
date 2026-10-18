@@ -1,5 +1,5 @@
 // Oefeningkaart (§6.2), van boven naar beneden in de volgorde van de spec.
-import { h, clear } from './dom.js';
+import { h, clear, fill } from './dom.js';
 import { starsWithScore, icon, bodyMap, positionIcon } from './graphics.js';
 import { rate } from '../library.js';
 import { formatDose, evidenceLabel, SLOT_LABELS, TYPE_LABELS, SIDED_LABELS } from '../format.js';
@@ -24,7 +24,7 @@ function sourceItem(src) {
     : src.citation);
 }
 
-export function createExerciseScreen({ lib, onBack, getContext, onTry }) {
+export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) {
   const root = h('section', { class: 'screen' });
   const toolbar = h('div', { class: 'toolbar' });
   const rubricSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'rubric-title' });
@@ -33,7 +33,7 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry }) {
   function openRubric(letter, ex) {
     const r = RUBRICS[letter];
     const value = ex.scores[letter];
-    clear(rubricSheet).append(
+    fill(rubricSheet, 
       h('div', { class: 'sheet-body' },
         h('div', { class: 'sheet-head' },
           h('h2', { id: 'rubric-title' }, r.title),
@@ -55,14 +55,14 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry }) {
     const ex = lib.exercises.get(id);
     clear(root);
     const back = h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Terug naar de bibliotheek', onclick: onBack }, icon('back'));
-    clear(toolbar).append(back);
+    fill(toolbar, back);
     if (!ex) {
       root.append(h('header', { class: 'topbar' }, h('h1', { tabindex: '-1' }, 'Oefening niet gevonden')),
         h('p', null, `Er is geen oefening met de naam "${id}".`));
       return;
     }
 
-    const rating = rate(ex, lib.meta);
+    const rating = rate(ex, lib.meta, getContext().settings.weights);
     const primary = ex.targets.filter((t) => t.weight === 1).map((t) => lib.groups.get(t.group));
     const secondary = ex.targets.filter((t) => t.weight !== 1).map((t) => lib.groups.get(t.group));
     const evidence = evidenceLabel(ex.scores.B, lib.meta);
@@ -141,14 +141,15 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry }) {
     const gate = access(ex, getContext().knee, lib.meta.knee);
     const lockIcon = gate.allowed ? null : icon('lock');
     toolbar.append(
-      h('button', { class: 'btn wrap', type: 'button', disabled: true }, lockIcon, CARD.addButton),
+      h('button', {
+        class: 'btn wrap', type: 'button', disabled: !gate.allowed,
+        onclick: gate.allowed ? () => onAdd(ex) : null,
+      }, lockIcon, CARD.addButton),
       h('button', {
         class: 'btn primary wrap', type: 'button', disabled: !gate.allowed,
         onclick: gate.allowed ? () => onTry(ex) : null,
       }, gate.allowed ? null : icon('lock'), CARD.tryButton));
-    root.append(h('p', { class: 'note' }, gate.allowed
-      ? 'Toevoegen aan een routine komt in een volgende versie.'
-      : gate.codes.map((c) => WARNINGS[c].text).join(' ')));
+    if (!gate.allowed) root.append(h('p', { class: 'note' }, gate.codes.map((c) => WARNINGS[c].text).join(' ')));
   }
 
   return { root, toolbar, sheet: rubricSheet, render };

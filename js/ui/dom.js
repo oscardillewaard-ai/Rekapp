@@ -39,3 +39,11 @@ export function clear(el) {
   while (el.firstChild) el.firstChild.remove();
   return el;
 }
+
+// Inhoud vervangen. Net als bij h() vallen null, undefined en false weg; de
+// gewone el.append() zou er de tekst "null" van maken.
+export function fill(el, ...children) {
+  clear(el);
+  append(el, children);
+  return el;
+}

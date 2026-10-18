@@ -1,7 +1,7 @@
 // Speler (§6.8): timeline afspelen met timer, kantwissels, geluid, spraak en
 // wake lock; daarna het afrondscherm (§6.9). De tijd komt uit tijdstempels
 // (engine.js); dit bestand tekent alleen en zet gebeurtenissen om in geluid.
-import { h, clear } from './dom.js';
+import { h, fill } from './dom.js';
 import { icon, bodyMap, positionIcon } from './graphics.js';
 import { compileRoutine } from '../timeline.js';
 import {
@@ -228,7 +228,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
     if (state && settings.voiceOn && !audio.hasDutchVoice()) {
       items.push(h('p', { class: 'warn-bar' }, 'Geen Nederlandse stem gevonden. Je hoort alleen piepjes.'));
     }
-    clear(banners).append(...items);
+    fill(banners, ...items);
   }
 
   function render() {
@@ -243,7 +243,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
       exName.textContent = ex?.name ?? '';
       side.textContent = d.sideLabel;
       label.textContent = d.label;
-      clear(visual).append(
+      fill(visual, 
         ex ? bodyMap(ex.targets, { crop: 'mini', aspect: 72 / 104, className: 'mini-lg' }) : null,
         ex ? positionIcon(ex.position, 'pos-lg') : null);
       cue.textContent = ex ? ex.cues[0] : '';
@@ -280,7 +280,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
     const d = state ? displayFor(state.segments, state.segmentIndex, lib.exercises) : null;
     const ex = d?.exercise;
     if (!ex) return;
-    clear(detail).append(
+    fill(detail, 
       h('div', { class: 'sheet-body' },
         h('div', { class: 'sheet-head' }, h('h2', { id: 'detail-title' }, ex.name)),
         bodyMap(ex.targets, { className: 'large' }),
@@ -340,7 +340,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
         showError(e);
       }
     });
-    clear(finishView).append(
+    fill(finishView, 
       h('div', { class: 'screen' },
         h('header', { class: 'card-head' },
           h('h1', { tabindex: '-1' }, status === 'voltooid' ? 'Klaar!' : 'Gestopt'),

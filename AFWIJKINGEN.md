@@ -54,8 +54,8 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   oefening zijn (fase 2), toont de kaart een uitsnede van de lichaamskaart plus
   het positie-icoon, zoals §6.2 voorschrijft.
 - **Knoppen die later komen:** "Toevoegen aan routine" (M4), "Probeer nu" (M3)
-  en "Ontgrendelen via 48-uurstest" (M5) staan al op de kaart, maar zijn
-  uitgeschakeld tot hun mijlpaal klaar is. Bij een vergrendelde oefening blijven
+  en "Ontgrendelen via 48-uurstest" (M5) staan al op de kaart en werken vanaf
+  hun mijlpaal. Bij een vergrendelde oefening blijven
   toevoegen en afspelen altijd uit (W1).
 
 ## Invulling van open punten in §6.8 (M3, speler)
@@ -103,6 +103,50 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   zijn hard, dus dan geldt de opvlammingsmodus (alles boven 45° uit, W8) met
   een melding bovenaan, tot de opslag weer werkt. *Ter bevestiging aan Oscar
   voorgelegd.*
+
+## Invulling van open punten in §6.3–6.4 en §6.11 (M4)
+
+- **Navigatie:** een tabbalk met Start · Routines · Bibliotheek · Week · Meer.
+  "Meer" bevat Instellingen en krijgt in M6/M7 logboek, metingen en "Over".
+  De spec noemt geen hoofdnavigatie; dit houdt alles met één duim bereikbaar.
+- **Routines:** je eigen routines en daaronder de zes sjablonen. Een sjabloon
+  opent als preview met "Kopiëren en aanpassen"; een eigen routine met
+  "Bewerken". De kopie heet "<naam> (kopie)" en krijgt `fromTemplate`.
+- **Stappenlijst in de bouwer:** precies de onderdelen uit §6.3 (sleepgreep,
+  naam, sterren, dosischip, kniebadge, verwijderen), zonder minikaart, zodat
+  de naam op 390 px past. Een tik op de rij opent het dosisblad; daar staan
+  ook Omhoog/Omlaag (alternatief voor slepen, ook met het toetsenbord).
+- **"+ Oefening":** opent de bibliotheek schermvullend, met dezelfde filters
+  en zoekfunctie. Een vergrendelde oefening (W1), of tijdens een opvlamming
+  één boven 45° (W8), kun je niet kiezen; de reden verschijnt bovenaan. Het
+  openen van het ontgrendelprotocol vanaf die tik (§6.3) komt in M5, met het
+  protocol zelf.
+- **"Toevoegen aan routine"** op de oefenkaart: kies een eigen routine of
+  "+ Nieuwe routine". De oefening komt achteraan, met de standaarddosis, en
+  de bouwer opent. De knie-poort wordt daarbij opnieuw gecontroleerd.
+- **Niet-opgeslagen wijzigingen:** bij terug (knop of telefoon) vraagt de
+  bouwer "Wijzigingen opslaan?". Een nieuwe, nog lege routine verdwijnt
+  zonder vragen. "Start" en "Dupliceren" slaan eerst op.
+- **Standaard statische houdtijd (§6.11):** geldt voor nieuwe statische
+  stappen waarvan de standaarddosis in de bibliotheek 45 s is (de
+  standaardwaarde). Een oefening met een eigen, afwijkende standaarddosis
+  (bv. 60 s) houdt die. Keuze uit 30, 45, 60, 75 of 90 s.
+- **Weging aanpassen:** stappen van 5 %. Zolang de som niet 100 % is, zegt de
+  app dat en blijft de vorige geldige weging gelden ("som altijd 100 %").
+  Alleen de getoonde sterren veranderen; de knie-poort (K ≤ 2 → slot en
+  hoogstens 2 sterren) staat los van de weging.
+- **Suggestie in "Mijn week" (§6.4.2):** f is het hoogste "keer per week" van
+  je actieve routines (daar voeg je de tijd het makkelijkst toe); zonder
+  actieve routines 7. De suggestie staat alleen bij groepen die je al traint
+  en die gepland onder 300 s blijven, niet bij groepen die je niet doet.
+- **Onderhoudstip:** 12 weken na je eerste sessie, of zodra een spiergroep in
+  vier opeenvolgende weken (telkens 7 × 24 uur terug) werkelijk ≥ 300 s per
+  kant haalde.
+- **Status in woorden:** naast de kleur staat "niet getraind", "onder de
+  drempel", "op dosis" of "plateau", zodat het ook in nachtmodus en bij
+  kleurenblindheid leesbaar is.
+- **Startscherm:** boven de sjablonen staan je actieve routines en een korte
+  weekkaart (tik → "Mijn week").
 
 ## Keuzes bij open of tegenstrijdige punten (akkoord Oscar, 17-10-2026)
 

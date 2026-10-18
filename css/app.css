@@ -100,7 +100,7 @@ img, svg { display: block; }
 
 .screen { max-width: 40rem; margin: 0 auto; padding: 0 1rem calc(var(--toolbar-h) + var(--safe-b) + 1.5rem); }
 /* Lange woorden breken alleen af als ze anders niet passen (grote tekst). */
-.screen, dialog.sheet, .toolbar { overflow-wrap: anywhere; }
+.screen, dialog.sheet, .toolbar { overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
 
 .topbar {
   position: sticky; top: 0; z-index: 5;
@@ -262,7 +262,7 @@ img, svg { display: block; }
 
 .scores { display: grid; gap: .25rem; }
 .score-bar {
-  display: grid; grid-template-columns: minmax(0, 8.25rem) minmax(2rem, 1fr) auto; align-items: center; gap: .75rem;
+  display: grid; grid-template-columns: minmax(0, 9.5rem) minmax(2rem, 1fr) auto; align-items: center; gap: .75rem;
   width: 100%; min-height: var(--tap); padding: 0 .5rem;
   border: 0; border-radius: 10px; background: transparent; text-align: left; cursor: pointer;
 }
@@ -385,6 +385,9 @@ body.with-tabbar .screen { padding-bottom: calc(var(--toolbar-h) + var(--tabbar-
 /* ---------- Start ---------- */
 
 .slot-card h2 { font-size: 1.25rem; }
+a.week-card { display: block; color: var(--text); text-decoration: none; }
+a.week-card h2 { display: flex; justify-content: space-between; align-items: center; }
+a.week-card:active { background: var(--surface-2); }
 .variant-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
 .btn.variant { flex-direction: column; gap: 0; min-height: 5rem; text-decoration: none; }
 .variant-min { font-size: 1.75rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -524,18 +527,23 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: 1; }
 .step-row { display: grid; grid-template-columns: var(--tap) minmax(0, 1fr) var(--tap); gap: .375rem; align-items: center; }
 .step-row.dragging { position: relative; z-index: 5; opacity: .9; box-shadow: 0 6px 18px rgba(0, 0, 0, .6); }
 .step-row.drop-target { outline: 2px dashed var(--accent); border-radius: var(--radius); }
-.step-main { width: 100%; border: 0; text-align: left; cursor: pointer; }
+.step-main { width: 100%; border: 0; text-align: left; cursor: pointer; grid-template-columns: minmax(0, 1fr) auto; padding-left: .75rem; }
+@container (max-width: 20rem) {
+  .step-main { grid-template-columns: minmax(0, 1fr); }
+  .step-main .side { grid-column: 1; }
+}
 .drag { touch-action: none; cursor: grab; }
 .grip { font-size: 1.25rem; letter-spacing: -.2em; color: var(--muted); }
 .dose-chip { background: var(--surface-3); color: var(--text); }
 .add-step { width: 100%; margin-top: .75rem; }
 .field.stack { flex-direction: column; align-items: stretch; gap: .375rem; }
 .field input[type="text"] {
+  width: 100%; min-width: 0;
   min-height: var(--tap); padding: 0 .875rem; border-radius: 10px;
   border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font-size: 1rem;
 }
 .segmented { margin-top: .75rem; }
-.stepper { display: grid; grid-template-columns: minmax(0, 1fr) var(--tap) 4.5rem var(--tap); align-items: center; gap: .5rem; margin-top: .75rem; }
+.stepper { display: grid; grid-template-columns: minmax(0, 1fr) var(--tap) 3.75rem var(--tap); align-items: center; gap: .5rem; margin-top: .75rem; }
 .stepper-label { overflow-wrap: anywhere; }
 .stepper output { text-align: center; font-weight: 700; font-size: 1.125rem; font-variant-numeric: tabular-nums; }
 .time-bar {
@@ -556,10 +564,32 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: 1; }
 .dose-table th, .dose-table td { padding: .375rem .25rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .dose-table thead th { color: var(--muted); font-weight: 600; }
 .actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
-.actions .btn { flex: 1 1 7rem; }
+.actions .btn { flex: 1 1 auto; overflow-wrap: normal; }
 
 /* ---------- Meldingen bovenaan ---------- */
 
 .app-notices { max-width: 40rem; margin: 0 auto; padding: 0 1rem; }
 .app-notices:empty { display: none; }
 .app-notices .warn-bar { margin: calc(env(safe-area-inset-top, 0px) + .5rem) 0 .5rem; }
+
+/* ---------- Kiezer in de bouwer (M4) ---------- */
+/* Volledig scherm: kop en meldingen boven, de lijst scrollt, zoeken en
+   filters onderin de duimzone (zoals in de bibliotheek). */
+dialog.sheet.picker { height: 100dvh; max-height: 100dvh; border-radius: 0; margin: 0 auto; }
+.picker .screen { display: flex; flex-direction: column; height: 100%; width: 100%; padding: 0; }
+.picker .topbar { position: static; order: 0; padding: calc(env(safe-area-inset-top, 0px) + .25rem) 1rem .25rem; }
+.picker .topbar, .picker .picker-notice, .picker .toolbar { flex: none; }
+.picker .picker-notice { order: 1; padding: 0 1rem; }
+.picker .picker-notice:empty { display: none; }
+.picker .picker-notice .locked-bar { margin: .5rem 0; }
+.picker .lib-list { order: 2; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 1rem 1rem; overscroll-behavior: contain; }
+.picker .toolbar { order: 3; position: static; }
+button.row { width: 100%; border: 0; text-align: left; cursor: pointer; font: inherit; }
+
+/* ---------- Meer ---------- */
+
+.menu-row { grid-template-columns: auto minmax(0, 1fr) auto; text-decoration: none; }
+.menu-row svg { width: 1.5rem; height: 1.5rem; }
+.menu-row .chev-right { transform: rotate(180deg); color: var(--muted); }
+.picker .topbar .btn.icon { order: 1; }
+.picker .topbar .count { order: 2; flex-basis: 100%; }

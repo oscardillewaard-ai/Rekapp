@@ -1,6 +1,6 @@
 // "Mijn week" (§6.4.2): per spiergroep een balk met de laagste kant,
 // markeringen bij 300 en 600 s, gepland en werkelijk, dynamisch klein eronder.
-import { h, clear } from './dom.js';
+import { h, fill } from './dom.js';
 import { weekRows, suggestionText, maintenanceTipDue, MAINTENANCE_TIP } from '../week.js';
 import { REGIONS } from '../catalog.js';
 
@@ -50,7 +50,7 @@ export function createWeekScreen({ lib, getData }) {
     const now = Date.now();
     const rows = weekRows(lib, { routines, sessions, now });
     const active = routines.filter((r) => r.active !== false);
-    clear(root).append(
+    fill(root, 
       h('header', { class: 'topbar' }, h('h1', { id: 'week-title', tabindex: '-1' }, 'Mijn week')),
       h('p', { class: 'note' },
         `Seconden statisch of PNF rekken per kant per week. Gepland: ${active.length} actieve ${active.length === 1 ? 'routine' : 'routines'} × keer per week. Werkelijk: je logboek van de laatste 7 dagen. Streepjes bij 300 en 600 s.`),

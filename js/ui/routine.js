@@ -1,20 +1,20 @@
 // Routinepreview: oefeningen met dosis en knie, totale tijd, grote Start-knop.
 // Wat de knie-poort of de opvlammingsmodus blokkeert (W1, W8) gaat er vóór
 // het afspelen uit; dat staat er duidelijk bij.
-import { h, clear } from './dom.js';
+import { h, clear, fill } from './dom.js';
 import { icon, bodyMap, positionIcon, starsWithScore } from './graphics.js';
 import { compileRoutine } from '../timeline.js';
 import { formatDose, formatDuration } from '../format.js';
 import { routineWarnings, playableRoutine, WARNINGS } from '../warnings.js';
 import { rate } from '../library.js';
 
-export function createRoutineScreen({ lib, getContext, onStart, onBack }) {
+export function createRoutineScreen({ lib, getContext, onStart, onBack, onCopy, onEdit }) {
   const root = h('section', { class: 'screen' });
   const toolbar = h('div', { class: 'toolbar' });
 
   function render(routine) {
     clear(root);
-    clear(toolbar).append(h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Terug', onclick: onBack }, icon('back')));
+    fill(toolbar, h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Terug', onclick: onBack }, icon('back')));
     if (!routine) {
       root.append(h('header', { class: 'topbar' }, h('h1', { tabindex: '-1' }, 'Routine niet gevonden')));
       return;
@@ -31,7 +31,11 @@ export function createRoutineScreen({ lib, getContext, onStart, onBack }) {
         h('h1', { tabindex: '-1' }, routine.name),
         h('p', { class: 'evidence' },
           `${formatDuration(total)} · ${playable.steps.length} ${playable.steps.length === 1 ? 'oefening' : 'oefeningen'}`,
-          routine.template ? ' · Sjabloon (alleen-lezen)' : '')));
+          routine.template ? ' · Sjabloon (alleen-lezen)' : ` · ${routine.timesPerWeek}× per week${routine.active === false ? ' · niet actief' : ''}`),
+        // Sjablonen zijn alleen-lezen (§6.3): kopiëren en dan aanpassen.
+        routine.template
+          ? h('button', { class: 'btn', type: 'button', onclick: () => onCopy(routine) }, 'Kopiëren en aanpassen')
+          : h('button', { class: 'btn', type: 'button', onclick: () => onEdit(routine) }, 'Bewerken')));
 
     if (removed.length) {
       root.append(h('div', { class: 'locked-bar', role: 'note' },

@@ -1,5 +1,5 @@
 // Routines: je eigen routines en de zes sjablonen (alleen-lezen).
-import { h, clear } from './dom.js';
+import { h, fill } from './dom.js';
 import { formatDuration } from '../format.js';
 import { totalSec } from '../routines.js';
 
@@ -27,7 +27,7 @@ export function createRoutinesScreen({ lib, getData, onNew }) {
   function render() {
     const { routines } = getData();
     const mine = [...routines].sort((a, b) => a.name.localeCompare(b.name, 'nl'));
-    clear(root).append(
+    fill(root, 
       h('header', { class: 'topbar' }, h('h1', { id: 'routines-title', tabindex: '-1' }, 'Routines')),
       toolbar,
       h('h2', { class: 'region-title' }, 'Mijn routines'),

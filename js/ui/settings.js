@@ -1,7 +1,10 @@
 // Instellingen (§6.11). Elke wijziging wordt direct opgeslagen. Latere
 // mijlpalen voegen weging, opvlamming, export/import en opslag toe.
-import { h, clear } from './dom.js';
+import { h, fill } from './dom.js';
 import { icon } from './graphics.js';
+import { DEFAULT_SETTINGS } from '../settings.js';
+
+const LETTER_NAMES = { B: 'Bewijs', K: 'Knieveiligheid', D: 'Doelgerichtheid', R: 'Relevantie', P: 'Praktisch' };
 
 export function createSettingsScreen({ audio, getSettings, update }) {
   const root = h('section', { class: 'screen', 'aria-labelledby': 'settings-title' });
@@ -17,10 +20,10 @@ export function createSettingsScreen({ audio, getSettings, update }) {
 
   function voiceSelect() {
     const wrap = h('div');
-    const fill = () => {
+    const fillVoices = () => {
       const voices = audio.dutchVoices();
       if (!voices.length) {
-        clear(wrap).append(h('p', { class: 'note' }, 'Geen Nederlandse stem gevonden op dit toestel. Je hoort alleen piepjes.'));
+        fill(wrap, h('p', { class: 'note' }, 'Geen Nederlandse stem gevonden op dit toestel. Je hoort alleen piepjes.'));
         return;
       }
       const select = h('select', { 'aria-label': 'Stem' },
@@ -28,11 +31,11 @@ export function createSettingsScreen({ audio, getSettings, update }) {
         voices.map((v) => h('option', { value: v.voiceURI }, `${v.name} (${v.lang})`)));
       select.value = getSettings().voiceURI ?? '';
       select.addEventListener('change', () => update({ voiceURI: select.value || null }));
-      clear(wrap).append(h('label', { class: 'field' }, h('span', null, 'Stem'), select));
+      fill(wrap, h('label', { class: 'field' }, h('span', null, 'Stem'), select));
     };
-    fill();
+    fillVoices();
     offVoices?.();
-    offVoices = audio.onVoicesChanged(fill);
+    offVoices = audio.onVoicesChanged(fillVoices);
     return wrap;
   }
 
@@ -47,6 +50,16 @@ export function createSettingsScreen({ audio, getSettings, update }) {
     return h('label', { class: 'slider' }, h('span', null, 'Piepvolume', out), input);
   }
 
+  // Standaard statische houdtijd (§6.11): voor nieuwe statische stappen in de
+  // bouwer die in de bibliotheek de standaard 45 s hebben.
+  function defaultHold() {
+    const select = h('select', { 'aria-label': 'Standaard statische houdtijd' },
+      [30, 45, 60, 75, 90].map((n) => h('option', { value: n }, `${n} s`)));
+    select.value = String(getSettings().defaultStaticHoldSec);
+    select.addEventListener('change', () => update({ defaultStaticHoldSec: Number(select.value) }));
+    return h('label', { class: 'field' }, h('span', null, 'Standaard statische houdtijd', h('small', { class: 'hint' }, 'Voor nieuwe statische stappen in de bouwer.')), select);
+  }
+
   function sideSwitch() {
     const select = h('select', { 'aria-label': 'Kantwisselduur' },
       [3, 5, 8, 10].map((n) => h('option', { value: n }, `${n} s`)));
@@ -55,8 +68,42 @@ export function createSettingsScreen({ audio, getSettings, update }) {
     return h('label', { class: 'field' }, h('span', null, 'Kantwisselduur'), select);
   }
 
+  // Weging aanpassen (§6.11): som altijd 100 %; herberekent alleen de getoonde
+  // sterren, de knie-poort blijft gelden.
+  let draft = null;
+  function weights() {
+    draft ??= { ...getSettings().weights };
+    const wrap = h('section', { class: 'section' });
+    const paint = () => {
+      const sum = Object.values(draft).reduce((a, b) => a + b, 0);
+      const set = (k, d) => {
+        draft = { ...draft, [k]: Math.min(100, Math.max(0, draft[k] + d)) };
+        const total = Object.values(draft).reduce((a, b) => a + b, 0);
+        if (total === 100) update({ weights: { ...draft } });
+        paint();
+      };
+      fill(wrap, 
+        h('h2', null, 'Weging aanpassen'),
+        h('p', { class: 'note' }, 'Verandert alleen de sterren die je ziet. De knie-poort blijft altijd gelden.'),
+        ...Object.keys(LETTER_NAMES).map((k) => h('div', { class: 'stepper', role: 'group', 'aria-label': `${k} ${LETTER_NAMES[k]}` },
+          h('span', { class: 'stepper-label' }, `${k} · ${LETTER_NAMES[k]}`),
+          h('button', { class: 'btn icon', type: 'button', 'aria-label': `${LETTER_NAMES[k]} lager`, onclick: () => set(k, -5) }, '−'),
+          h('output', null, `${draft[k]}%`),
+          h('button', { class: 'btn icon', type: 'button', 'aria-label': `${LETTER_NAMES[k]} hoger`, onclick: () => set(k, 5) }, '+'))),
+        h('p', { class: sum === 100 ? 'note' : 'warn-bar', role: 'status' },
+          sum === 100 ? 'Som: 100 %.' : `Som: ${sum} %. Pas aan tot 100 %; tot dan blijft de vorige weging gelden.`),
+        h('button', {
+          class: 'btn', type: 'button',
+          onclick: () => { draft = { ...DEFAULT_SETTINGS.weights }; update({ weights: { ...draft } }); paint(); },
+        }, 'terug naar standaard 25/25/20/15/15'));
+    };
+    paint();
+    return wrap;
+  }
+
   function render() {
-    clear(root).append(
+    draft = null;
+    fill(root, 
       h('header', { class: 'topbar' }, h('h1', { id: 'settings-title', tabindex: '-1' }, 'Instellingen')),
       h('section', { class: 'section' },
         h('h2', null, 'Geluid en spraak'),
@@ -80,7 +127,9 @@ export function createSettingsScreen({ audio, getSettings, update }) {
       h('section', { class: 'section' },
         h('h2', null, 'Weergave'),
         toggle('Nachtmodus', 'nightMode', 'Alleen rood en amber.'),
-        toggle('Vergrendelde oefeningen tonen', 'showLocked')),
+        toggle('Vergrendelde oefeningen tonen', 'showLocked'),
+        defaultHold()),
+      weights(),
       extra);
   }
   render();
