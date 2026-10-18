@@ -50,6 +50,35 @@ function openCycle(rec) {
   return last && last.result === null ? last : null;
 }
 
+// De lopende cyclus (nog geen uitslag), of null.
+export const currentCycle = (rec) => (rec ? openCycle(rec) : null);
+
+// Vensters van de 24- en 48-uurscheck van een cyclus, in ms.
+export function cycleSchedule(cycle, kneeMeta) {
+  const w = kneeMeta.checkWindowsHours;
+  return {
+    h24: [cycle.exposureAt + w.h24[0] * HOUR, cycle.exposureAt + w.h24[1] * HOUR],
+    h48: [cycle.exposureAt + w.h48[0] * HOUR, cycle.exposureAt + w.h48[1] * HOUR],
+  };
+}
+
+// Begeleide proef (§6.6): 1 × 30 s per kant (bilateraal: 30 s).
+export const TRIAL_SEC = 30;
+export function trialStep(ex) {
+  return ex.sided === 'unilateral' ? { exerciseId: ex.id, perSideSec: TRIAL_SEC } : { exerciseId: ex.id, durationSec: TRIAL_SEC };
+}
+
+// Oefeningen in deze stappen die in de proefperiode zitten (test of
+// voorlopig): elk gebruik is een blootstelling.
+export function trialExerciseIds(steps, exercises, state) {
+  const ids = new Set();
+  for (const step of steps) {
+    const st = unlockState(exercises.get(step.exerciseId), state);
+    if (st === 'test' || st === 'voorlopig') ids.add(step.exerciseId);
+  }
+  return [...ids];
+}
+
 export function lastExposureAt(rec) {
   return rec?.cycles.length ? rec.cycles[rec.cycles.length - 1].exposureAt : null;
 }
@@ -112,8 +141,10 @@ function failCycle(rec, cycle, at, kneeMeta, events, exId) {
 // Blootstelling: de begeleide proef (status test) of gebruik in een routine
 // (status test of voorlopig). Opent een nieuwe 24/48-uurscyclus. Loopt er nog
 // een cyclus, dan vervalt die en telt de nieuwe vanaf deze blootstelling; de
-// teller blijft staan.
-export function recordExposure(exId, state, { at, painBefore, painDuring }, kneeMeta) {
+// teller blijft staan. painDuring mag null zijn: de app legt de blootstelling
+// vast zodra de routine klaar is en vraagt de pijn tijdens daarna (zie
+// setPainDuring).
+export function recordExposure(exId, state, { at, painBefore, painDuring = null }, kneeMeta) {
   const next = clone(state);
   const rec = next.unlocks[exId];
   if (!rec || (rec.state !== 'test' && rec.state !== 'voorlopig')) {
@@ -129,7 +160,20 @@ export function recordExposure(exId, state, { at, painBefore, painDuring }, knee
   const cycle = { exposureAt: at, painBefore, painDuring, p24: null, p48: null, result: null };
   rec.cycles.push(cycle);
   // Pijn tijdens boven 2/10: direct niet schoon.
-  if (painDuring > kneeMeta.painMax) failCycle(rec, cycle, at, kneeMeta, events, exId);
+  if (painDuring !== null && painDuring > kneeMeta.painMax) failCycle(rec, cycle, at, kneeMeta, events, exId);
+  return { state: next, events };
+}
+
+// "Kniepijn tijdens" achteraf invullen bij een blootstelling (afrondscherm van
+// de speler). Boven 2/10: de cyclus is niet schoon.
+export function setPainDuring(exId, state, { exposureAt, pain }, kneeMeta) {
+  const next = clone(state);
+  const events = [];
+  const rec = next.unlocks[exId];
+  const c = rec && openCycle(rec);
+  if (!c || c.exposureAt !== exposureAt) return { state: next, events }; // al vervallen of afgesloten
+  c.painDuring = pain;
+  if (pain > kneeMeta.painMax) failCycle(rec, c, exposureAt, kneeMeta, events, exId);
   return { state: next, events };
 }
 
@@ -143,7 +187,7 @@ export function pendingChecks(state, now, kneeMeta) {
   const due = [];
   for (const [exId, rec] of Object.entries(state.unlocks)) {
     const c = openCycle(rec);
-    if (!c) continue;
+    if (!c || c.painDuring === null) continue;
     if (c.p24 === null && inWindow(c, now, kneeMeta.checkWindowsHours.h24)) due.push({ exerciseId: exId, context: '24u', exposureAt: c.exposureAt });
     if (c.p24 !== null && c.p48 === null && inWindow(c, now, kneeMeta.checkWindowsHours.h48)) due.push({ exerciseId: exId, context: '48u', exposureAt: c.exposureAt });
   }
@@ -159,11 +203,13 @@ export function expireChecks(state, now, kneeMeta) {
     const c = openCycle(rec);
     if (!c) continue;
     const hours = (now - c.exposureAt) / HOUR;
+    const missedDuring = c.painDuring === null && hours >= kneeMeta.checkWindowsHours.h24[0];
     const missed24 = c.p24 === null && hours > kneeMeta.checkWindowsHours.h24[1];
     const missed48 = c.p48 === null && hours > kneeMeta.checkWindowsHours.h48[1];
-    if (missed24 || missed48) {
+    if (missedDuring || missed24 || missed48) {
       c.result = 'vervallen';
-      events.push({ type: 'cyclus_vervallen', exerciseId: exId, reason: missed24 ? '24u niet ingevuld' : '48u niet ingevuld' });
+      const reason = missedDuring ? 'kniepijn tijdens niet ingevuld' : missed24 ? '24u niet ingevuld' : '48u niet ingevuld';
+      events.push({ type: 'cyclus_vervallen', exerciseId: exId, reason });
     }
   }
   return { state: next, events };
@@ -188,6 +234,19 @@ export function activateFlare(state, at, reason = 'handmatig') {
     rec.cleanCount = 0;
   }
   return { state: next, events };
+}
+
+// "Nog niet" op het voorstel om de opvlamming te beëindigen: vandaag niet
+// meer vragen (morgen weer, als de reeks dan nog klopt).
+export function postponeFlareExit(state, at) {
+  const next = clone(state);
+  next.flare.exitProposedAt = at;
+  return next;
+}
+
+export function flareExitPostponedToday(state, now) {
+  const t = state.flare.exitProposedAt;
+  return Boolean(t) && dayKey(t) === dayKey(now);
 }
 
 export function endFlare(state) {
@@ -264,7 +323,13 @@ export function dailyCheckDue(state, now) {
 // §6.7 Uit: na 7 opeenvolgende dagelijkse kniechecks ≤2/10 het voorstel om de
 // modus te beëindigen. Dagen zonder check tellen niet (ze breken de reeks).
 export function flareExitDue(state, now, kneeMeta) {
-  if (!state.flare.active) return false;
+  return state.flare.active && flareStreak(state, now, kneeMeta) >= kneeMeta.flareExitDays;
+}
+
+// Aantal opeenvolgende dagen (tot en met vandaag of gisteren) met een
+// dagelijkse kniecheck en geen check boven 2/10, sinds de opvlamming begon.
+export function flareStreak(state, now, kneeMeta) {
+  if (!state.flare.active) return 0;
   const byDay = new Map();
   for (const c of state.checks) {
     if (c.at < state.flare.since || c.at > now) continue;
@@ -281,10 +346,10 @@ export function flareExitDue(state, now, kneeMeta) {
     const day = byDay.get(key);
     if (!day || !day.daily || day.high) break;
     streak += 1;
-    if (streak >= kneeMeta.flareExitDays) return true;
+    if (streak >= kneeMeta.flareExitDays) break;
     key = previousDayKey(key);
   }
-  return false;
+  return streak;
 }
 
 // Instellingen → "ontgrendelingen resetten".

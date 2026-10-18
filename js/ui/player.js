@@ -2,6 +2,7 @@
 // wake lock; daarna het afrondscherm (§6.9). De tijd komt uit tijdstempels
 // (engine.js); dit bestand tekent alleen en zet gebeurtenissen om in geluid.
 import { h, fill } from './dom.js';
+import { painPicker } from './knee.js';
 import { icon, bodyMap, positionIcon } from './graphics.js';
 import { compileRoutine } from '../timeline.js';
 import {
@@ -315,9 +316,17 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
       segmentsDone: state.segmentsDone,
     };
     const intensity = slider('Rekintensiteit', 5);
-    const knee = slider('Kniepijn tijdens', 0);
-    const notes = h('textarea', { rows: 3, 'aria-label': 'Notitie', placeholder: 'Notitie (optioneel)' });
+    // Zat er een oefening uit de proefperiode in (§6.6), dan is "kniepijn
+    // tijdens" nodig voor de 48-uurscyclus: dan een bewuste keuze, zonder
+    // voorgekozen waarde.
+    const trialNames = (routine.exposure?.ids ?? []).filter((id) => run.segmentsDone.some((x) => x.exerciseId === id && x.sec > 0))
+      .map((id) => lib.exercises.get(id).name);
     const save = h('button', { class: 'btn primary', type: 'button' }, 'Opslaan');
+    const knee = trialNames.length
+      ? painPicker('Kniepijn tijdens (0–10)', { onChange: () => { save.disabled = false; } })
+      : slider('Kniepijn tijdens', 0);
+    if (trialNames.length) save.disabled = true;
+    const notes = h('textarea', { rows: 3, 'aria-label': 'Notitie', placeholder: 'Notitie (optioneel)' });
     const error = h('p', { class: 'warn-bar', role: 'alert', hidden: true });
     const showError = (e) => {
       error.hidden = false;
@@ -345,6 +354,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
         h('header', { class: 'card-head' },
           h('h1', { tabindex: '-1' }, status === 'voltooid' ? 'Klaar!' : 'Gestopt'),
           h('p', { class: 'evidence' }, `${routine.name} · ${status} · actief ${formatDuration(run.activeSec)} van ${formatDuration(run.plannedSec)}`)),
+        trialNames.length ? h('p', { class: 'warn-bar' }, `${trialNames.join(', ')} zit in de proefperiode. Vul je kniepijn tijdens in en tik op Opslaan; anders telt deze cyclus niet mee.`) : null,
         h('section', { class: 'section' }, intensity.el, knee.el, notes),
         error),
       h('div', { class: 'toolbar' }, save));

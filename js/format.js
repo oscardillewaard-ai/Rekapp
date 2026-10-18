@@ -46,3 +46,9 @@ export function exerciseDurationSec(ex, timing) {
   const { totalSec } = compileRoutine({ steps: [step] }, new Map([[ex.id, ex]]), { timing });
   return totalSec - timing.prepSec;
 }
+
+// Tijdstippen in de kniestatus: "za 18 okt, 09:30" en "18 okt".
+const momentFmt = new Intl.DateTimeFormat('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const dayFmt = new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short' });
+export const formatMoment = (ms) => momentFmt.format(ms);
+export const formatDay = (ms) => dayFmt.format(ms);

@@ -5,7 +5,7 @@ import { rate } from '../library.js';
 import { formatDose, evidenceLabel, SLOT_LABELS, TYPE_LABELS, SIDED_LABELS } from '../format.js';
 import { RUBRICS, BREATHING, CARD } from '../texts.js';
 import { WARNINGS } from '../warnings.js';
-import { access } from '../knee.js';
+import { access, unlockState } from '../knee.js';
 
 const LETTERS = ['B', 'K', 'D', 'R', 'P'];
 const LETTER_NAMES = { B: 'Bewijs', K: 'Knieveiligheid', D: 'Doelgerichtheid', R: 'Relevantie', P: 'Praktisch' };
@@ -24,7 +24,7 @@ function sourceItem(src) {
     : src.citation);
 }
 
-export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) {
+export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd, onUnlock }) {
   const root = h('section', { class: 'screen' });
   const toolbar = h('div', { class: 'toolbar' });
   const rubricSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'rubric-title' });
@@ -49,6 +49,20 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) 
         h('button', { class: 'btn primary', type: 'button', onclick: () => rubricSheet.close() }, 'Sluiten')));
     rubricSheet.showModal();
     rubricSheet.querySelector('.current')?.scrollIntoView({ block: 'nearest' });
+  }
+
+  // Rode balk bij een vergrendelde oefening (§6.2), met de status in het
+  // ontgrendelprotocol (§6.6) en de weg naar de 48-uurstest.
+  function lockedBar(ex) {
+    const st = unlockState(ex, getContext().knee);
+    if (st === 'vrij') {
+      return h('div', { class: 'info-bar', role: 'note' }, 'Vrijgegeven via de 48-uurstest. Bij een opvlamming wordt hij weer vergrendeld.');
+    }
+    const status = st === 'vergrendeld' ? null : `In de proefperiode (status: ${st}).`;
+    return h('div', { class: 'locked-bar', role: 'note' },
+      h('strong', null, icon('lock'), st === 'vergrendeld' ? CARD.lockedBar : 'Proefperiode'),
+      status ? h('p', null, status) : null,
+      h('button', { class: 'btn danger', type: 'button', onclick: () => onUnlock(ex) }, st === 'vergrendeld' ? CARD.unlockButton : 'Naar de 48-uurstest'));
   }
 
   function render(id) {
@@ -103,10 +117,7 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) 
         h('dt', null, 'Maximale kniebuiging'), h('dd', null, `${ex.kneeFlexionMaxDeg}°`),
         h('dt', null, 'Kniebelasting'), h('dd', null, ex.kneeLoad)),
       h('p', null, ex.pfpsNote),
-      rating.locked ? h('div', { class: 'locked-bar', role: 'note' },
-        h('strong', null, icon('lock'), CARD.lockedBar),
-        h('button', { class: 'btn danger', type: 'button', disabled: true }, CARD.unlockButton),
-        h('p', { class: 'note' }, 'De 48-uurstest komt in een volgende versie.')) : null));
+      rating.locked ? lockedBar(ex) : null));
 
     // 5. Uitvoering: cues, ademcue, standaarddosis, regressie, progressie.
     root.append(section('Uitvoering',

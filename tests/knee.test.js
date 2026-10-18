@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   emptyKneeState, access, unlockState, canStartTest, startTest, cancelTest, recordExposure, recordKneeCheck,
   pendingChecks, expireChecks, activateFlare, endFlare, flareExitDue, dailyCheckDue, dayKey,
+  setPainDuring, trialStep, trialExerciseIds, cycleSchedule, currentCycle, flareStreak, postponeFlareExit, flareExitPostponedToday,
 } from '../js/knee.js';
 import { routineWarnings, playableRoutine } from '../js/warnings.js';
 import { compileRoutine } from '../js/timeline.js';
@@ -245,4 +246,77 @@ test('dagelijkse kniecheck: één per dag, nieuwe dag om 04:00', () => {
   let s = check(emptyKneeState(), { at: at(0, 22), pain: 1, context: 'dagelijks' }).state;
   assert.equal(dailyCheckDue(s, at(1, 3)), false);
   assert.equal(dailyCheckDue(s, at(1, 4)), true);
+});
+
+// M5: de app legt de blootstelling vast zodra de routine klaar is en vraagt
+// "kniepijn tijdens" op het afrondscherm.
+test('blootstelling zonder pijn tijdens: geen 24u-check tot die is ingevuld', () => {
+  let s = startTest(couch, emptyKneeState(), at(0), ALL);
+  s = recordExposure('couch_stretch', s, { at: at(0), painBefore: 1 }, K).state;
+  assert.deepEqual(pendingChecks(s, at(0) + 21 * HOUR, K), []);
+  s = setPainDuring('couch_stretch', s, { exposureAt: at(0), pain: 1 }, K).state;
+  assert.deepEqual(pendingChecks(s, at(0) + 21 * HOUR, K).map((c) => c.context), ['24u']);
+});
+
+test('pijn tijdens achteraf boven 2/10 → niet schoon, afkoelperiode en opvlammingsvoorstel', () => {
+  let s = startTest(couch, emptyKneeState(), at(0), ALL);
+  s = recordExposure('couch_stretch', s, { at: at(0), painBefore: 1 }, K).state;
+  const r = setPainDuring('couch_stretch', s, { exposureAt: at(0), pain: 3 }, K);
+  assert.equal(r.state.unlocks.couch_stretch.state, 'vergrendeld');
+  assert.equal(r.state.unlocks.couch_stretch.cooldownUntil, at(0) + 7 * DAY);
+  assert.ok(r.events.some((e) => e.type === 'opvlamming_voorstel'));
+});
+
+test('pijn tijdens nooit ingevuld: bij het 24u-venster vervalt de cyclus, de teller blijft staan', () => {
+  let s = u1();
+  const t1 = at(0) + 49 * HOUR;
+  s = recordExposure('couch_stretch', s, { at: t1, painBefore: 1 }, K).state;
+  const before = expireChecks(s, t1 + 19 * HOUR, K);
+  assert.equal(before.events.length, 0);
+  const r = expireChecks(s, t1 + 20 * HOUR, K);
+  assert.equal(r.events[0].reason, 'kniepijn tijdens niet ingevuld');
+  assert.equal(r.state.unlocks.couch_stretch.state, 'voorlopig');
+  assert.equal(r.state.unlocks.couch_stretch.cleanCount, 1);
+  assert.equal(currentCycle(r.state.unlocks.couch_stretch), null);
+});
+
+test('pijn tijdens invullen bij een cyclus die al vervallen is, verandert niets', () => {
+  let s = startTest(couch, emptyKneeState(), at(0), ALL);
+  s = recordExposure('couch_stretch', s, { at: at(0), painBefore: 1 }, K).state;
+  s = recordExposure('couch_stretch', s, { at: at(0) + HOUR, painBefore: 1 }, K).state;
+  const r = setPainDuring('couch_stretch', s, { exposureAt: at(0), pain: 5 }, K);
+  assert.equal(r.state.unlocks.couch_stretch.state, 'test');
+  assert.deepEqual(r.events, []);
+});
+
+test('begeleide proef: 30 s per kant, bilateraal 30 s; vensters 20–30 u en 44–56 u', () => {
+  assert.deepEqual(trialStep(couch), { exerciseId: 'couch_stretch', perSideSec: 30 });
+  assert.deepEqual(trialStep(ex('kikker')), { exerciseId: 'kikker', durationSec: 30 });
+  const sched = cycleSchedule({ exposureAt: at(0) }, K);
+  assert.deepEqual(sched.h24, [at(0) + 20 * HOUR, at(0) + 30 * HOUR]);
+  assert.deepEqual(sched.h48, [at(0) + 44 * HOUR, at(0) + 56 * HOUR]);
+});
+
+test('trialExerciseIds: alleen oefeningen in test of voorlopig', () => {
+  let s = startTest(couch, emptyKneeState(), at(0), ALL);
+  const steps = [{ exerciseId: 'couch_stretch' }, { exerciseId: 'gastroc_muur' }, { exerciseId: 'duif' }];
+  assert.deepEqual(trialExerciseIds(steps, lib.exercises, s), ['couch_stretch']);
+  s = u1();
+  assert.deepEqual(trialExerciseIds(steps, lib.exercises, s), ['couch_stretch']);
+  s.unlocks.couch_stretch.state = 'vrij';
+  assert.deepEqual(trialExerciseIds(steps, lib.exercises, s), []);
+});
+
+test('flareStreak telt de dagen van de reeks (voor de banner)', () => {
+  let s = activateFlare(emptyKneeState(), at(0), 'handmatig').state;
+  assert.equal(flareStreak(s, at(0), K), 0);
+  for (let d = 0; d < 3; d++) s = check(s, { at: at(d, 11), pain: 1, context: 'dagelijks' }).state;
+  assert.equal(flareStreak(s, at(2, 12), K), 3);
+  assert.equal(flareExitDue(s, at(2, 12), K), false);
+});
+
+test('"Nog niet" op het voorstel: vandaag niet meer vragen', () => {
+  const s = postponeFlareExit(activateFlare(emptyKneeState(), at(0)).state, at(0, 11));
+  assert.equal(flareExitPostponedToday(s, at(0, 12)), true);
+  assert.equal(flareExitPostponedToday(s, at(1, 11)), false);
 });

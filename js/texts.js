@@ -77,6 +77,17 @@ export const CARD = {
   tryButton: 'Probeer nu',
 };
 
+// §6.6–6.7 knieslot, 48-uurstest en opvlammingsmodus.
+export const KNEE = {
+  painNow: 'Kniepijn nu (0–10)',
+  intro: 'Het protocol volgt je eigen regels: pijn ≤2/10 tijdens en na, niet hoger dan je beginwaarde na 24 en 48 uur, en drie schone 48-uurscontroles op rij voordat de oefening echt vrij is. Je knie reageert pas na 24–48 uur, dus het gevoel tijdens de sessie telt niet als groen licht.',
+  pain7d: 'kniepijn de afgelopen 7 dagen steeds ≤2/10',
+  noLegTrainingToday: 'vandaag geen loop- of beentraining',
+  noHeavyNext48h: 'de komende 48 uur geen afdaalsessie of zware beentraining gepland',
+  trial: 'Begeleide proef: 1 × 30 s per kant op intensiteit 3–4/10, op een dik kussen als je knielt.',
+  flareButton: 'Ik heb een opvlamming',
+};
+
 // §6.1 filters: "alleen K ≥ 4" en "toon vergrendelde".
 export const FILTERS = {
   onlyK4: 'alleen K ≥ 4',

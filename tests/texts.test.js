@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { RUBRICS, BREATHING, CARD, FILTERS } from '../js/texts.js';
+import { RUBRICS, BREATHING, CARD, FILTERS, KNEE } from '../js/texts.js';
 import { WARNINGS } from '../js/warnings.js';
 
 // Elke vaste tekst in de app moet letterlijk in de spec staan.
@@ -22,6 +22,10 @@ test('ademcues uit §6.2 staan letterlijk in de spec', () => {
 
 test('kaart- en filterteksten uit §6.1–6.2 staan letterlijk in de spec', () => {
   for (const [k, text] of Object.entries({ ...CARD, ...FILTERS })) inSpec(text, k);
+});
+
+test('knieteksten uit §6.6–6.7 staan letterlijk in de spec', () => {
+  for (const [k, text] of Object.entries(KNEE)) inSpec(text, k);
 });
 
 test('waarschuwingen W1–W9 uit §6.5 staan letterlijk in de spec', () => {

@@ -1,14 +1,18 @@
 // Instellingen (§6.11). Elke wijziging wordt direct opgeslagen. Latere
-// mijlpalen voegen weging, opvlamming, export/import en opslag toe.
+// mijlpalen voegen export/import, herinneringen en opslag toe.
 import { h, fill } from './dom.js';
 import { icon } from './graphics.js';
 import { DEFAULT_SETTINGS } from '../settings.js';
+import { KNEE } from '../texts.js';
+import { formatDay } from '../format.js';
 
 const LETTER_NAMES = { B: 'Bewijs', K: 'Knieveiligheid', D: 'Doelgerichtheid', R: 'Relevantie', P: 'Praktisch' };
 
-export function createSettingsScreen({ audio, getSettings, update }) {
+export function createSettingsScreen({ audio, getSettings, update, knee }) {
   const root = h('section', { class: 'screen', 'aria-labelledby': 'settings-title' });
   const extra = h('div'); // secties van latere mijlpalen
+  const confirmSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'reset-title' });
+  confirmSheet.addEventListener('click', (e) => { if (e.target === confirmSheet) confirmSheet.close(); });
   let offVoices = null;
 
   function toggle(label, key, hint) {
@@ -101,6 +105,32 @@ export function createSettingsScreen({ audio, getSettings, update }) {
     return wrap;
   }
 
+  // Knie (§6.11): opvlammingsmodus handmatig en ontgrendelingen resetten.
+  function kneeSection() {
+    const state = knee.get();
+    const flare = state.unknown
+      ? h('p', { class: 'note' }, 'Je kniestatus kon niet worden gelezen; voor de zekerheid geldt de opvlammingsmodus.')
+      : state.flare.active
+        ? h('p', null, `Opvlammingsmodus staat aan sinds ${formatDay(state.flare.since)}. Hij gaat uit na 7 dagen op rij een dagelijkse kniecheck van ≤2/10; de app vraagt het je dan.`)
+        : h('button', { class: 'btn', type: 'button', onclick: () => knee.askFlare() }, KNEE.flareButton);
+    const askReset = () => {
+      fill(confirmSheet,
+        h('div', { class: 'sheet-body' },
+          h('h2', { id: 'reset-title' }, 'Ontgrendelingen resetten?'),
+          h('p', null, 'Alle vergrendelde oefeningen gaan terug naar vergrendeld, met de teller op 0 en zonder afkoelperiode. Je kniechecks en logboek blijven bewaard.')),
+        h('div', { class: 'sheet-foot' },
+          h('button', { class: 'btn', type: 'button', onclick: () => confirmSheet.close() }, 'Annuleren'),
+          h('button', { class: 'btn danger', type: 'button', onclick: async () => { confirmSheet.close(); await knee.reset(); } }, 'Resetten')));
+      confirmSheet.showModal();
+    };
+    const hasUnlocks = Object.keys(state.unlocks).length > 0;
+    return h('section', { class: 'section' },
+      h('h2', null, 'Knie'),
+      flare,
+      h('button', { class: 'btn', type: 'button', disabled: state.unknown || !hasUnlocks, onclick: askReset }, 'Ontgrendelingen resetten'),
+      hasUnlocks ? null : h('p', { class: 'note' }, 'Er loopt geen ontgrendeling.'));
+  }
+
   function render() {
     draft = null;
     fill(root, 
@@ -130,7 +160,9 @@ export function createSettingsScreen({ audio, getSettings, update }) {
         toggle('Vergrendelde oefeningen tonen', 'showLocked'),
         defaultHold()),
       weights(),
-      extra);
+      kneeSection(),
+      extra,
+      confirmSheet);
   }
   render();
   return { root, extra, render };

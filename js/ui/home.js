@@ -1,5 +1,6 @@
-// Startscherm: je actieve routines, een samenvatting van "Mijn week" en de
-// sjablonen Ochtend en Avond (5 · 10 · 15 min). M5 voegt de kniechecks toe.
+// Startscherm: kniekaarten (opvlamming, kniechecks, proefperiode), je actieve
+// routines, een samenvatting van "Mijn week" en de sjablonen Ochtend en Avond
+// (5 · 10 · 15 min).
 import { h, fill } from './dom.js';
 import { formatDuration } from '../format.js';
 import { totalSec } from '../routines.js';
@@ -8,9 +9,8 @@ import { weekRows } from '../week.js';
 const SLOT_ORDER = { ochtend: 0, avond: 1, vrij: 2 };
 const SLOT_TEXT = { ochtend: 'Ochtend', avond: 'Avond', vrij: 'Vrij' };
 
-export function createHomeScreen({ lib, getData }) {
+export function createHomeScreen({ lib, getData, topCards = () => [], bottom = () => null }) {
   const root = h('section', { class: 'screen', 'aria-labelledby': 'home-title' });
-  const extra = h('div'); // kaarten van latere mijlpalen (kniechecks, opvlamming)
 
   function slotCard(slot, title) {
     const templates = [...lib.templates.values()].filter((r) => r.slot === slot).sort((a, b) => a.variant - b.variant);
@@ -51,11 +51,12 @@ export function createHomeScreen({ lib, getData }) {
     const { routines, sessions, settings } = getData();
     fill(root, 
       h('header', { class: 'topbar' }, h('h1', { id: 'home-title', tabindex: '-1' }, 'Rekapp')),
-      extra,
+      topCards(),
       myRoutines(routines, settings),
       weekCard(routines, sessions),
       slotCard('ochtend', 'Ochtend'),
-      slotCard('avond', 'Avond'));
+      slotCard('avond', 'Avond'),
+      bottom());
   }
-  return { root, extra, render };
+  return { root, render };
 }
