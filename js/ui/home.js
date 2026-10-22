@@ -12,12 +12,12 @@ const SLOT_TEXT = { ochtend: 'Ochtend', avond: 'Avond', vrij: 'Vrij' };
 export function createHomeScreen({ lib, getData, topCards = () => [], bottom = () => null }) {
   const root = h('section', { class: 'screen', 'aria-labelledby': 'home-title' });
 
-  function slotCard(slot, title) {
+  function slotCard(slot, title, settings) {
     const templates = [...lib.templates.values()].filter((r) => r.slot === slot).sort((a, b) => a.variant - b.variant);
     return h('section', { class: 'section slot-card' },
       h('h2', null, title),
       h('div', { class: 'variant-buttons' }, templates.map((r) =>
-        h('a', { class: 'btn variant', href: `#/routine/${r.id}`, 'aria-label': `${r.name}, ${formatDuration(r.expectedTotalSec)}` },
+        h('a', { class: 'btn variant', href: `#/routine/${r.id}`, 'aria-label': `${r.name}, ${formatDuration(totalSec(r, lib.exercises, lib.meta.timing, settings.sideSwitchSec))}` },
           h('span', { class: 'variant-min' }, String(r.variant)),
           h('span', { class: 'variant-unit' }, 'min')))));
   }
@@ -54,8 +54,8 @@ export function createHomeScreen({ lib, getData, topCards = () => [], bottom = (
       topCards(),
       myRoutines(routines, settings),
       weekCard(routines, sessions),
-      slotCard('ochtend', 'Ochtend'),
-      slotCard('avond', 'Avond'),
+      slotCard('ochtend', 'Ochtend', settings),
+      slotCard('avond', 'Avond', settings),
       bottom());
   }
   return { root, render };

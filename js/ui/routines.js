@@ -12,7 +12,8 @@ export function createRoutinesScreen({ lib, getData, onNew }) {
 
   function card(r, { template }) {
     const { settings } = getData();
-    const sec = template ? r.expectedTotalSec : totalSec(r, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
+    // Ook sjablonen met de ingestelde kantwisselduur, net als de preview.
+    const sec = totalSec(r, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
     const meta = [
       SLOT_TEXT[r.slot],
       formatDuration(sec),

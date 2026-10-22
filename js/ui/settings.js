@@ -1,6 +1,6 @@
 // Instellingen (§6.11). Elke wijziging wordt direct opgeslagen. Latere
 // mijlpalen voegen export/import, herinneringen en opslag toe.
-import { h, fill } from './dom.js';
+import { h, fill, preserveFocus } from './dom.js';
 import { icon } from './graphics.js';
 import { DEFAULT_SETTINGS } from '../settings.js';
 import { KNEE } from '../texts.js';
@@ -84,7 +84,7 @@ export function createSettingsScreen({ audio, getSettings, update, knee }) {
         draft = { ...draft, [k]: Math.min(100, Math.max(0, draft[k] + d)) };
         const total = Object.values(draft).reduce((a, b) => a + b, 0);
         if (total === 100) update({ weights: { ...draft } });
-        paint();
+        preserveFocus(wrap, paint);
       };
       fill(wrap, 
         h('h2', null, 'Weging aanpassen'),
@@ -98,7 +98,7 @@ export function createSettingsScreen({ audio, getSettings, update, knee }) {
           sum === 100 ? 'Som: 100 %.' : `Som: ${sum} %. Pas aan tot 100 %; tot dan blijft de vorige weging gelden.`),
         h('button', {
           class: 'btn', type: 'button',
-          onclick: () => { draft = { ...DEFAULT_SETTINGS.weights }; update({ weights: { ...draft } }); paint(); },
+          onclick: () => { draft = { ...DEFAULT_SETTINGS.weights }; update({ weights: { ...draft } }); preserveFocus(wrap, paint); },
         }, 'terug naar standaard 25/25/20/15/15'));
     };
     paint();

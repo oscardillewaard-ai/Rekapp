@@ -47,3 +47,36 @@ export function fill(el, ...children) {
   append(el, children);
   return el;
 }
+
+// Eén vaste live-regio voor korte meldingen aan schermlezers (bv. de nieuwe
+// waarde van een stepper). Elementen die opnieuw worden opgebouwd, kunnen dat
+// zelf niet: een nieuw aria-live-element wordt niet voorgelezen.
+let liveRegion = null;
+export function announce(text) {
+  if (!liveRegion) {
+    liveRegion = h('p', { class: 'sr-only', role: 'status' });
+    document.body.append(liveRegion);
+  }
+  liveRegion.textContent = '';
+  // Een nieuwe tekst in een volgende taak, zodat dezelfde tekst twee keer
+  // achter elkaar ook twee keer wordt voorgelezen.
+  setTimeout(() => { liveRegion.textContent = text; }, 50);
+}
+
+// Een stuk scherm opnieuw opbouwen zonder dat toetsenbord en schermlezer hun
+// plek kwijtraken: daarna staat de focus weer op het element met hetzelfde
+// aria-label (of dezelfde tekst), en een stepper of keuzeknop meldt zijn
+// nieuwe stand.
+export function preserveFocus(container, rebuild) {
+  const active = document.activeElement;
+  const keyOf = (el) => el.getAttribute('aria-label') ?? el.textContent.trim();
+  const key = active && active !== document.body && container.contains(active) ? keyOf(active) : null;
+  rebuild();
+  if (key === null) return;
+  const match = [...container.querySelectorAll('button, input, select, a[href], textarea')].find((el) => keyOf(el) === key);
+  if (!match) return;
+  match.focus({ preventScroll: true });
+  const group = match.closest('.stepper');
+  if (group) announce(`${group.getAttribute('aria-label')}: ${group.querySelector('output')?.textContent ?? ''}`);
+  else if (match.getAttribute('aria-pressed') === 'true') announce(`${keyOf(match)} gekozen`);
+}

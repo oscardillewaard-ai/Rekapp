@@ -5,7 +5,7 @@ import { weekRows, suggestionText, maintenanceTipDue, MAINTENANCE_TIP } from '..
 import { REGIONS } from '../catalog.js';
 
 // Status ook in woorden: kleur alleen is niet genoeg (nachtmodus, kleurenblind).
-const STATUS_TEXT = { grijs: 'niet getraind', oranje: 'onder de drempel', groen: 'op dosis', blauw: 'plateau' };
+const STATUS_TEXT = { grijs: 'geen statisch of PNF', oranje: 'onder de drempel', groen: 'op dosis', blauw: 'plateau' };
 const fmt = (n) => new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 1 }).format(n);
 
 export function createWeekScreen({ lib, getData }) {
@@ -35,7 +35,7 @@ export function createWeekScreen({ lib, getData }) {
         button.setAttribute('aria-expanded', String(!details.hidden));
       },
     },
-    h('span', { class: 'dose-name' }, r.group.label, h('small', null, STATUS_TEXT[r.plannedStatus])),
+    h('span', { class: 'dose-name' }, r.group.label, h('small', null, `gepland: ${STATUS_TEXT[r.plannedStatus]}`)),
     bar(r.plannedSec, r.plannedStatus, 'Gepland'),
     bar(r.actualSec, r.actualStatus, 'Werkelijk'),
     r.planned.dyn || r.actual.dyn

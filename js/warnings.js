@@ -83,12 +83,15 @@ export function routineWarnings(routine, ctx) {
   if (routine.active !== false) active.push(routine);
   const week = plannedWeekDose(active, exercises);
 
-  // W5: groepen waar deze routine statische of PNF-tijd aan toevoegt en die
-  // per kant boven 600 s per week komen.
-  for (const [group, own] of routineDose(routine, exercises)) {
-    if (own.L === 0 && own.R === 0) continue;
-    const sec = meterValue(week.get(group));
-    if (sec > meta.dose.plateauSec) out.push(warning('W5', { group, sec }));
+  // W5: groepen waar deze (actieve) routine statische of PNF-tijd aan
+  // toevoegt en die per kant boven 600 s per week komen. Een inactieve
+  // routine telt niet mee in de weekdosis en voegt dus niets toe.
+  if (routine.active !== false) {
+    for (const [group, own] of routineDose(routine, exercises)) {
+      if (own.L === 0 && own.R === 0) continue;
+      const sec = meterValue(week.get(group));
+      if (sec > meta.dose.plateauSec) out.push(warning('W5', { group, sec }));
+    }
   }
 
   // W6/W7: groepen die in deze (actieve) routine primair doel zijn.

@@ -41,6 +41,16 @@ test('frequentie voor de suggestie: de vaakst gedane actieve routine', () => {
   assert.equal(suggestionFrequency([]), 7);
 });
 
+test('inactieve routines tellen niet mee: niet in de geplande dosis en niet in f', () => {
+  const a10 = tpl('A10');
+  const off = { ...tpl('O10'), id: 'uit', active: false, timesPerWeek: 14 };
+  const rows = weekRows(lib, { routines: [a10, off], sessions: [], now: at(0) });
+  const only = weekRows(lib, { routines: [a10], sessions: [], now: at(0) });
+  assert.deepEqual(rows.map((r) => r.plannedSec), only.map((r) => r.plannedSec));
+  const sug = rows.find((r) => r.suggestion);
+  assert.equal(sug.suggestion.timesPerWeek, 7); // niet 14 van de inactieve routine
+});
+
 test('werkelijke laag: uit de log van de laatste 7 × 24 uur', () => {
   const segs = compileRoutine(lib.templates.get('A10'), lib.exercises, { timing: lib.meta.timing }).segments;
   const segmentsDone = segs.filter((s) => ['work', 'contract', 'relax'].includes(s.kind)).map((s) => ({ exerciseId: s.exerciseId, side: s.side, kind: s.kind, sec: s.durationSec }));

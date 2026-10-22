@@ -116,17 +116,35 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   naam, sterren, dosischip, kniebadge, verwijderen), zonder minikaart, zodat
   de naam op 390 px past. Een tik op de rij opent het dosisblad; daar staan
   ook Omhoog/Omlaag (alternatief voor slepen, ook met het toetsenbord).
-- **"+ Oefening":** opent de bibliotheek schermvullend, met dezelfde filters
-  en zoekfunctie. Een vergrendelde oefening (W1), of tijdens een opvlamming
-  één boven 45° (W8), kun je niet kiezen; de reden verschijnt bovenaan. Het
-  openen van het ontgrendelprotocol vanaf die tik (§6.3) komt in M5, met het
-  protocol zelf.
+- **"+ Oefening":** opent de bibliotheek schermvullend. Bibliotheek en
+  kiezer delen zoeken, filters en sortering ("filters blijven bewaard",
+  §6.3): wat je in de een instelt, staat ook in de ander. Een vergrendelde
+  oefening (W1), of tijdens een opvlamming één boven 45° (W8), kun je niet
+  kiezen; de reden verschijnt bovenaan, bij W1 met de knop "Naar de
+  48-uurstest" (§6.6, M5).
 - **"Toevoegen aan routine"** op de oefenkaart: kies een eigen routine of
   "+ Nieuwe routine". De oefening komt achteraan, met de standaarddosis, en
   de bouwer opent. De knie-poort wordt daarbij opnieuw gecontroleerd.
 - **Niet-opgeslagen wijzigingen:** bij terug (knop of telefoon) vraagt de
-  bouwer "Wijzigingen opslaan?". Een nieuwe, nog lege routine verdwijnt
-  zonder vragen. "Start" en "Dupliceren" slaan eerst op.
+  bouwer "Wijzigingen opslaan?" met Verder bewerken, Niet opslaan of
+  Opslaan. Een nieuwe, nog lege routine verdwijnt zonder vragen. "Start" en
+  "Dupliceren" slaan eerst op. Lukt opslaan niet (bv. opslag vol), dan blijft
+  alles staan met een melding. Een wijziging die niets verandert (dezelfde
+  keuze nog eens, +5 en −5) telt niet als wijziging.
+- **Concept bij afsluiten:** gaat de app met niet-opgeslagen wijzigingen in
+  de bouwer naar de achtergrond, dan bewaart hij die als concept (in de
+  store `settings`, sleutel `builderDraft`). iOS sluit webapps op de
+  achtergrond vaak af; bij de volgende start vraagt de app "Verder bewerken"
+  of "Weggooien".
+- **Totale tijd in beeld:** de balk met de totale tijd blijft bovenaan staan
+  tijdens het bewerken (§6.3 zet hem in de kop), zodat je ziet wanneer je
+  over 15:00 gaat.
+- **PNF-dosis (voorlopig, ter beslissing aan Oscar):** §6.3 zegt "stappen van
+  5 s, minimaal 10 s, maximaal 180 s"; het schema in §9.1 geeft voor PNF
+  rondes 1–5, aanspannen 3–10 s en rekken 10–60 s. De bouwer volgt nu het
+  schema: rekken in stappen van 5 s (10–60 s), aanspannen per seconde (3–10
+  s), 1–5 rondes. Daarmee kan één kant tot 5 × (10 + 60) = 350 s duren. Open
+  vraag: moet het totaal per kant ook ≤ 180 s blijven?
 - **Standaard statische houdtijd (§6.11):** geldt voor nieuwe statische
   stappen waarvan de standaarddosis in de bibliotheek 45 s is (de
   standaardwaarde). Een oefening met een eigen, afwijkende standaarddosis
@@ -142,11 +160,64 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
 - **Onderhoudstip:** 12 weken na je eerste sessie, of zodra een spiergroep in
   vier opeenvolgende weken (telkens 7 × 24 uur terug) werkelijk ≥ 300 s per
   kant haalde.
-- **Status in woorden:** naast de kleur staat "niet getraind", "onder de
-  drempel", "op dosis" of "plateau", zodat het ook in nachtmodus en bij
-  kleurenblindheid leesbaar is.
+- **Status in woorden:** naast de kleur staat "geen statisch of PNF" (grijs),
+  "onder de drempel", "op dosis" of "plateau", zodat het ook in nachtmodus en
+  bij kleurenblindheid leesbaar is. Bij de groepsnaam staat de geplande
+  stand ("gepland: …"); de werkelijke stand staat in de voorleestekst.
+- **Duur van sjablonen** in de lijsten rekent met jouw kantwisselduur, net
+  als de preview (de `expectedTotalSec` uit de bibliotheek geldt voor 5 s).
+- **W5** alleen bij een actieve routine: een inactieve routine telt niet mee
+  in de weekdosis en voegt er dus niets aan toe.
 - **Startscherm:** boven de sjablonen staan je actieve routines en een korte
   weekkaart (tik → "Mijn week").
+
+## Invulling van open punten in §6.6–6.7 (M5, knie)
+
+- **Kaarten op het startscherm:** bovenaan, in deze volgorde: de
+  opvlammingsbanner, het voorstel om de opvlamming te beëindigen, de
+  dagelijkse kniecheck, de 24- en 48-uurschecks die nu open staan, en de
+  oefeningen in de proefperiode met hun volgende stap. Onderaan de knop
+  "Ik heb een opvlamming".
+- **Pijn kiezen:** 0–10 als elf knoppen zonder voorgekozen waarde, zodat elke
+  pijnscore een bewuste keuze is (een schuif op 0 zou een vergeten keuze als
+  "geen pijn" opslaan). Op het gewone afrondscherm blijft de schuif van M3.
+- **Ontgrendelscherm** (`#/ontgrendelen/<id>`), te openen via de kaart
+  ("Ontgrendelen via 48-uurstest"), de kiezer en de proefperiodekaart: status
+  en teller, de uitleg uit §6.6, de drie bevestigingen, de begeleide proef,
+  de lopende cyclus met zijn vensters en de eerdere cycli.
+- **Begeleide proef:** één stap van 30 s per kant (bilateraal 30 s), in de
+  gewone speler. De beginwaarde ("Kniepijn nu") wordt vooraf gevraagd;
+  boven 2/10 start de proef niet. "Probeer nu" op de kaart van een oefening
+  in de status test leidt naar de proef.
+- **Blootstelling vastleggen:** zodra de sessie bewaard is (ook bij stoppen
+  met gedaan werk aan die oefening), op het eindtijdstip van de sessie.
+  "Kniepijn tijdens" vraagt het afrondscherm daarna verplicht (geen
+  voorgekozen waarde, Opslaan pas na een keuze). Ga je weg zonder Opslaan,
+  dan blijft de pijn tijdens leeg; zo'n cyclus telt niet als schoon en
+  vervalt bij het begin van het 24-uursvenster (de teller blijft staan),
+  net als een niet-ingevulde check (§6.6).
+- **Kniechecks in het logboek:** de beginwaarde vóór een blootstelling staat
+  als kniecheck met context `test` (met oefening); de pijn tijdens staat in de
+  sessie (`kneePainDuring`). Dagelijkse, 24u- en 48u-checks hebben hun eigen
+  context.
+- **Opvlammingsvoorstel** na een niet-schone cyclus met een waarde boven 2/10
+  (§6.6): een blad met "Niet nu" en "Aanzetten". Een 24u- of 48u-check boven
+  2/10 zet de modus direct aan (§6.7), zonder voorstel.
+- **Opvlamming beëindigen:** alleen via het voorstel na 7 dagen (§6.7 "de
+  gebruiker bevestigt"); er is geen knop om de modus zelf uit te zetten.
+  "Nog niet" vraagt het de volgende dag opnieuw. *Ter beslissing aan Oscar:
+  wil je een manier om een per ongeluk aangezette modus direct terug te
+  draaien?*
+- **Banner:** de stand van de reeks ("Nu: 3 van 7") en de voorgestelde
+  routines O5 en A5 als knoppen.
+- **Meldingen** over de kniestatus ("schone cyclus", "afkoelperiode tot …",
+  "cyclus vervallen") verschijnen kort bovenin en verdwijnen na 10 s of met
+  OK; de stand zelf staat ook op het startscherm en het ontgrendelscherm.
+- **Ontgrendelingen resetten** (Instellingen): alle vergrendelde oefeningen
+  terug naar vergrendeld, teller 0, zonder afkoelperiode; kniechecks en
+  logboek blijven.
+- **Laatste poort:** vlak voor de speler start, past de app de knie-poort nog
+  één keer toe op elke stap, ongeacht de route.
 
 ## Keuzes bij open of tegenstrijdige punten (akkoord Oscar, 17-10-2026)
 

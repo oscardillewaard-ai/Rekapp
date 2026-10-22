@@ -69,6 +69,12 @@ test('W5 boven 600 s per week; telt alle actieve routines samen', () => {
   assert.ok(c.includes('W6:hamstrings'));
 });
 
+test('W5 niet bij een inactieve routine: die voegt niets toe aan de weekdosis', () => {
+  const a10 = { ...lib.templates.get('A10'), active: true };
+  const off = { ...lib.templates.get('A10'), id: 'uit', active: false };
+  assert.ok(!codes(routineWarnings(off, ctx({ otherRoutines: [a10] }))).some((c) => c.startsWith('W5')));
+});
+
 test('W6/W7 alleen in een actieve routine', () => {
   const c = codes(routineWarnings({ ...T1, active: false }, ctx()));
   assert.ok(!c.some((x) => x.startsWith('W6') || x.startsWith('W7') || x.startsWith('W5')));

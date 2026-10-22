@@ -21,15 +21,21 @@ const plural = (n) => `${n} ${n === 1 ? 'oefening' : 'oefeningen'}`;
 // van de routinebouwer (rij = knop; onPick krijgt de oefening). blockedCodes(ex)
 // geeft bij de kiezer de blokkerende waarschuwingen (W1/W8), of [].
 let instances = 0;
+
+// Zoeken, filters en sortering. De bibliotheek en de kiezer van de bouwer
+// delen één toestand: "+ Oefening" opent de bibliotheek met de filters die
+// daar staan (§6.3), en andersom.
+export const libraryState = (showLocked) => ({ filters: { ...defaultFilters(), showLocked }, sort: 'score', grouped: true });
+
 export function createLibraryScreen({
   lib, equipmentOrder, showLocked = true, weights, title = 'Bibliotheek', onPick = null,
   blockedCodes = (ex) => (ex.locked ? ['W1'] : []), scrollTop = () => window.scrollTo(0, 0), headerExtra = null,
+  state = libraryState(showLocked),
 }) {
   const uid = ++instances;
   // "Vergrendelde oefeningen tonen" (§6.11) is de standaard van het filter.
   let lockedDefault = showLocked;
   const baseFilters = () => ({ ...defaultFilters(), showLocked: lockedDefault });
-  const state = { filters: baseFilters(), sort: 'score', grouped: true };
   let items = catalogItems(lib, weights);
   const equipment = equipmentOptions(lib, equipmentOrder);
   const rows = new Map(); // oefening-id → <li>, eenmalig gebouwd
@@ -164,6 +170,7 @@ export function createLibraryScreen({
 
   // Na een wijziging: knoppen bijwerken, lijst opnieuw tonen, telling melden.
   function update({ silent = false } = {}) {
+    if (search.value !== (state.filters.query ?? '')) search.value = state.filters.query ?? '';
     for (const u of updaters) u();
     renderList();
     const text = `Toon ${plural(visible().length)}`;
@@ -205,9 +212,9 @@ export function createLibraryScreen({
   // Rijen opnieuw opbouwen (bv. als de kniestatus veranderde).
   function refresh() {
     rows.clear();
-    renderList();
+    update({ silent: true });
   }
 
   renderList();
-  return { root, toolbar, sheet, setShowLocked, setWeights, refresh, focusSearch: () => search.focus() };
+  return { root, toolbar, sheet, setShowLocked, setWeights, refresh, sync: () => update({ silent: true }), focusSearch: () => search.focus() };
 }

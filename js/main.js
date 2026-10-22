@@ -3,7 +3,7 @@
 import { loadLibrary, LibraryError } from './library.js';
 import { h, clear, fill } from './ui/dom.js';
 import { loadGraphics, icon } from './ui/graphics.js';
-import { createLibraryScreen } from './ui/library.js';
+import { createLibraryScreen, libraryState } from './ui/library.js';
 import { createExerciseScreen } from './ui/exercise.js';
 import { createHomeScreen } from './ui/home.js';
 import { createRoutineScreen } from './ui/routine.js';
@@ -87,6 +87,10 @@ async function boot() {
   let routines = storedRoutines.filter((r) => validateUserRoutine(r, lib.exercises).length === 0);
   const skippedRoutines = storedRoutines.length - routines.length;
   let sessions = await store.getAll('sessions').catch(() => []);
+  // Niet-opgeslagen werk uit de bouwer van de vorige keer (de app werd op de
+  // achtergrond afgesloten, wat iOS vaak doet).
+  let builderDraft = await store.get('settings', 'builderDraft').catch(() => null);
+  if (builderDraft && validateUserRoutine(builderDraft.routine, lib.exercises).length) builderDraft = null;
   await loadGraphics([...new Set([...lib.exercises.values()].map((x) => x.position))]);
 
   const audio = createAudio();
@@ -324,7 +328,8 @@ async function boot() {
     bottom: () => (knee.flare.active || knee.unknown ? null
       : h('button', { class: 'btn flare-button', type: 'button', onclick: askFlare }, KNEE.flareButton)),
   });
-  const library = createLibraryScreen({ lib, equipmentOrder, showLocked: settings.showLocked, weights: settings.weights, blockedCodes });
+  const libState = libraryState(settings.showLocked);
+  const library = createLibraryScreen({ lib, equipmentOrder, showLocked: settings.showLocked, weights: settings.weights, blockedCodes, state: libState });
   const exercise = createExerciseScreen({
     lib, getContext, onBack: goBack('#/bibliotheek'), onTry: tryExercise, onAdd: openAddSheet,
     onUnlock: (ex) => { location.hash = `#/ontgrendelen/${ex.id}`; },
@@ -366,7 +371,7 @@ async function boot() {
   let pickResolve = null;
   const pickerClose = h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Sluiten', onclick: () => pickerDialog.close() }, icon('cross'));
   const picker = createLibraryScreen({
-    lib, equipmentOrder, showLocked: settings.showLocked, weights: settings.weights, blockedCodes,
+    lib, equipmentOrder, showLocked: settings.showLocked, weights: settings.weights, blockedCodes, state: libState,
     title: 'Kies een oefening', headerExtra: pickerClose,
     scrollTop: () => { pickerList().scrollTop = 0; },
     onPick: (ex, codes) => {
@@ -377,7 +382,6 @@ async function boot() {
           ? h('button', { class: 'btn', type: 'button', onclick: () => { pickerDialog.close(); location.hash = `#/ontgrendelen/${ex.id}`; } }, 'Naar de 48-uurstest')
           : null;
         fill(pickerNotice, h('div', { class: 'locked-bar' }, h('p', null, h('strong', null, `${ex.name}: `), codes.map((c) => WARNINGS[c].text).join(' ')), toUnlock));
-        pickerList().scrollTop = 0;
         return;
       }
       pickerDialog.close(ex.id);
@@ -402,15 +406,20 @@ async function boot() {
 
   const builder = createBuilderScreen({
     lib, getData, pickExercise,
-    onSave: saveRoutine,
+    onSave: async (r) => { await saveRoutine(r); dropDraft(); },
     onDelete: async (r) => {
       await store.delete('routines', r.id);
       routines = routines.filter((x) => x.id !== r.id);
-      replaceRoute('#/routines');
     },
+    onDeleted: () => replaceRoute('#/routines'),
     onDuplicate: async (r) => {
       const d = duplicateRoutine(r, { id: newId(), now: Date.now() });
-      await saveRoutine(d);
+      try {
+        await saveRoutine(d);
+      } catch (e) {
+        flash(`Dupliceren is niet gelukt: ${e?.message ?? e}`);
+        return;
+      }
       location.hash = `#/bouwer/${encodeURIComponent(d.id)}`;
     },
     onStart: (r) => {
@@ -418,7 +427,39 @@ async function boot() {
       if (playable.steps.length) startRoutine(playable, r);
     },
     onBack: goBack('#/routines'),
+    onForget: () => dropDraft(),
   });
+  function dropDraft() {
+    builderDraft = null;
+    store.delete('settings', 'builderDraft').catch(() => {});
+  }
+  // Naar de achtergrond met niet-opgeslagen wijzigingen: concept bewaren.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'hidden' || current !== 'bouwer') return;
+    const d = builder.draft();
+    if (d) store.put('settings', structuredClone(d), 'builderDraft').catch(() => {});
+  });
+  if (builderDraft) {
+    const d = builderDraft;
+    const bar = h('div', { class: 'warn-bar draft-bar' },
+      h('p', null, `"${d.routine.name}" had wijzigingen die niet waren opgeslagen.`),
+      h('div', { class: 'actions' },
+        h('button', { class: 'btn', type: 'button', onclick: () => { bar.remove(); dropDraft(); } }, 'Weggooien'),
+        h('button', {
+          class: 'btn primary', type: 'button',
+          onclick: () => {
+            bar.remove();
+            pendingDraft = d;
+            const target = `#/bouwer/${encodeURIComponent(d.routine.id)}`;
+            // Stond de bouwer al open (herladen in de bouwer), dan verandert de
+            // hash niet: zelf de router aanroepen.
+            if (location.hash === target) route();
+            else location.hash = target;
+          },
+        }, 'Verder bewerken')));
+    notices.append(bar);
+  }
+  let pendingDraft = null;
   // Nieuwe routine (of kopie van een sjabloon) die nog niet is opgeslagen.
   let pendingNew = null;
   function openBuilder(r, { fresh = false } = {}) {
@@ -435,8 +476,14 @@ async function boot() {
     const addTo = async (r, fresh) => {
       addSheet.close();
       const next = { ...r, steps: [...r.steps, newStep(ex, settings)], updatedAt: Date.now() };
-      if (fresh) openBuilder(next, { fresh: true });
-      else { await saveRoutine(next); location.hash = `#/bouwer/${encodeURIComponent(next.id)}`; }
+      if (fresh) { openBuilder(next, { fresh: true }); return; }
+      try {
+        await saveRoutine(next);
+      } catch (e) {
+        flash(`Toevoegen is niet gelukt: ${e?.message ?? e}`);
+        return;
+      }
+      location.hash = `#/bouwer/${encodeURIComponent(next.id)}`;
     };
     const mine = [...routines].sort((a, b) => a.name.localeCompare(b.name, 'nl'));
     fill(addSheet, 
@@ -552,6 +599,9 @@ async function boot() {
     '#/instellingen': () => { settingsScreen.render(); show('instellingen', 'Instellingen'); window.scrollTo(0, 0); },
   };
 
+  // Een kapotte link (#/bouwer/%) mag de router niet laten vastlopen.
+  const safeDecode = (x) => { try { return decodeURIComponent(x); } catch { return ''; } };
+
   function route() {
     stamp();
     const hash = location.hash || '#/start';
@@ -587,7 +637,7 @@ async function boot() {
       return;
     }
     if ((m = /^#\/routine\/(.+)$/.exec(hash))) {
-      const id = decodeURIComponent(m[1]);
+      const id = safeDecode(m[1]);
       const r = lib.templates.get(id) ?? routines.find((x) => x.id === id) ?? null;
       routine.render(r);
       show('routine', r?.name ?? 'Routine');
@@ -595,8 +645,15 @@ async function boot() {
       return;
     }
     if ((m = /^#\/bouwer\/(.+)$/.exec(hash))) {
-      const id = decodeURIComponent(m[1]);
-      if (builder.currentId() !== id) {
+      const id = safeDecode(m[1]);
+      // Van buiten de bouwer altijd de opgeslagen versie laden (die kan
+      // intussen veranderd zijn, bv. via "Toevoegen aan routine"). Alleen
+      // binnen de bouwer (terugvraag bij niet-opgeslagen wijzigingen) blijft
+      // de werkkopie staan.
+      if (pendingDraft?.routine.id === id) {
+        builder.restore(pendingDraft, routines.find((x) => x.id === id) ?? null);
+        pendingDraft = null;
+      } else if (current !== 'bouwer' || builder.currentId() !== id) {
         const fresh = pendingNew?.id === id ? pendingNew : null;
         const r = fresh ?? routines.find((x) => x.id === id);
         if (!r) { replaceRoute('#/routines'); return; }
@@ -613,6 +670,7 @@ async function boot() {
       return;
     }
     if (hash === '#/bibliotheek') {
+      library.sync();
       const back = current === 'oefening';
       show('bibliotheek', 'Bibliotheek', back ? `a.row[href="#/oefening/${lastExerciseId}"]` : 'h1');
       window.scrollTo(0, scrollOf.bibliotheek ?? 0);

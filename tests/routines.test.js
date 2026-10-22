@@ -106,4 +106,45 @@ test('validatie weigert kapotte routines', () => {
   assert.ok(bad({ steps: [{ exerciseId: 'gastroc_muur', durationSec: 45 }] }).length > 0); // unilateraal heeft perSideSec nodig
   assert.ok(bad({ steps: [{ exerciseId: 'spreidzit_muur', durationSec: 60, extraWeakSide: 'L' }] }).length > 0);
   assert.ok(bad({ steps: [{ exerciseId: 'hamstring_pnf', pnf: { rounds: 0, contractSec: 5, stretchSec: 25 } }] }).length > 0);
+  // M4-review: wat de tijdlijn en de dosis verschillend zouden lezen.
+  assert.ok(bad({ steps: [{ exerciseId: 'gastroc_muur', perSideSec: 45, extraWeakSide: 'X' }] }).some((e) => e.field === 'steps[0].extraWeakSide'));
+  assert.ok(bad({ steps: [{ exerciseId: 'hamstring_pnf', pnf: { rounds: 2.5, contractSec: 5, stretchSec: 25 } }] }).some((e) => e.field === 'steps[0].pnf'));
+  assert.ok(bad({ name: 'x'.repeat(61) }).some((e) => e.field === 'name'));
+  assert.deepEqual(bad({ name: 'x'.repeat(60) }), []);
+  for (const t of [-1, 31, 2.5]) {
+    assert.ok(bad({ steps: [{ exerciseId: 'gastroc_muur', perSideSec: 45, transitionAfterSec: t }] }).some((e) => e.field === 'steps[0].transitionAfterSec'), `overgang ${t}`);
+  }
+  assert.ok(bad({ preRun: 'ja' }).some((e) => e.field === 'preRun'));
+  assert.ok(bad({ active: 1 }).some((e) => e.field === 'active'));
+  assert.ok(bad({ id: '' }).some((e) => e.field === 'id'));
+});
+
+test('dupliceren: diepe kopie met "(kopie)" en nieuwe tijden; het origineel blijft ongewijzigd', () => {
+  const r = copyTemplate(lib.templates.get('A10'), { id: 'a', now: 1 });
+  const d = duplicateRoutine(r, { id: 'b', now: 2 });
+  assert.equal(d.id, 'b');
+  assert.equal(d.name, `${r.name} (kopie)`);
+  assert.equal(d.createdAt, 2);
+  assert.equal(d.updatedAt, 2);
+  assert.deepEqual(validateUserRoutine(d, lib.exercises), []);
+  d.steps[0].perSideSec = 999;
+  assert.notEqual(r.steps[0].perSideSec, 999);
+});
+
+test('PNF-grenzen: rekken 10–60 s in stappen van 5, aanspannen 3–10 s, rondes 1–5', () => {
+  const s = newStep(ex('hamstring_pnf'));
+  let x = s;
+  for (let i = 0; i < 20; i++) x = adjustDose(x, 5);
+  assert.equal(x.pnf.stretchSec, 60);
+  for (let i = 0; i < 20; i++) x = adjustDose(x, -5);
+  assert.equal(x.pnf.stretchSec, 10);
+  assert.equal(setPnf(s, { contractSec: 20 }).pnf.contractSec, 10);
+  assert.equal(setPnf(s, { contractSec: 1 }).pnf.contractSec, 3);
+  assert.equal(setPnf(s, { rounds: 9 }).pnf.rounds, 5);
+  assert.equal(setPnf(s, { rounds: 0 }).pnf.rounds, 1);
+});
+
+test('nieuwe stap blijft binnen 10–180 s, ook met een vreemde standaardhoudtijd', () => {
+  assert.equal(newStep(ex('gastroc_muur'), { defaultStaticHoldSec: 500 }).perSideSec, 180);
+  assert.equal(newStep(ex('gastroc_muur'), { defaultStaticHoldSec: 1 }).perSideSec, 10);
 });

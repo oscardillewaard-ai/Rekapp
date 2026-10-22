@@ -1,5 +1,5 @@
 // Routinebouwer (§6.3). Werkt op een kopie; Opslaan schrijft naar de opslag.
-import { h, fill } from './dom.js';
+import { h, fill, preserveFocus } from './dom.js';
 import { icon, starsWithScore } from './graphics.js';
 import { rate } from '../library.js';
 import { formatDose, formatDuration } from '../format.js';
@@ -15,22 +15,28 @@ const SLOTS = [['ochtend', 'Ochtend'], ['avond', 'Avond'], ['vrij', 'Vrij']];
 const SEVERITY_CLASS = { blokkeert: 'locked-bar', oranje: 'warn-bar', info: 'info-bar' };
 const fmt = (n) => new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 1 }).format(n);
 
-export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDelete, onDuplicate, onStart, onBack }) {
+export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDelete, onDeleted, onDuplicate, onStart, onBack, onForget = () => {} }) {
   const root = h('section', { class: 'screen builder' });
   const toolbar = h('div', { class: 'toolbar' });
   const stepSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'step-title' });
   stepSheet.addEventListener('click', (e) => { if (e.target === stepSheet) stepSheet.close(); });
   const leaveSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'leave-title' });
+  leaveSheet.addEventListener('click', (e) => { if (e.target === leaveSheet) leaveSheet.close(); });
 
   let r = null; // werkkopie
-  let saved = ''; // JSON van de opgeslagen versie
+  let saved = ''; // de opgeslagen versie (zonder updatedAt)
   let isNew = false;
+  let error = null; // laatste fout bij opslaan of verwijderen
 
-  const dirty = () => isNew || JSON.stringify(r) !== saved;
+  // updatedAt telt niet mee: een wijziging die niets verandert (dezelfde chip
+  // nog eens, +5 en −5) maakt de routine niet "gewijzigd".
+  const snap = (x) => JSON.stringify({ ...x, updatedAt: 0 });
+  const dirty = () => isNew || snap(r) !== saved;
   const ctx = () => getData();
+  const playableCount = () => r.steps.filter((st) => access(lib.exercises.get(st.exerciseId), ctx().knee, lib.meta.knee).allowed).length;
 
   function change(next, { rerender = true } = {}) {
-    r = { ...next, updatedAt: Date.now() };
+    r = next;
     if (rerender) render();
   }
 
@@ -40,7 +46,7 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
     return h('div', { class: 'stepper', role: 'group', 'aria-label': label },
       h('span', { class: 'stepper-label' }, label),
       h('button', { class: 'btn icon', type: 'button', 'aria-label': `${label} lager`, onclick: onMinus }, '−'),
-      h('output', { 'aria-live': 'polite' }, `${value}${unit}`),
+      h('output', null, `${value}${unit}`),
       h('button', { class: 'btn icon', type: 'button', 'aria-label': `${label} hoger`, onclick: onPlus }, '+'));
   }
 
@@ -60,6 +66,11 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
   // ---------- Stap bewerken ----------
 
   function openStep(index) {
+    preserveFocus(stepSheet, () => fillStep(index));
+    if (!stepSheet.open) stepSheet.showModal();
+  }
+
+  function fillStep(index) {
     const step = r.steps[index];
     const ex = lib.exercises.get(step.exerciseId);
     const next = r.steps[index + 1];
@@ -99,14 +110,15 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
         h('div', { class: 'sheet-head' },
           h('h2', { id: 'step-title' }, ex.name),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Sluiten', onclick: () => stepSheet.close() }, icon('cross'))),
-        h('p', { class: 'note' }, `Standaard: ${formatDose(ex.defaultDose, ex)}. Stappen van 5 s, minimaal 10 s, maximaal 180 s.`),
+        h('p', { class: 'note' }, step.pnf
+          ? `Standaard: ${formatDose(ex.defaultDose, ex)}. Rekken in stappen van 5 s (10–60 s), aanspannen 3–10 s, 1–5 rondes.`
+          : `Standaard: ${formatDose(ex.defaultDose, ex)}. Stappen van 5 s, minimaal 10 s, maximaal 180 s.`),
         ...dose, extra, transition,
         h('div', { class: 'actions' },
           h('button', { class: 'btn', type: 'button', disabled: index === 0, onclick: () => { change(moveStep(r, index, index - 1)); openStep(index - 1); } }, 'Omhoog'),
           h('button', { class: 'btn', type: 'button', disabled: index === r.steps.length - 1, onclick: () => { change(moveStep(r, index, index + 1)); openStep(index + 1); } }, 'Omlaag'),
           h('button', { class: 'btn danger', type: 'button', onclick: () => { stepSheet.close(); change(removeStep(r, index)); } }, 'Verwijderen'))),
       h('div', { class: 'sheet-foot' }, h('button', { class: 'btn primary', type: 'button', onclick: () => stepSheet.close() }, 'Klaar')));
-    if (!stepSheet.open) stepSheet.showModal();
   }
 
   // ---------- Slepen (sleepgreep; met pijltjes ook met het toetsenbord) ----------
@@ -142,18 +154,22 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
         target = Math.min(Math.max(target, 0), items.length - 1);
         items.forEach((other, i) => other.classList.toggle('drop-target', i === target && i !== index));
       };
-      const onUp = () => {
+      // Loslaten verplaatst; een afgebroken gebaar (pointercancel, bv. een
+      // systeemgebaar of inkomend gesprek) zet alles terug.
+      const end = (commit) => () => {
         handle.removeEventListener('pointermove', onMove);
         handle.removeEventListener('pointerup', onUp);
-        handle.removeEventListener('pointercancel', onUp);
+        handle.removeEventListener('pointercancel', onCancel);
         li.classList.remove('dragging');
         li.style.transform = '';
         items.forEach((other) => other.classList.remove('drop-target'));
-        if (target !== index) change(moveStep(r, index, target));
+        if (commit && target !== index) change(moveStep(r, index, target));
       };
+      const onUp = end(true);
+      const onCancel = end(false);
       handle.addEventListener('pointermove', onMove);
       handle.addEventListener('pointerup', onUp);
-      handle.addEventListener('pointercancel', onUp);
+      handle.addEventListener('pointercancel', onCancel);
     });
     return handle;
   }
@@ -161,6 +177,11 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
   // ---------- Scherm ----------
 
   function render() {
+    preserveFocus(root, renderScreen);
+    renderToolbar();
+  }
+
+  function renderScreen() {
     const { settings, knee, routines } = ctx();
     const total = totalSec(r, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
     const over = total > MAX_TOTAL_SEC;
@@ -204,8 +225,10 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
         h('td', null, week ?? '–'));
     });
 
-    fill(root, 
+    const blocked = r.steps.length > 0 && playableCount() === 0;
+    fill(root,
       h('header', { class: 'card-head' }, h('h1', { tabindex: '-1' }, isNew ? 'Nieuwe routine' : 'Routine bewerken')),
+      error ? h('p', { class: 'warn-bar', role: 'alert' }, error) : null,
       h('section', { class: 'section' },
         h('label', { class: 'field stack' }, h('span', null, 'Naam'), nameInput),
         segmented('Moment', SLOTS, r.slot, (v) => change({ ...r, slot: v })),
@@ -220,6 +243,7 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
         h('span', { class: 'time-track', 'aria-hidden': 'true' }, h('span', { class: 'time-fill', style: `width:${Math.min(100, (total / MAX_TOTAL_SEC) * 100)}%` })),
         h('span', { class: 'time-max', 'aria-hidden': 'true' }, '15:00')),
       r.steps.length ? steps : h('p', { class: 'note' }, 'Nog geen oefeningen. Voeg er een toe.'),
+      blocked ? h('p', { class: 'locked-bar' }, 'Alle oefeningen in deze routine zijn nu geblokkeerd door de knie-poort. Er valt niets af te spelen.') : null,
       h('button', { class: 'btn add-step', type: 'button', onclick: addExercise }, '+ Oefening'),
       warnings.length ? h('section', { class: 'section' }, h('h2', null, 'Waarschuwingen'),
         h('ul', { class: 'plain warnings' }, warnings.map((w) => h('li', { class: SEVERITY_CLASS[w.severity] },
@@ -232,16 +256,15 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
           h('thead', null, h('tr', null, h('th', { scope: 'col' }, 'Spiergroep'), h('th', { scope: 'col' }, 'Per sessie'), h('th', { scope: 'col' }, 'Per week'))),
           h('tbody', null, doseRows))) : null,
       isNew ? null : h('section', { class: 'section actions' },
-        h('button', { class: 'btn', type: 'button', onclick: async () => { if (dirty()) await save(); onDuplicate(r); } }, 'Dupliceren'),
+        h('button', { class: 'btn', type: 'button', onclick: async () => { if (await saveIfDirty()) onDuplicate(r); } }, 'Dupliceren'),
         h('button', { class: 'btn danger', type: 'button', onclick: () => confirmDelete() }, 'Verwijderen')));
-    renderToolbar();
   }
 
   function renderToolbar() {
     fill(toolbar, 
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Terug', onclick: () => leave() }, icon('back')),
       h('button', { class: 'btn', type: 'button', disabled: !dirty(), onclick: () => save() }, 'Opslaan'),
-      h('button', { class: 'btn primary', type: 'button', disabled: !r.steps.length, onclick: () => start() }, icon('play'), 'Start'));
+      h('button', { class: 'btn primary', type: 'button', disabled: playableCount() === 0, onclick: () => start() }, icon('play'), 'Start'));
   }
 
   async function addExercise() {
@@ -254,38 +277,71 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
     root.querySelector('.steps li:last-child')?.scrollIntoView({ block: 'nearest' });
   }
 
+  // Opslaan; bij een fout (bv. opslag vol) blijft alles staan en zegt de
+  // bouwer wat er mis ging. Geeft true als het gelukt is.
   async function save() {
-    if (!r.name.trim()) r = { ...r, name: 'Nieuwe routine' };
-    await onSave(r);
-    saved = JSON.stringify(r);
+    const next = { ...r, name: r.name.trim() ? r.name : 'Nieuwe routine', updatedAt: Date.now() };
+    try {
+      await onSave(next);
+    } catch (e) {
+      error = `Opslaan is niet gelukt: ${e?.message ?? e}`;
+      render();
+      return false;
+    }
+    r = next;
+    saved = snap(r);
     isNew = false;
+    error = null;
     render();
+    return true;
   }
+  const saveIfDirty = async () => !dirty() || save();
 
   async function start() {
-    if (dirty()) await save();
-    onStart(r);
+    if (await saveIfDirty()) onStart(r);
   }
 
   function confirmDelete() {
-    fill(leaveSheet, 
+    fill(leaveSheet,
       h('div', { class: 'sheet-body' }, h('h2', { id: 'leave-title' }, `"${r.name}" verwijderen?`), h('p', null, 'Je logboek blijft bewaard.')),
       h('div', { class: 'sheet-foot' },
         h('button', { class: 'btn', type: 'button', onclick: () => leaveSheet.close() }, 'Annuleren'),
-        h('button', { class: 'btn danger', type: 'button', onclick: async () => { leaveSheet.close(); const gone = r; forget(); await onDelete(gone); } }, 'Verwijderen')));
+        h('button', {
+          class: 'btn danger', type: 'button',
+          onclick: async () => {
+            leaveSheet.close();
+            try {
+              await onDelete(r);
+            } catch (e) {
+              error = `Verwijderen is niet gelukt: ${e?.message ?? e}`;
+              render();
+              return;
+            }
+            forget();
+            onDeleted();
+          },
+        }, 'Verwijderen')));
     leaveSheet.showModal();
   }
 
   // Weg uit de bouwer. Met niet-opgeslagen wijzigingen eerst vragen; "Niet
   // opslaan" laat de werkkopie los, zodat de router daarna vrij kan gaan.
-  function forget() { r = null; isNew = false; saved = ''; }
+  // "Verder bewerken" (of een tik naast het blad) blijft in de bouwer.
+  function forget() { r = null; isNew = false; saved = ''; error = null; onForget(); }
   function leave() {
     if (!dirty() || (!r.steps.length && isNew)) { forget(); onBack(); return; }
-    fill(leaveSheet, 
+    fill(leaveSheet,
       h('div', { class: 'sheet-body' }, h('h2', { id: 'leave-title' }, 'Wijzigingen opslaan?')),
       h('div', { class: 'sheet-foot' },
+        h('button', { class: 'btn', type: 'button', onclick: () => leaveSheet.close() }, 'Verder bewerken'),
         h('button', { class: 'btn', type: 'button', onclick: () => { leaveSheet.close(); forget(); onBack(); } }, 'Niet opslaan'),
-        h('button', { class: 'btn primary', type: 'button', onclick: async () => { leaveSheet.close(); await save(); onBack(); } }, 'Opslaan')));
+        h('button', {
+          class: 'btn primary', type: 'button',
+          onclick: async () => {
+            leaveSheet.close();
+            if (await save()) { forget(); onBack(); }
+          },
+        }, 'Opslaan')));
     leaveSheet.showModal();
   }
 
@@ -293,8 +349,19 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
     root, toolbar, sheets: [stepSheet, leaveSheet],
     open(routine, { fresh = false } = {}) {
       r = structuredClone(routine);
-      saved = JSON.stringify(routine);
+      saved = snap(routine);
       isNew = fresh;
+      error = null;
+      render();
+    },
+    // Concept bij niet-opgeslagen wijzigingen (zie main.js: bewaard als de
+    // app naar de achtergrond gaat) en het terugzetten daarvan.
+    draft: () => (r !== null && dirty() ? { routine: r, fresh: isNew } : null),
+    restore({ routine, fresh }, base) {
+      r = structuredClone(routine);
+      saved = base ? snap(base) : '';
+      isNew = fresh || !base;
+      error = null;
       render();
     },
     isDirty: () => r !== null && dirty(),

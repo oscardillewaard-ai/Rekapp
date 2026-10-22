@@ -64,6 +64,10 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 html {
+  /* scrollIntoView en focus houden rekening met vaste balken: niets komt
+     onder de werkbalk of de vaste totaaltijd terecht. */
+  scroll-padding-top: 5rem;
+  scroll-padding-bottom: calc(var(--toolbar-h) + var(--tabbar-h) + .75rem);
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
@@ -549,6 +553,12 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: 1; }
 .time-bar {
   display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: .625rem;
   margin-top: 1rem; padding: .75rem 1rem; border-radius: var(--radius); background: var(--surface);
+}
+/* §6.3: de totale tijd hoort bij de kop en blijft in beeld tijdens het
+   bewerken, ook als je over 15:00 gaat. */
+.builder .time-bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 4;
+  box-shadow: 0 0 0 .5rem var(--bg);
 }
 .time-value { font-weight: 700; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
 .time-track { position: relative; height: .625rem; border-radius: .3125rem; background: var(--bar); overflow: hidden; }

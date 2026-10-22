@@ -112,11 +112,15 @@ export function totalSec(r, exercises, timing, sideSwitchSec) {
 
 // Controle van een eigen routine (bij laden en importeren). Geeft een lijst
 // fouten terug; leeg = geldig.
+// Zelfde grens als het naamveld in de bouwer.
+export const NAME_MAX = 60;
+
 export function validateUserRoutine(r, exercises) {
   const errors = [];
   const err = (field, message) => errors.push({ field, message });
   if (typeof r?.id !== 'string' || !r.id) err('id', 'ontbreekt');
   if (typeof r?.name !== 'string' || !r.name.trim()) err('name', 'naam ontbreekt');
+  else if (r.name.length > NAME_MAX) err('name', `hoogstens ${NAME_MAX} tekens`);
   if (!SLOTS.includes(r?.slot)) err('slot', `moet ochtend, avond of vrij zijn`);
   if (typeof r?.preRun !== 'boolean') err('preRun', 'moet waar of onwaar zijn');
   if (!Number.isInteger(r?.timesPerWeek) || r.timesPerWeek < 1 || r.timesPerWeek > 14) err('timesPerWeek', 'moet 1–14 zijn');
@@ -131,9 +135,15 @@ export function validateUserRoutine(r, exercises) {
     }
     if (s.pnf) {
       const { rounds, contractSec, stretchSec } = s.pnf;
-      if (!(rounds >= 1 && rounds <= 5) || !(contractSec >= 3 && contractSec <= 10) || !(stretchSec >= 10 && stretchSec <= 60)) {
-        err(`steps[${i}].pnf`, 'rondes 1–5, aanspannen 3–10 s, rekken 10–60 s');
+      const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+      if (!int(rounds, 1, 5) || !int(contractSec, 3, 10) || !int(stretchSec, 10, 60)) {
+        err(`steps[${i}].pnf`, 'rondes 1–5, aanspannen 3–10 s, rekken 10–60 s, hele getallen');
       }
+    }
+    // Tijdlijn en dosis lezen extraWeakSide allebei; iets anders dan L/R
+    // zou de tijd laten verschillen van de dosis.
+    if (s.extraWeakSide !== undefined && s.extraWeakSide !== null && s.extraWeakSide !== 'L' && s.extraWeakSide !== 'R') {
+      err(`steps[${i}].extraWeakSide`, 'moet L, R of leeg zijn');
     }
     if (s.transitionAfterSec !== undefined && !(Number.isInteger(s.transitionAfterSec) && s.transitionAfterSec >= 0 && s.transitionAfterSec <= 30)) {
       err(`steps[${i}].transitionAfterSec`, 'moet 0–30 s zijn');
