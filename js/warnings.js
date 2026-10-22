@@ -53,11 +53,17 @@ export function routineWarnings(routine, ctx) {
     }
   });
 
+  // W3–W7 gaan over wat echt wordt afgespeeld: stappen die de knie-poort
+  // blokkeert (W1/W8), slaat de speler over; ze tellen niet mee in tijd of
+  // dosis. Dat geldt ook voor de andere routines in de weekdosis.
+  const playable = (r) => playableRoutine(r, ctx).routine;
+  const own = playable(routine);
+
   // W3: vóór een run en ≥ 60 s statisch of PNF per spiergroep (alleen doelen
   // met gewicht 1) per kant in deze routine.
   if (routine.preRun) {
     const perGroup = new Map();
-    for (const step of routine.steps) {
+    for (const step of own.steps) {
       const ex = exercises.get(step.exerciseId);
       if (!COUNTED.has(ex.type)) continue;
       const sec = secondsPerSide(step, ex);
@@ -75,20 +81,20 @@ export function routineWarnings(routine, ctx) {
   }
 
   // W4: totale tijd > 900 s.
-  const { totalSec } = compileRoutine(routine, exercises, { timing: meta.timing, sideSwitchSec: ctx.sideSwitchSec });
+  const { totalSec } = compileRoutine(own, exercises, { timing: meta.timing, sideSwitchSec: ctx.sideSwitchSec });
   if (totalSec > MAX_TOTAL_SEC) out.push(warning('W4', { totalSec }));
 
   // W5–W7 gaan over de geplande weekdosis: alle actieve routines samen.
-  const active = (ctx.otherRoutines ?? []).filter((r) => r.active !== false && r.id !== routine.id);
-  if (routine.active !== false) active.push(routine);
+  const active = (ctx.otherRoutines ?? []).filter((r) => r.active !== false && r.id !== routine.id).map(playable);
+  if (routine.active !== false) active.push(own);
   const week = plannedWeekDose(active, exercises);
 
   // W5: groepen waar deze (actieve) routine statische of PNF-tijd aan
   // toevoegt en die per kant boven 600 s per week komen. Een inactieve
   // routine telt niet mee in de weekdosis en voegt dus niets toe.
   if (routine.active !== false) {
-    for (const [group, own] of routineDose(routine, exercises)) {
-      if (own.L === 0 && own.R === 0) continue;
+    for (const [group, mine] of routineDose(own, exercises)) {
+      if (mine.L === 0 && mine.R === 0) continue;
       const sec = meterValue(week.get(group));
       if (sec > meta.dose.plateauSec) out.push(warning('W5', { group, sec }));
     }
@@ -97,7 +103,7 @@ export function routineWarnings(routine, ctx) {
   // W6/W7: groepen die in deze (actieve) routine primair doel zijn.
   if (routine.active !== false) {
     const primary = new Set();
-    for (const step of routine.steps) {
+    for (const step of own.steps) {
       for (const t of exercises.get(step.exerciseId).targets) if (t.weight === 1) primary.add(t.group);
     }
     for (const group of primary) {

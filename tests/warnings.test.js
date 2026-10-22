@@ -106,3 +106,18 @@ test('sjablonen zonder opvlamming geven geen blokkerende waarschuwing', () => {
     assert.equal(playableRoutine(r, ctx()).removed.length, 0, r.id);
   }
 });
+
+test('W3–W7 en de tijd rekenen alleen met stappen die echt worden afgespeeld (zonder W1/W8)', () => {
+  // Opvlamming: rf_zijlig (90°) wordt overgeslagen, dus telt niet voor W3.
+  const flare = activateFlare(emptyKneeState(), at(0)).state;
+  const r = { id: 'x', name: 'x', slot: 'avond', preRun: true, timesPerWeek: 7, active: true, steps: [{ exerciseId: 'rf_zijlig', perSideSec: 90 }] };
+  assert.ok(codes(routineWarnings(r, ctx())).some((c) => c.startsWith('W3')));
+  const c = codes(routineWarnings(r, ctx({ knee: flare })));
+  assert.ok(c.includes('W8:rf_zijlig'));
+  assert.ok(!c.some((x) => x.startsWith('W3') || x.startsWith('W5') || x.startsWith('W6')), c.join(','));
+  // Een vergrendelde oefening (W1) telt ook niet mee voor W4.
+  const long = { ...r, preRun: false, steps: [{ exerciseId: 'couch_stretch', perSideSec: 180 }, { exerciseId: 'couch_stretch', perSideSec: 180 }, { exerciseId: 'couch_stretch', perSideSec: 180 }] };
+  const cl = codes(routineWarnings(long, ctx()));
+  assert.ok(cl.includes('W1:couch_stretch'));
+  assert.ok(!cl.includes('W4'));
+});

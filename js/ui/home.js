@@ -5,6 +5,7 @@ import { h, fill } from './dom.js';
 import { formatDuration } from '../format.js';
 import { totalSec } from '../routines.js';
 import { weekRows } from '../week.js';
+import { playableRoutine } from '../warnings.js';
 
 const SLOT_ORDER = { ochtend: 0, avond: 1, vrij: 2 };
 const SLOT_TEXT = { ochtend: 'Ochtend', avond: 'Avond', vrij: 'Vrij' };
@@ -12,17 +13,21 @@ const SLOT_TEXT = { ochtend: 'Ochtend', avond: 'Avond', vrij: 'Vrij' };
 export function createHomeScreen({ lib, getData, topCards = () => [], bottom = () => null }) {
   const root = h('section', { class: 'screen', 'aria-labelledby': 'home-title' });
 
-  function slotCard(slot, title, settings) {
+  // Tijden zoals ze echt worden afgespeeld: zonder stappen die de knie-poort
+  // blokkeert (W1/W8).
+  const seconds = (r, { settings, knee }) => totalSec(playableRoutine(r, { lib, knee }).routine, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
+
+  function slotCard(slot, title, data) {
     const templates = [...lib.templates.values()].filter((r) => r.slot === slot).sort((a, b) => a.variant - b.variant);
     return h('section', { class: 'section slot-card' },
       h('h2', null, title),
       h('div', { class: 'variant-buttons' }, templates.map((r) =>
-        h('a', { class: 'btn variant', href: `#/routine/${r.id}`, 'aria-label': `${r.name}, ${formatDuration(totalSec(r, lib.exercises, lib.meta.timing, settings.sideSwitchSec))}` },
+        h('a', { class: 'btn variant', href: `#/routine/${r.id}`, 'aria-label': `${r.name}, ${formatDuration(seconds(r, data))}` },
           h('span', { class: 'variant-min' }, String(r.variant)),
           h('span', { class: 'variant-unit' }, 'min')))));
   }
 
-  function myRoutines(routines, settings) {
+  function myRoutines(routines, data) {
     const active = routines.filter((r) => r.active !== false)
       .sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot] || a.name.localeCompare(b.name, 'nl'));
     if (!active.length) return null;
@@ -32,11 +37,11 @@ export function createHomeScreen({ lib, getData, topCards = () => [], bottom = (
         h('a', { class: 'row routine-row', href: `#/routine/${encodeURIComponent(r.id)}` },
           h('div', { class: 'main' },
             h('div', { class: 'name' }, r.name),
-            h('div', { class: 'meta' }, `${SLOT_TEXT[r.slot]} · ${formatDuration(totalSec(r, lib.exercises, lib.meta.timing, settings.sideSwitchSec))} · ${r.timesPerWeek}× per week`)))))));
+            h('div', { class: 'meta' }, `${SLOT_TEXT[r.slot]} · ${formatDuration(seconds(r, data))} · ${r.timesPerWeek}× per week`)))))));
   }
 
-  function weekCard(routines, sessions) {
-    const rows = weekRows(lib, { routines, sessions, now: Date.now() });
+  function weekCard(routines, sessions, knee) {
+    const rows = weekRows(lib, { routines, sessions, now: Date.now(), knee });
     const trained = rows.filter((r) => r.plannedSec > 0 || r.actualSec > 0);
     if (!trained.length) return null;
     const ok = rows.filter((r) => r.actualSec >= lib.meta.dose.thresholdSec).length;
@@ -48,14 +53,15 @@ export function createHomeScreen({ lib, getData, topCards = () => [], bottom = (
   }
 
   function render() {
-    const { routines, sessions, settings } = getData();
+    const data = getData();
+    const { routines, sessions, knee } = data;
     fill(root, 
       h('header', { class: 'topbar' }, h('h1', { id: 'home-title', tabindex: '-1' }, 'Rekapp')),
       topCards(),
-      myRoutines(routines, settings),
-      weekCard(routines, sessions),
-      slotCard('ochtend', 'Ochtend', settings),
-      slotCard('avond', 'Avond', settings),
+      myRoutines(routines, data),
+      weekCard(routines, sessions, knee),
+      slotCard('ochtend', 'Ochtend', data),
+      slotCard('avond', 'Avond', data),
       bottom());
   }
   return { root, render };

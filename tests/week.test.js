@@ -74,3 +74,14 @@ test('onderhoudstip: na 12 weken, of als een groep 4 weken op rij ≥ 300 s haal
   assert.equal(maintenanceTipDue(lib, four, at(27, 22)), true);
   assert.equal(maintenanceTipDue(lib, four.slice(7), at(27, 22)), false); // pas 3 weken
 });
+
+test('geplande dosis zonder stappen die de knie-poort blokkeert (opvlamming)', async () => {
+  const { emptyKneeState, activateFlare } = await import('../js/knee.js');
+  const a5 = tpl('A5');
+  const flare = activateFlare(emptyKneeState(), at(0)).state;
+  const without = weekRows(lib, { routines: [a5], sessions: [], now: at(0), knee: flare });
+  const plain = weekRows(lib, { routines: [a5], sessions: [], now: at(0), knee: emptyKneeState() });
+  assert.equal(row(without, 'rectus_femoris').plannedSec, 0);
+  assert.ok(row(plain, 'rectus_femoris').plannedSec > 0);
+  assert.equal(row(without, 'gastrocnemius').plannedSec, row(plain, 'gastrocnemius').plannedSec);
+});

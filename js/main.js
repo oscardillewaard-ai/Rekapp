@@ -350,7 +350,7 @@ async function boot() {
   const unlock = createUnlockScreen({ lib, getKnee: () => knee, actions: kneeActions, onBack: goBack('#/start') });
   const routine = createRoutineScreen({
     lib, getContext, onBack: goBack('#/start'), onStart: startRoutine,
-    onCopy: (tpl) => openBuilder(copyTemplate(tpl, { id: newId(), now: Date.now() }), { fresh: true }),
+    onCopy: (tpl) => openBuilder(withoutBlocked(copyTemplate(tpl, { id: newId(), now: Date.now() })), { fresh: true }),
     onEdit: (r) => { location.hash = `#/bouwer/${encodeURIComponent(r.id)}`; },
   });
   const player = createPlayerScreen({
@@ -577,7 +577,7 @@ async function boot() {
     },
     onDeleted: () => replaceRoute('#/routines'),
     onDuplicate: async (r) => {
-      const d = duplicateRoutine(r, { id: newId(), now: Date.now() });
+      const d = withoutBlocked(duplicateRoutine(r, { id: newId(), now: Date.now() }));
       try {
         await saveRoutine(d);
       } catch (e) {
@@ -665,6 +665,18 @@ async function boot() {
 
   // Elke start komt hier langs. Zit er een oefening uit de proefperiode in,
   // dan eerst "Kniepijn nu" (die vraag is dan het gebruikersgebaar).
+  // Kopiëren en dupliceren maken een nieuwe routine: wat de knie-poort nu
+  // blokkeert (W1/W8), komt er niet in (§6.5 "voorkomen toevoegen"). Zeg wat
+  // er is weggelaten.
+  function withoutBlocked(r) {
+    const { routine: kept, removed } = playableRoutine(r, { lib, knee });
+    if (removed.length) {
+      const names = [...new Set(removed.map((x) => exName(x.exerciseId)))].join(', ');
+      flash(`Niet overgenomen (knie-poort): ${names}.`);
+    }
+    return kept;
+  }
+
   function startRoutine(playable, meta) {
     const ids = trialExerciseIds(playable.steps, lib.exercises, knee);
     if (ids.length) askPainNow(playable, meta, ids);

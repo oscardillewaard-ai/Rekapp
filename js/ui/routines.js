@@ -2,6 +2,7 @@
 import { h, fill } from './dom.js';
 import { formatDuration } from '../format.js';
 import { totalSec } from '../routines.js';
+import { playableRoutine } from '../warnings.js';
 
 const SLOT_TEXT = { ochtend: 'Ochtend', avond: 'Avond', vrij: 'Vrij' };
 
@@ -11,9 +12,10 @@ export function createRoutinesScreen({ lib, getData, onNew }) {
     h('button', { class: 'btn primary', type: 'button', onclick: () => onNew() }, '+ Nieuwe routine'));
 
   function card(r, { template }) {
-    const { settings } = getData();
-    // Ook sjablonen met de ingestelde kantwisselduur, net als de preview.
-    const sec = totalSec(r, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
+    const { settings, knee } = getData();
+    // Zoals de preview: met de ingestelde kantwisselduur en zonder stappen die
+    // de knie-poort blokkeert (W1/W8).
+    const sec = totalSec(playableRoutine(r, { lib, knee }).routine, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
     const meta = [
       SLOT_TEXT[r.slot],
       formatDuration(sec),

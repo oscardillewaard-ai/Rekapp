@@ -148,7 +148,8 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd, on
 
     // 8. Knoppen, onderaan in de duimzone. Een vergrendelde oefening (W1), of
     // tijdens een opvlamming alles boven 45° (W8), kan niet worden toegevoegd
-    // of afgespeeld. Dezelfde poort (access) bewaakt ook de speler zelf.
+    // of afgespeeld. Vlak voor de speler start, past main.js (beginRun) dezelfde
+    // poort (access) nog eens toe op elke stap.
     const gate = access(ex, getContext().knee, lib.meta.knee);
     const lockIcon = gate.allowed ? null : icon('lock');
     toolbar.append(

@@ -46,9 +46,9 @@ export function createWeekScreen({ lib, getData }) {
   }
 
   function render() {
-    const { routines, sessions } = getData();
+    const { routines, sessions, knee } = getData();
     const now = Date.now();
-    const rows = weekRows(lib, { routines, sessions, now });
+    const rows = weekRows(lib, { routines, sessions, now, knee });
     const active = routines.filter((r) => r.active !== false);
     fill(root, 
       h('header', { class: 'topbar' }, h('h1', { id: 'week-title', tabindex: '-1' }, 'Mijn week')),

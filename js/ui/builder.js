@@ -5,7 +5,7 @@ import { rate } from '../library.js';
 import { formatDose, formatDuration } from '../format.js';
 import { autoTransitionSec } from '../timeline.js';
 import { routineDose } from '../dose.js';
-import { routineWarnings } from '../warnings.js';
+import { routineWarnings, playableRoutine } from '../warnings.js';
 import { access } from '../knee.js';
 import {
   newStep, adjustDose, setPnf, setExtraWeakSide, setTransition, moveStep, removeStep, totalSec, MAX_TOTAL_SEC,
@@ -183,7 +183,10 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
 
   function renderScreen() {
     const { settings, knee, routines } = ctx();
-    const total = totalSec(r, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
+    // Tijd en dosis van wat echt wordt afgespeeld: stappen die de knie-poort
+    // blokkeert (W1/W8), slaat de speler over.
+    const { routine: playable, removed } = playableRoutine(r, { lib, knee });
+    const total = totalSec(playable, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
     const over = total > MAX_TOTAL_SEC;
     const others = routines.filter((x) => x.id !== r.id);
     const warnings = routineWarnings(r, { lib, knee, otherRoutines: others, now: Date.now(), sideSwitchSec: settings.sideSwitchSec });
@@ -213,7 +216,7 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
       steps.append(li);
     });
 
-    const dose = routineDose(r, lib.exercises, r.timesPerWeek);
+    const dose = routineDose(playable, lib.exercises, r.timesPerWeek);
     const doseRows = [...lib.groups.values()].filter((g) => dose.has(g.id)).map((g) => {
       const d = dose.get(g.id);
       const per = (v) => fmt(v / r.timesPerWeek);
@@ -241,7 +244,8 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
         h('span', { class: 'time-label', 'aria-hidden': 'true' }, 'Totale tijd'),
         h('span', { class: 'time-value', 'aria-hidden': 'true' }, formatDuration(total)),
         h('span', { class: 'time-track', 'aria-hidden': 'true' }, h('span', { class: 'time-fill', style: `width:${Math.min(100, (total / MAX_TOTAL_SEC) * 100)}%` })),
-        h('span', { class: 'time-max', 'aria-hidden': 'true' }, '15:00')),
+        h('span', { class: 'time-max', 'aria-hidden': 'true' }, '15:00'),
+        removed.length && !blocked ? h('small', { class: 'time-note' }, `Zonder ${removed.length === 1 ? 'de geblokkeerde oefening' : `de ${removed.length} geblokkeerde oefeningen`}; die worden overgeslagen.`) : null),
       r.steps.length ? steps : h('p', { class: 'note' }, 'Nog geen oefeningen. Voeg er een toe.'),
       blocked ? h('p', { class: 'locked-bar' }, 'Alle oefeningen in deze routine zijn nu geblokkeerd door de knie-poort. Er valt niets af te spelen.') : null,
       h('button', { class: 'btn add-step', type: 'button', onclick: addExercise }, '+ Oefening'),

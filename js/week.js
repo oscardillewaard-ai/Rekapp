@@ -1,6 +1,7 @@
 // "Mijn week" (§6.4.2): per spiergroep gepland en werkelijk, met kleur,
 // suggestie en onderhoudstip. Puur.
 import { plannedWeekDose, actualWeekDose, meterValue, meterStatus, neededPerSession } from './dose.js';
+import { playableRoutine } from './warnings.js';
 
 const DAY = 24 * 3600 * 1000;
 
@@ -10,9 +11,10 @@ export function suggestionFrequency(activeRoutines) {
   return activeRoutines.reduce((m, r) => Math.max(m, r.timesPerWeek), 0) || 7;
 }
 
-// Alle 24 spiergroepen in de volgorde van §4.
-export function weekRows(lib, { routines, sessions, now }) {
-  const active = routines.filter((r) => r.active !== false);
+// Alle 24 spiergroepen in de volgorde van §4. Met een kniestatus telt de
+// geplande dosis alleen de stappen die echt worden afgespeeld (zonder W1/W8).
+export function weekRows(lib, { routines, sessions, now, knee = null }) {
+  const active = routines.filter((r) => r.active !== false).map((r) => (knee ? playableRoutine(r, { lib, knee }).routine : r));
   const planned = plannedWeekDose(active, lib.exercises);
   const actual = actualWeekDose(sessions, lib.exercises, now, lib.meta.dose.windowHours);
   const f = suggestionFrequency(active);

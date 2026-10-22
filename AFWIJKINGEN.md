@@ -124,7 +124,18 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   48-uurstest" (§6.6, M5).
 - **"Toevoegen aan routine"** op de oefenkaart: kies een eigen routine of
   "+ Nieuwe routine". De oefening komt achteraan, met de standaarddosis, en
-  de bouwer opent. De knie-poort wordt daarbij opnieuw gecontroleerd.
+  de bouwer opent. Bij een bestaande routine is de toevoeging meteen
+  opgeslagen. De knie-poort wordt daarbij opnieuw gecontroleerd.
+- **Kopiëren en dupliceren** maken een nieuwe routine. Wat de knie-poort op
+  dat moment blokkeert (W1, of W8 tijdens een opvlamming), komt er niet in;
+  de app meldt welke oefeningen zijn weggelaten (§6.5: W1 en W8 "voorkomen
+  toevoegen"). Een bestaande routine houdt een oefening die later weer
+  vergrendeld raakt; die wordt bij het afspelen overgeslagen.
+- **Tijd, dosis en waarschuwingen** (totale tijd in de lijsten en de bouwer,
+  "Dosis van deze routine", W3–W7, de geplande laag van "Mijn week") rekenen
+  met wat echt wordt afgespeeld: zonder stappen die de knie-poort blokkeert.
+  De bouwer toont die stappen met een slot en zegt dat ze worden
+  overgeslagen.
 - **Niet-opgeslagen wijzigingen:** bij terug (knop of telefoon) vraagt de
   bouwer "Wijzigingen opslaan?" met Verder bewerken, Niet opslaan of
   Opslaan. Een nieuwe, nog lege routine verdwijnt zonder vragen. "Start" en
@@ -218,6 +229,61 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   logboek blijven.
 - **Laatste poort:** vlak voor de speler start, past de app de knie-poort nog
   één keer toe op elke stap, ongeacht de route.
+
+## Invulling van open punten in §6.9–6.10 (M6)
+
+- **Logboek** (Meer → Logboek): sessies, kniechecks en zelftestmetingen per
+  dag, nieuwste eerst, met het filter Alles · Sessies · Kniechecks ·
+  Zelftests. De laatste 30 dagen, met "Oudere tonen". Een tik op een sessie
+  toont per oefening en kant de gedane werktijd. Sessies tonen datum en tijd
+  zoals ze zijn vastgelegd (in de tijdzone van dat moment).
+- **Export:** één blad met "Alles delen of bewaren" (deelmenu van het toestel;
+  op de iPhone o.a. "Bewaar in Bestanden") en per bestand een
+  downloadknop. Het JSON-bestand heet `rekapp-JJJJ-MM-DD.json`; de CSV's
+  heten zoals in §6.9. "Laatste export" (§6.11) is het moment van delen of
+  van het downloaden van het JSON-bestand.
+- **Formaat van de dump:** `{ schemaVersion: 1, app: "Rekapp", exportedAt,
+  librarySchemaVersion, data: { routines, sessions, kneeChecks, unlocks,
+  tests, flare, settings } }`. `schemaVersion` is de versie van de dump, niet
+  van de bibliotheek (die staat in `librarySchemaVersion`). Het concept uit
+  de bouwer zit er niet in.
+- **CSV:** puntkomma, UTF-8 met BOM, regeleinden CRLF, getallen met een
+  decimale komma (zodat Excel met Nederlandse instellingen ze als getal
+  leest). Kniechecks hebben een tijdstempel zonder tijdzone; datum en tijd
+  staan in de tijdzone van het toestel bij het exporteren.
+  `dosis_per_week.csv`: de werkelijke dosis per kalenderweek (maandag tot en
+  met zondag) uit het logboek, alleen spiergroepen die die week iets kregen.
+- **Import:** eerst controleren en tonen wat er komt; daarna vervangt de
+  import alles in één keer (alles of niets) en start de app opnieuw. De
+  knieregels zijn hard: een ontgrendeling die niet klopt met haar eigen
+  cycli (bv. "vrij" zonder drie schone cycli op rij, een cyclus als schoon
+  gemarkeerd terwijl de waarden dat niet zijn, ontgrendeld tijdens een
+  opvlamming), gaat terug naar vergrendeld, met een melding.
+- **Exportherinnering:** een kaart op het startscherm 14 dagen na de laatste
+  export (of, zonder export, na de eerste sessie). "Later" vraagt het de
+  volgende dag opnieuw.
+- **Zelftests** (Meer → Zelftests): per test de uitvoering uit de
+  bibliotheek, het meetprotocol, per kant drie invoervelden met het
+  gemiddelde erbij, een grafiek (links rondjes en een doorgetrokken lijn,
+  rechts vierkantjes en een stippellijn, zodat het ook zonder kleur te lezen
+  is) en de metingen, die je kunt verwijderen. Je mag één kant invullen.
+  Bij de rugkraktest (overlap telt negatief) staat een ±-knop, omdat het
+  cijfertoetsenbord van de iPhone geen minteken heeft.
+- **Nulmeting:** de eerste twee opeenvolgende meetdagen per kant; per dag
+  telt de laatste meting. De meetfout van de test is de grootste van beide
+  kanten, en minimaal 1 (cm of graad, de kleinste afleesstap): twee gelijke
+  nulmetingen zouden anders een meetfout van 0 geven, waardoor elk verschil
+  "echt" zou zijn.
+- **Band in de grafiek:** nulmeting ± de grens voor een echte verandering
+  (1,5 × de meetfout, of de MDC).
+- **Hertest:** week 4, 8 en 12 na de eerste nulmetingsdag, daarna elke 8
+  weken; een meting tot 3 dagen ervoor telt mee. Een open hertest staat op
+  het startscherm en in het overzicht.
+- **"Aandacht":** als het laatste verschil tussen links en rechts groter is
+  dan de meetfout, krijgen de spiergroepen van die test in de bibliotheek
+  het label "aandacht" (bij de groep en bij de oefeningen met die groep als
+  primair doel). Pas zodra de meetfout bekend is (nulmeting aan beide
+  kanten).
 
 ## Keuzes bij open of tegenstrijdige punten (akkoord Oscar, 17-10-2026)
 
