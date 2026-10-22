@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Rekapp-icoon: eigen ontwerp. Een figuur in de kuitrek tegen de muur,
+       met een boog voor de rek. Bron voor de PNG-iconen (zie README.md). -->
+  <rect width="512" height="512" fill="#0b0b0b"/>
+  <g id="figuur">
+    <rect x="384" y="104" width="22" height="300" rx="8" fill="#3b3b3b"/>
+    <line x1="88" y1="410" x2="424" y2="410" stroke="#3b3b3b" stroke-width="14" stroke-linecap="round"/>
+    <g fill="none" stroke="#5cc8ff" stroke-width="34" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M296 196 L224 300"/>
+      <path d="M288 212 L374 190"/>
+      <path d="M224 300 L300 338 L316 400"/>
+      <path d="M224 300 L130 400"/>
+    </g>
+    <circle cx="316" cy="148" r="38" fill="#5cc8ff"/>
+    <path d="M176 262 A 118 118 0 0 0 96 352" fill="none" stroke="#ffa24a" stroke-width="16" stroke-linecap="round"/>
+  </g>
+</svg>

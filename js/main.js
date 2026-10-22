@@ -16,6 +16,10 @@ import { createMoreScreen } from './ui/more.js';
 import { createUnlockScreen, kneeCards, painPicker } from './ui/knee.js';
 import { createLogScreen } from './ui/log.js';
 import { createTestsScreen, createTestScreen } from './ui/tests.js';
+import { createInstallScreen } from './ui/install.js';
+import { createAboutScreen } from './ui/about.js';
+import { isStandalone, watchInstallPrompt, registerServiceWorker, storageStatus } from './pwa.js';
+import { reminderIcs } from './ics.js';
 import {
   openStore, loadSettings, saveSettings, loadKneeState, saveKneeState, requestPersistence, newId, readAll, replaceAll,
 } from './store.js';
@@ -371,6 +375,7 @@ async function boot() {
       reset: async () => commitKnee(resetUnlocks(knee)),
     },
     data: { openExport, importFile, canImport: () => store.persistent },
+    pwa: { storageStatus, requestPersistence, isStandalone, downloadReminder },
   });
   const routinesScreen = createRoutinesScreen({
     lib, getData,
@@ -380,6 +385,19 @@ async function boot() {
   const more = createMoreScreen();
   const log = createLogScreen({ lib, getData });
   const testsScreen = createTestsScreen({ lib, getData });
+  const install = createInstallScreen();
+  const about = createAboutScreen({ lib });
+
+  // Herinnering in de agenda (§7): een .ics met dagelijkse herhaling en alarm.
+  function downloadReminder(key, time) {
+    const label = key === 'morning' ? 'ochtendroutine' : 'avondroutine';
+    const text = reminderIcs({
+      uid: `rekapp-${key}@rekapp`, time, title: `Rekapp: ${label}`,
+      description: 'Tijd om te rekken. Open Rekapp op je beginscherm.',
+      url: new URL('./', location.href).href, now: Date.now(),
+    });
+    download({ name: `rekapp-${label}.ics`, type: 'text/calendar;charset=utf-8', text });
+  }
   const testScreen = createTestScreen({
     lib, getData, onBack: goBack('#/zelftests'),
     onSave: async (test, entries) => {
@@ -507,10 +525,21 @@ async function boot() {
     importSheet.showModal();
   }
 
-  // Kaarten op het startscherm: exportherinnering en open hertests.
+  // Kaarten op het startscherm: installeren, exportherinnering en open
+  // hertests.
+  let installHintHidden = false;
   function dataCards() {
     const now = Date.now();
     const out = [];
+    // §7 "Eerst installeren, dan gebruiken."
+    if (!isStandalone() && !installHintHidden) {
+      out.push(h('section', { class: 'section knee-card install-card', 'aria-labelledby': 'install-card-title' },
+        h('h2', { id: 'install-card-title' }, 'Installeer Rekapp'),
+        h('p', null, 'Zet Rekapp op je beginscherm. Dan werkt hij offline en blijven je gegevens beter bewaard.'),
+        h('div', { class: 'actions' },
+          h('button', { class: 'btn', type: 'button', onclick: () => { installHintHidden = true; home.render(); } }, 'Niet nu'),
+          h('a', { class: 'btn primary', href: '#/installeren' }, 'Hoe?'))));
+    }
     if (exportReminderDue({ lastExportAt: settings.lastExportAt, snoozedAt: settings.exportReminderSnoozedAt, sessions, now })) {
       out.push(h('section', { class: 'section knee-card', 'aria-labelledby': 'export-card-title' },
         h('h2', { id: 'export-card-title' }, 'Tijd voor een export'),
@@ -711,7 +740,7 @@ async function boot() {
   // Welke tab oplicht bij een scherm (instellingen hoort bij "Meer").
   const TAB_OF = {
     start: 'start', routines: 'routines', bibliotheek: 'bibliotheek', week: 'week', meer: 'meer',
-    instellingen: 'meer', logboek: 'meer', zelftests: 'meer',
+    instellingen: 'meer', logboek: 'meer', zelftests: 'meer', installeren: 'meer', over: 'meer',
   };
 
   const views = {
@@ -724,6 +753,8 @@ async function boot() {
     logboek: h('div', null, log.root),
     zelftests: h('div', null, testsScreen.root),
     zelftest: h('div', null, testScreen.root, testScreen.toolbar),
+    installeren: h('div', null, install.root),
+    over: h('div', null, about.root),
     oefening: h('div', null, exercise.root, exercise.toolbar),
     routine: h('div', null, routine.root, routine.toolbar),
     bouwer: h('div', null, builder.root, builder.toolbar),
@@ -734,6 +765,24 @@ async function boot() {
   fill(app, notices, ...Object.values(views), tabbar,
     library.sheet, exercise.sheet, picker.sheet, pickerDialog, addSheet, ...builder.sheets, flareSheet, painSheet, exportSheet, importSheet, toasts);
   watchBars();
+
+  // Service worker (§8.1) en "Update beschikbaar → herladen" (§11.3). Een
+  // nieuwe versie wacht tot je zelf herlaadt; tijdens een routine niet.
+  watchInstallPrompt();
+  registerServiceWorker((apply) => {
+    if (notices.querySelector('.update-bar')) return;
+    const bar = h('div', { class: 'info-bar update-bar', role: 'status' },
+      h('span', null, 'Update beschikbaar.'),
+      h('button', {
+        class: 'btn', type: 'button',
+        onclick: () => {
+          if (player.isActive()) { flash('Rond eerst de routine af; daarna kun je herladen.'); return; }
+          bar.remove();
+          apply();
+        },
+      }, 'Herladen'));
+    notices.prepend(bar);
+  });
 
   // ---------- Router ----------
 
@@ -781,6 +830,8 @@ async function boot() {
     '#/instellingen': () => { settingsScreen.render(); show('instellingen', 'Instellingen'); window.scrollTo(0, 0); },
     '#/logboek': () => { log.render(); show('logboek', 'Logboek'); window.scrollTo(0, 0); },
     '#/zelftests': () => { testsScreen.render(); show('zelftests', 'Zelftests'); window.scrollTo(0, scrollOf.zelftests ?? 0); },
+    '#/installeren': () => { install.render(); show('installeren', 'Installeren'); window.scrollTo(0, 0); },
+    '#/over': () => { about.render(); show('over', 'Over Rekapp'); window.scrollTo(0, 0); },
   };
 
   // Een kapotte link (#/bouwer/%) mag de router niet laten vastlopen.

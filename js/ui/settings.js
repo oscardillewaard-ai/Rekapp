@@ -8,7 +8,7 @@ import { formatDay } from '../format.js';
 
 const LETTER_NAMES = { B: 'Bewijs', K: 'Knieveiligheid', D: 'Doelgerichtheid', R: 'Relevantie', P: 'Praktisch' };
 
-export function createSettingsScreen({ audio, getSettings, update, knee, data }) {
+export function createSettingsScreen({ audio, getSettings, update, knee, data, pwa }) {
   const root = h('section', { class: 'screen', 'aria-labelledby': 'settings-title' });
   const extra = h('div'); // secties van latere mijlpalen
   const confirmSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'reset-title' });
@@ -131,6 +131,49 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data })
       hasUnlocks ? null : h('p', { class: 'note' }, 'Er loopt geen ontgrendeling.'));
   }
 
+  // Herinneringen (§7): geen push zonder server; een .ics met dagelijkse
+  // herhaling en alarm voor je agenda.
+  function reminders() {
+    const r = getSettings().reminders;
+    const row = (key, label, fallback) => {
+      const input = h('input', { type: 'time', value: r[key] ?? fallback, 'aria-label': `${label}: tijdstip` });
+      input.addEventListener('change', () => { if (input.value) update({ reminders: { ...getSettings().reminders, [key]: input.value } }); });
+      return h('div', { class: 'reminder-row' },
+        h('label', { class: 'field' }, h('span', null, label), input),
+        h('button', {
+          class: 'btn', type: 'button',
+          onclick: () => {
+            const time = input.value || fallback;
+            update({ reminders: { ...getSettings().reminders, [key]: time } });
+            pwa.downloadReminder(key, time);
+          },
+        }, 'Herinnering in agenda'));
+    };
+    return h('section', { class: 'section' },
+      h('h2', null, 'Herinneringen'),
+      h('p', { class: 'note' }, 'De app kan zonder server geen meldingen sturen. Zet daarom een dagelijkse herinnering in je agenda: kies een tijd en open het bestand dat de knop maakt.'),
+      row('morning', 'Ochtend', '07:30'),
+      row('evening', 'Avond', '20:30'));
+  }
+
+  // Opslagstatus (§6.11, §7).
+  function storage() {
+    const out = h('p', { role: 'status' }, 'Opslag controleren…');
+    const btn = h('button', { class: 'btn', type: 'button', hidden: true }, 'Blijvend opslaan aanvragen');
+    const show = async () => {
+      const st = await pwa.storageStatus();
+      if (!data.canImport()) out.textContent = 'Opslaan lukt niet in deze browser (bv. een privévenster): er wordt niets bewaard.';
+      else if (!st.supported) out.textContent = 'Deze browser zegt niet of je gegevens blijvend zijn opgeslagen. Exporteer regelmatig.';
+      else if (st.persisted) out.textContent = 'Blijvend opgeslagen: de browser wist je gegevens niet bij ruimtegebrek.';
+      else out.textContent = `Niet blijvend opgeslagen: de browser kan je gegevens wissen${pwa.isStandalone() ? '' : ', zeker in een gewone tab. Installeer de app'}. Exporteer regelmatig.`;
+      btn.hidden = !st.supported || st.persisted || !data.canImport();
+    };
+    btn.addEventListener('click', async () => { await pwa.requestPersistence(); show(); });
+    show();
+    return h('section', { class: 'section' }, h('h2', null, 'Opslag'), out, btn,
+      h('p', null, h('a', { href: '#/installeren' }, 'Installeren op je beginscherm')));
+  }
+
   // Gegevens (§6.9, §6.11): laatste export, exporteren en importeren.
   function dataSection() {
     const last = getSettings().lastExportAt;
@@ -176,7 +219,9 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data })
         defaultHold()),
       weights(),
       kneeSection(),
+      reminders(),
       dataSection(),
+      storage(),
       extra,
       confirmSheet);
   }

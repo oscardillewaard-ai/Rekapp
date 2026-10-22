@@ -285,6 +285,37 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   primair doel). Pas zodra de meetfout bekend is (nulmeting aan beide
   kanten).
 
+## Invulling van open punten in §7 en §8.1 (M7)
+
+- **Service worker:** de lijst met bestanden en de versie in `sw.js` maakt
+  `node tools/update-sw.mjs`; de versie is een hash over de inhoud van alle
+  bestanden, zodat elke wijziging een update geeft. `tests/sw.test.js` (ook in
+  de Pages-workflow) faalt als dat vergeten is. Geen buildstap: de app draait
+  zonder deze stap, alleen de update-melding zou dan uitblijven.
+- **Cache:** alles vooraf (app, bibliotheek met schema, lichaamskaart,
+  positie-iconen, app-iconen); cache-first; pagina-aanvragen krijgen altijd
+  `index.html`. Oude caches worden opgeruimd zodra de nieuwe versie actief is.
+- **Update:** een nieuwe versie wacht; bovenin verschijnt "Update
+  beschikbaar." met "Herladen". Tijdens een routine herlaadt de app niet (eerst
+  afronden). De app kijkt bij elke terugkeer naar het scherm of er een update
+  is.
+- **Installatiehulp:** een kaart op het startscherm zolang de app niet als
+  beginscherm-app draait ("Eerst installeren, dan gebruiken", §7), met "Niet
+  nu" (tot de volgende start) en "Hoe?" naar Meer → Installeren: stappen per
+  platform; op Android de knop "App installeren" als Chrome die aanbiedt.
+- **Opslagstatus:** in Instellingen → Opslag, met "Blijvend opslaan aanvragen"
+  als de browser dat ondersteunt en het nog niet zo is.
+- **Herinneringen (.ics):** per moment (ochtend 07:30, avond 20:30, aan te
+  passen) een agenda-item van 15 minuten met `RRULE:FREQ=DAILY` en een alarm
+  op het tijdstip zelf. De tijd staat zonder tijdzone in het bestand
+  ("floating"), zodat de herinnering na de wissel van zomer- naar wintertijd
+  op dezelfde klokuren blijft.
+- **Iconen:** eigen ontwerp (een figuur in de kuitrek tegen de muur, met een
+  boog voor de rek); `icons/icon.svg` is de bron van de PNG's.
+- **Over:** de vier punten uit §6.12 letterlijk, de formule en de rubrieken uit
+  §3, "Wat de sterren wel en niet zeggen" (§3.3) en per spiergroep het bewijs,
+  de relevantie en de bronnen uit de bibliotheek (§4).
+
 ## Keuzes bij open of tegenstrijdige punten (akkoord Oscar, 17-10-2026)
 
 ### PNF met "extra set zwakke kant"

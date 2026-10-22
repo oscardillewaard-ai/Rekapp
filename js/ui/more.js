@@ -4,7 +4,10 @@ import { icon } from './graphics.js';
 
 export function createMoreScreen() {
   const root = h('section', { class: 'screen', 'aria-labelledby': 'more-title' });
-  const items = [['#/logboek', 'Logboek', 'list'], ['#/zelftests', 'Zelftests', 'sliders'], ['#/instellingen', 'Instellingen', 'gear']];
+  const items = [
+    ['#/logboek', 'Logboek', 'list'], ['#/zelftests', 'Zelftests', 'sliders'], ['#/instellingen', 'Instellingen', 'gear'],
+    ['#/installeren', 'Installeren', 'home'], ['#/over', 'Over Rekapp', 'info'],
+  ];
 
   function render() {
     fill(root, 
@@ -12,6 +15,5 @@ export function createMoreScreen() {
       h('ul', { class: 'list' }, items.map(([href, text, ic]) => h('li', null,
         h('a', { class: 'row menu-row', href }, icon(ic), h('div', { class: 'main' }, h('div', { class: 'name' }, text)), icon('back', 'chev-right'))))));
   }
-  // M7 voegt hier "Over" toe.
   return { root, render, add: (href, text, ic) => items.push([href, text, ic]) };
 }

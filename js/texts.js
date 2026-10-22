@@ -95,6 +95,32 @@ export const SELFTEST = {
   retest: 'in week 4, 8 en 12, daarna elke 8 weken.',
 };
 
+// §6.12 scherm "Over" en §3.3 "Wat de sterren wel en niet zeggen".
+export const ABOUT = [
+  'Geen medisch advies.',
+  'Rekken vergroot je beweeglijkheid. Het voorkomt geen blessures; krachttraining doet dat wel (Lauersen 2014).',
+  'De kniescores zijn voorzorg, geen bewezen schade.',
+  'Bij aanhoudende of terugkerende kniepijn: laat een sportfysiotherapeut de posities beoordelen.',
+];
+export const STARS_FORMULA = [
+  'score   = 0,25·B + 0,25·K + 0,20·D + 0,15·R + 0,15·P        (bereik 1–5, twee decimalen)',
+  'sterren = score afgerond op 0,5; een halve stap rondt naar boven af',
+  'knie-poort: als K ≤ 2 → sterren = min(sterren, 2) en locked = true',
+];
+export const STARS_MEANING = [
+  ['Ze zijn persoonlijk.', 'Ze gelden voor jou: PFPS, trail en klimmen. Voor iemand zonder knieklachten scoort een hiel-naar-bil hoger.'],
+  ['B is bijna altijd groepsbewijs.', 'Studies naar één specifieke variant zijn zeldzaam. Twee stretches voor dezelfde spiergroep verschillen daarom vooral in K, D, R en P.'],
+  ['D en R zijn oordelen', 'en K is voorzorg. De kaart toont daarom altijd het bewijsniveau in woorden (§6.2).'],
+  ['Bekend effect van de weging:', 'oefeningen zonder kniebetrokkenheid (romp, schouders, armen) krijgen K = 5 en scoren daardoor relatief hoog, ook als ze voor jouw doelen weinig opleveren (lage R). Twee oplossingen in de app: sorteren op R, en "Weging aanpassen" in de instellingen (§6.11). De standaardweging blijft 25/25/20/15/15, zoals afgesproken.'],
+];
+
+// §7 installeren.
+export const INSTALL = {
+  ios: 'Safari → Deel → "Zet op beginscherm"',
+  android: 'Chrome-menu → "App installeren"',
+  first: 'Eerst installeren, dan gebruiken.',
+};
+
 // §6.1 filters: "alleen K ≥ 4" en "toon vergrendelde".
 export const FILTERS = {
   onlyK4: 'alleen K ≥ 4',

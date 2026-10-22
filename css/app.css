@@ -683,3 +683,21 @@ button.log-row { color: var(--text); }
 .export-share { margin-top: .5rem; }
 .draft-bar .actions { margin-top: .5rem; }
 .time-note { grid-column: 1 / -1; color: var(--muted); font-size: .8125rem; }
+
+/* ---------- Installeren, Over, herinneringen (M7) ---------- */
+
+.update-bar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin: calc(env(safe-area-inset-top, 0px) + .5rem) 0 .5rem; color: var(--text); border: 1px solid var(--accent); }
+.update-bar .btn { flex: none; }
+.install-now { width: 100%; margin-bottom: .75rem; }
+.install-steps li { margin-bottom: .375rem; }
+.about-list { margin: 0; padding-left: 1.25rem; display: grid; gap: .5rem; }
+.formula { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8125rem; background: var(--surface-2); padding: .75rem; border-radius: 10px; color: var(--text); }
+.about details.sources { margin-top: .5rem; }
+.reminder-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .5rem; margin-top: .75rem; }
+.reminder-row .field { flex-direction: column; align-items: stretch; gap: .375rem; min-width: 0; }
+.reminder-row input[type="time"] {
+  width: 100%; min-width: 0;
+  min-height: var(--tap); padding: 0 .75rem; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--text); font-size: 1rem; color-scheme: dark;
+}
+.install-card .actions a.btn { text-decoration: none; }

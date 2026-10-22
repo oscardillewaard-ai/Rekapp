@@ -53,6 +53,13 @@ node --test
 Alle tests moeten groen zijn vóór een commit. De testvectoren uit §11.1 (A t/m
 G) staan er letterlijk in; pas ze niet aan om een test groen te krijgen.
 
+Na een wijziging aan app-bestanden eerst de service worker bijwerken (lijst
+en versie; `tests/sw.test.js` controleert dit):
+
+```bash
+node tools/update-sw.mjs
+```
+
 ## Opbouw
 
 Zoals §8.1. De rekenmodules in `js/` (`library.js`, `timeline.js`, `dose.js`,
