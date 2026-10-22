@@ -114,16 +114,23 @@ export function saveSettings(store, settings) {
   return store.put('settings', settings, 'settings');
 }
 
-// Kniestatus zoals knee.js die gebruikt: { unlocks, flare, checks }.
+// Kniestatus zoals knee.js die gebruikt: { unlocks, flare, checks, rev }.
+// rev telt elke opgeslagen wijziging; zo merkt een tweede venster (of de
+// geïnstalleerde app naast een browsertab) dat zijn kopie verouderd is.
 export async function loadKneeState(store) {
-  const [unlocks, flare, checks] = await Promise.all([
-    store.getAllKeyed('unlocks'), store.get('flare', 'state'), store.getAll('kneeChecks'),
+  const [unlocks, flare, checks, rev] = await Promise.all([
+    store.getAllKeyed('unlocks'), store.get('flare', 'state'), store.getAll('kneeChecks'), store.get('flare', 'rev'),
   ]);
   return {
     unlocks: Object.fromEntries(unlocks),
     flare: flare ?? { active: false, since: null, exitProposedAt: null },
     checks: checks.sort((a, b) => a.at - b.at),
+    rev: rev ?? 0,
   };
+}
+
+export async function loadKneeRev(store) {
+  return (await store.get('flare', 'rev')) ?? 0;
 }
 
 export function saveKneeState(store, knee) {
@@ -131,6 +138,7 @@ export function saveKneeState(store, knee) {
     os('unlocks').clear();
     for (const [id, rec] of Object.entries(knee.unlocks)) os('unlocks').put(rec, id);
     os('flare').put(knee.flare, 'state');
+    os('flare').put(knee.rev ?? 0, 'rev');
     for (const c of knee.checks) os('kneeChecks').put(c);
   });
 }
@@ -171,6 +179,7 @@ export function replaceAll(store, data) {
     for (const t of data.tests) os('tests').put(t);
     for (const [id, rec] of Object.entries(data.unlocks)) os('unlocks').put(rec, id);
     os('flare').put(data.flare, 'state');
+    os('flare').put(Date.now(), 'rev'); // andere vensters laden opnieuw
     if (data.settings) os('settings').put(data.settings, 'settings');
   });
 }

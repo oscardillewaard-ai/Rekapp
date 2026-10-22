@@ -21,16 +21,18 @@ import { createAboutScreen } from './ui/about.js';
 import { isStandalone, watchInstallPrompt, registerServiceWorker, storageStatus } from './pwa.js';
 import { reminderIcs } from './ics.js';
 import {
-  openStore, loadSettings, saveSettings, loadKneeState, saveKneeState, requestPersistence, newId, readAll, replaceAll,
+  openStore, loadSettings, saveSettings, loadKneeState, loadKneeRev, saveKneeState, requestPersistence, newId, readAll, replaceAll,
 } from './store.js';
-import { buildDump, sessionsCsv, kneeChecksCsv, weekDoseCsv, parseDump, exportReminderDue } from './backup.js';
+import { buildDump, sessionsCsv, kneeChecksCsv, weekDoseCsv, parseDump, exportReminderDue, checkKneeState } from './backup.js';
+import { compileRoutine } from './timeline.js';
 import { newMeasurement, analyse, attentionGroups } from './selftests.js';
 import { isoWithOffset } from './session.js';
 import { withDefaults, DEFAULT_SETTINGS } from './settings.js';
 import { createAudio } from './audio.js';
 import {
   access, unlockState, startTest, cancelTest, recordExposure, setPainDuring, recordKneeCheck, expireChecks, activateFlare,
-  endFlare, postponeFlareExit, resetUnlocks, trialStep, trialExerciseIds, lastExposureAt,
+  endFlare, postponeFlareExit, resetUnlocks, trialStep, trialExerciseIds, lastExposureAt, abandonCycle, latestKneeTime,
+  pendingChecks, flareExitDue, needsReconfirm, reconfirm,
 } from './knee.js';
 import { KNEE } from './texts.js';
 import { formatDay } from './format.js';
@@ -90,8 +92,15 @@ async function boot() {
     else showError('De bibliotheek kon niet worden geladen.', String(e?.message ?? e));
     return;
   }
-  let knee = store.persistent ? await loadKneeState(store).catch(UNKNOWN_KNEE) : UNKNOWN_KNEE();
   const K = lib.meta.knee;
+  // De kniestatus nalopen (zelfde regels als een import); niet te lezen →
+  // opvlammingsmodus (fail-closed).
+  const readKnee = async () => {
+    const raw = await loadKneeState(store).catch(() => null);
+    return raw ? checkKneeState(raw, lib, Date.now()) : null;
+  };
+  const bootKnee = store.persistent ? await readKnee() : null;
+  let knee = bootKnee ? bootKnee.knee : UNKNOWN_KNEE();
   // Eigen routines: alleen geldige (een kapotte routine zou de speler of de
   // dosis verstoren); sessies voor "Mijn week".
   const storedRoutines = await store.getAll('routines').catch(() => []);
@@ -121,6 +130,8 @@ async function boot() {
   const notice = (text) => { if (![...notices.children].some((n) => n.textContent === text)) notices.append(h('p', { class: 'warn-bar' }, text)); };
   if (!store.persistent) notice('Opslaan lukt niet in deze browser: sessies en instellingen worden niet bewaard. Open de app buiten een privévenster of herlaad hem.');
   if (knee.unknown) notice('Je kniestatus kon niet worden gelezen. Voor de zekerheid staan oefeningen boven 45° uit, zoals bij een opvlamming.');
+  for (const w of bootKnee?.warnings ?? []) notice(w);
+  if (bootKnee?.changed) saveKneeState(store, knee).catch(() => {});
   if (skippedRoutines) notice(`${skippedRoutines} opgeslagen ${skippedRoutines === 1 ? 'routine is' : 'routines zijn'} beschadigd en worden niet getoond.`);
   // Kort bericht (bv. "schone cyclus"), vast bovenin zodat het ook zichtbaar
   // is als je gescrold bent, en zonder de knoppen in de duimzone te bedekken.
@@ -159,25 +170,67 @@ async function boot() {
     }).filter(Boolean);
   }
 
-  async function commitKnee(next, events = []) {
-    knee = next;
-    if (store.persistent && !knee.unknown) {
+  // Opslaan gebeurt op volgorde, en alleen als de opgeslagen stand nog de
+  // stand is waarop deze wijziging voortbouwt. Is hij intussen in een ander
+  // venster veranderd, dan laadt de app die stand en geldt deze wijziging
+  // niet (de knieregels zijn hard: nooit een nieuwere stand overschrijven).
+  let kneeQueue = Promise.resolve();
+  const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel('rekapp') : null;
+  function commitKnee(next, events = []) {
+    const base = knee.rev ?? 0;
+    knee = { ...next, rev: base + 1 };
+    const mine = knee;
+    kneeQueue = kneeQueue.then(() => persistKnee(mine, base, events)).catch(() => {});
+    return kneeQueue;
+  }
+  async function persistKnee(mine, base, events) {
+    if (store.persistent && !mine.unknown) {
       try {
-        await saveKneeState(store, knee);
+        const stored = await loadKneeRev(store);
+        if (stored !== base) {
+          await reloadKnee({ force: true });
+          flash('Je kniestatus is intussen in een ander venster gewijzigd. De nieuwste stand is geladen; probeer het zo nodig opnieuw.');
+          return;
+        }
+        await saveKneeState(store, mine);
+        channel?.postMessage({ type: 'knee', rev: mine.rev });
       } catch (e) {
         notice(`Kniestatus niet opgeslagen: ${e?.message ?? e}`);
       }
     }
+    afterKnee(events);
+  }
+  // De stand uit de opslag halen als die nieuwer is (ander venster, terug uit
+  // de achtergrond).
+  async function reloadKnee({ force = false } = {}) {
+    if (!store.persistent || knee.unknown) return;
+    const fresh = await readKnee();
+    if (!fresh) return;
+    if (!force && fresh.knee.rev === knee.rev) return;
+    knee = fresh.knee;
+    afterKnee([]);
+  }
+  channel?.addEventListener('message', (e) => { if (e.data?.type === 'knee' && e.data.rev !== knee.rev) reloadKnee(); });
+  function afterKnee(events) {
     library.refresh();
     picker.refresh();
     for (const t of eventTexts(events)) flash(t);
     // Het voorstel komt na het afrondscherm van de speler, op het volgende
     // scherm (een wissel van scherm sluit open bladen).
     if (events.some((e) => e.type === 'opvlamming_voorstel') && !knee.flare.active) {
-      if (current === 'speler') flareProposalPending = true;
+      if (current === 'speler' || player.isActive() || player.isFinishing()) flareProposalPending = true;
       else proposeFlare();
     }
     refreshView();
+  }
+
+  // Staat de klok van het toestel vóór de laatste kniegebeurtenis, dan is hij
+  // teruggezet: dan legt de app niets vast (anders kun je een gemiste check
+  // inhalen of een venster verschuiven).
+  function clockBack() {
+    if (knee.unknown || Date.now() >= latestKneeTime(knee) - 60000) return false;
+    flash('De klok van je toestel staat vóór je laatste kniecheck. Zet de datum en tijd goed; tot dan legt de app geen kniechecks of proeven vast.');
+    return true;
   }
   let flareProposalPending = false;
 
@@ -190,6 +243,7 @@ async function boot() {
 
   const kneeActions = {
     async check(context, pain, exerciseId) {
+      if (clockBack()) return;
       try {
         const r = recordKneeCheck(knee, { id: newId(), at: Date.now(), pain, context, ...(exerciseId ? { exerciseId } : {}) }, K);
         await commitKnee(r.state, r.events);
@@ -199,6 +253,7 @@ async function boot() {
       }
     },
     async startTest(ex, confirmations) {
+      if (clockBack()) return;
       try {
         await commitKnee(startTest(ex, knee, Date.now(), confirmations));
       } catch (e) {
@@ -206,12 +261,27 @@ async function boot() {
       }
     },
     async cancelTest(ex) { await commitKnee(cancelTest(ex.id, knee)); },
-    // Begeleide proef: 1 × 30 s per kant. De beginwaarde is al gevraagd.
-    startTrial(ex, painBefore) {
+    // Begeleide proef: 1 × 30 s per kant. De beginwaarde is al gevraagd; op
+    // een andere dag dan de bevestiging opnieuw bevestigen (§6.6).
+    startTrial(ex, painBefore, confirmations = null) {
       if (unlockState(ex, knee) !== 'test' || knee.flare.active || painBefore === null || painBefore > K.painMax) return;
-      beginRun({ steps: [trialStep(ex)] }, { id: `proef:${ex.id}`, name: `Proef: ${ex.name}`, slot: 'vrij' }, { ids: [ex.id], painBefore });
+      if (clockBack()) return;
+      if (needsReconfirm(knee.unlocks[ex.id], Date.now())) {
+        try {
+          commitKnee(reconfirm(ex.id, knee, Date.now(), confirmations ?? {}));
+        } catch (e) {
+          flash(String(e?.message ?? e));
+          return;
+        }
+      }
+      beginRun({ steps: [trialStep(ex)] }, { id: `proef:${ex.id}`, name: `Proef: ${ex.name}`, slot: 'vrij', note: KNEE.trial }, { ids: [ex.id], painBefore, trial: true });
     },
-    async endFlare() { await commitKnee(endFlare(knee)); },
+    // Alleen als de reeks van 7 dagen nog klopt (een oude kaart kan nog open
+    // staan).
+    async endFlare() {
+      if (!flareExitDue(knee, Date.now(), K)) { flash('De reeks van 7 dagen klopt niet meer; de opvlammingsmodus blijft aan.'); refreshView(); return; }
+      await commitKnee(endFlare(knee));
+    },
     async postponeFlareExit() { await commitKnee(postponeFlareExit(knee, Date.now())); },
   };
 
@@ -250,6 +320,10 @@ async function boot() {
       const last = lastExposureAt(knee.unlocks[id]);
       return last !== null && Date.now() - last < K.exposureSpacingHours * 3600 * 1000;
     });
+    // Staat er voor zo'n oefening een 24- of 48-uurscheck open, dan geldt
+    // dit antwoord ook als die check: het is dezelfde vraag op hetzelfde
+    // moment, en een nieuwe blootstelling zou de cyclus anders laten vervallen.
+    const open = pendingChecks(knee, Date.now(), K).filter((c) => ids.includes(c.exerciseId));
     const rest = playable.steps.filter((st) => !ids.includes(st.exerciseId));
     const start = h('button', { class: 'btn primary', type: 'button', disabled: true }, icon('play'), 'Start');
     const high = h('p', { class: 'warn-bar', role: 'alert', hidden: true },
@@ -257,19 +331,52 @@ async function boot() {
     const picker2 = painPicker(KNEE.painNow, {
       onChange: (v) => {
         high.hidden = v <= K.painMax;
-        start.disabled = v > K.painMax && !rest.length;
+        start.disabled = v > K.painMax && !rest.length && !open.length;
+        start.lastChild.textContent = v > K.painMax && !rest.length ? 'Opslaan' : 'Start';
       },
     });
     start.addEventListener('click', () => {
       painSheet.close();
       const v = picker2.value();
-      if (v > K.painMax) beginRun({ ...playable, steps: rest }, meta, null);
-      else beginRun(playable, meta, { ids, painBefore: v });
+      const at = Date.now();
+      // Eerst de open checks en (boven 2/10) de waarde zelf vastleggen.
+      let next = knee;
+      const events = [];
+      for (const c of open) {
+        try {
+          const r = recordKneeCheck(next, { id: newId(), at, pain: v, context: c.context, exerciseId: c.exerciseId }, K);
+          next = r.state;
+          events.push(...r.events);
+        } catch (e) {
+          flash(String(e?.message ?? e));
+        }
+      }
+      if (v > K.painMax) {
+        for (const id of ids.filter((x) => !open.some((c) => c.exerciseId === x))) {
+          next = recordKneeCheck(next, { id: newId(), at, pain: v, context: 'test', exerciseId: id }, K).state;
+        }
+      }
+      const proposal = v > K.painMax && !next.flare.active;
+      if (next !== knee) commitKnee(next, events);
+      // Wat nu nog in de proefperiode zit (een check kan de status hebben
+      // veranderd), krijgt v als beginwaarde; boven 2/10 alleen de rest.
+      const started = v > K.painMax
+        ? beginRun({ ...playable, steps: rest }, meta, null)
+        : (() => {
+          const ids2 = trialExerciseIds(playable.steps, lib.exercises, knee);
+          return beginRun(playable, meta, ids2.length ? { ids: ids2, painBefore: v } : null);
+        })();
+      // §6.6: een waarde boven 2/10 → voorstel om de opvlammingsmodus aan te zetten.
+      if (proposal) {
+        if (started) flareProposalPending = true;
+        else proposeFlare();
+      }
     });
     fill(painSheet,
       h('div', { class: 'sheet-body' },
         h('h2', { id: 'pain-sheet-title' }, 'Eerst je knie'),
         h('p', null, `${names} zit in de proefperiode. Je antwoord is de beginwaarde voor de 24- en 48-uurscheck.`),
+        open.length ? h('p', { class: 'info-bar' }, `Je antwoord geldt ook als ${open.map((c) => `${c.context === '24u' ? '24' : '48'}-uurscheck voor ${exName(c.exerciseId)}`).join(' en ')}.`) : null,
         recent.length ? h('p', { class: 'warn-bar' }, WARNINGS.W9.text) : null,
         picker2.el, high),
       h('div', { class: 'sheet-foot' },
@@ -278,42 +385,63 @@ async function boot() {
     painSheet.showModal();
   }
 
-  // Blootstellingen uit een sessie (§6.6): vastgelegd zodra de sessie is
-  // bewaard; "kniepijn tijdens" komt bij Opslaan op het afrondscherm.
+  // Blootstellingen (§6.6). Vastgelegd zodra het eerste werkblok van die
+  // oefening begint (ook als de app daarna wordt afgesloten), met de
+  // beginwaarde. Bij het afronden: niet afgemaakt → de cyclus vervalt;
+  // "kniepijn tijdens" komt bij Opslaan op het afrondscherm.
+  // runExposure = { ids, painBefore, trial, planned: Map(id → s), recorded: Map(id → at) }
   let runExposure = null;
   const exposuresBySession = new Map();
+  const WORK = ['work', 'contract', 'relax'];
+  function onRunSegment(seg) {
+    const run = runExposure;
+    if (!run || !WORK.includes(seg.kind) || !run.ids.includes(seg.exerciseId) || run.recorded.has(seg.exerciseId)) return;
+    const id = seg.exerciseId;
+    const at = Date.now();
+    run.recorded.set(id, at);
+    try {
+      let next = recordKneeCheck(knee, { id: newId(), at, pain: run.painBefore, context: 'test', exerciseId: id }, K).state;
+      const r = recordExposure(id, next, { at, painBefore: run.painBefore }, K);
+      next = r.state;
+      commitKnee(next, r.events);
+    } catch (e) {
+      flash(`Blootstelling niet vastgelegd: ${e?.message ?? e}`);
+    }
+  }
   async function trackExposures(session) {
     let next = knee;
     const events = [];
     if (runExposure && !exposuresBySession.has(session.id)) {
-      const at = Date.parse(session.endedAt);
-      const recorded = [];
-      for (const id of runExposure.ids) {
-        const worked = session.segmentsDone.some((x) => x.exerciseId === id && x.sec > 0 && ['work', 'contract', 'relax'].includes(x.kind));
-        if (!worked) continue;
-        try {
-          next = recordKneeCheck(next, { id: newId(), at: Date.parse(session.startedAt), pain: runExposure.painBefore, context: 'test', exerciseId: id }, K).state;
-          const r = recordExposure(id, next, { at, painBefore: runExposure.painBefore }, K);
+      const run = runExposure;
+      runExposure = null;
+      const pending = [];
+      const abandoned = [];
+      for (const [id, at] of run.recorded) {
+        // Afgemaakt = alle geplande werktijd van die oefening gedaan (op 1 s na).
+        const done = session.segmentsDone.filter((x) => x.exerciseId === id && WORK.includes(x.kind)).reduce((a, x) => a + x.sec, 0);
+        if (done < (run.planned.get(id) ?? 0) - 1) {
+          const r = abandonCycle(id, next, at, run.trial ? 'proef niet afgemaakt' : 'oefening niet afgemaakt');
           next = r.state;
           events.push(...r.events);
-          recorded.push({ id, at });
-        } catch (e) {
-          flash(`Blootstelling niet vastgelegd: ${e?.message ?? e}`);
+          abandoned.push(id);
+        } else {
+          pending.push({ id, at });
         }
       }
-      exposuresBySession.set(session.id, recorded);
-      runExposure = null;
+      exposuresBySession.set(session.id, { pending, abandoned });
     }
-    const pending = exposuresBySession.get(session.id) ?? [];
-    if (session.kneePainDuring !== null && pending.length) {
+    const { pending = [], abandoned = [] } = exposuresBySession.get(session.id) ?? {};
+    if (session.kneePainDuring !== null && (pending.length || abandoned.length)) {
       for (const { id, at } of pending) {
-        const r = setPainDuring(id, next, { exposureAt: at, pain: session.kneePainDuring }, K);
+        const r = setPainDuring(id, next, { exposureAt: at, pain: session.kneePainDuring, at: Date.now() }, K);
         next = r.state;
         events.push(...r.events);
       }
-      exposuresBySession.set(session.id, []);
+      // Ook bij een niet afgemaakte oefening: boven 2/10 het voorstel (§6.6).
+      if (abandoned.length && session.kneePainDuring > K.painMax) events.push({ type: 'opvlamming_voorstel', exerciseId: abandoned[0] });
+      exposuresBySession.set(session.id, { pending: [], abandoned: [] });
     }
-    if (next !== knee) await commitKnee(next, events);
+    if (next !== knee || events.length) await commitKnee(next, events);
   }
 
   async function updateSettings(patch) {
@@ -363,7 +491,7 @@ async function boot() {
     onEdit: (r) => { location.hash = `#/bouwer/${encodeURIComponent(r.id)}`; },
   });
   const player = createPlayerScreen({
-    lib, audio, getSettings,
+    lib, audio, getSettings, onSegment: (seg) => onRunSegment(seg),
     onSave: async (session) => {
       await store.put('sessions', session);
       sessions = [...sessions.filter((x) => x.id !== session.id), session];
@@ -645,6 +773,16 @@ async function boot() {
     draftBar = null;
     store.delete('settings', 'builderDraft').catch(() => {});
   }
+  // Terug in beeld (de app bleef open op de achtergrond): de nieuwste
+  // kniestatus laden, verlopen checks laten vervallen en de kaarten
+  // bijwerken (dagelijkse check na 04:00, 24/48-uursvensters).
+  const onVisible = async () => {
+    await reloadKnee();
+    expireNow();
+    if (!player.isActive()) refreshView();
+  };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') onVisible(); });
+  window.addEventListener('pageshow', (e) => { if (e.persisted) onVisible(); });
   // Naar de achtergrond met niet-opgeslagen wijzigingen: concept bewaren.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'hidden' || current !== 'bouwer') return;
@@ -731,20 +869,35 @@ async function boot() {
 
   function startRoutine(playable, meta) {
     const ids = trialExerciseIds(playable.steps, lib.exercises, knee);
-    if (ids.length) askPainNow(playable, meta, ids);
-    else beginRun(playable, meta, null);
+    if (!ids.length) { beginRun(playable, meta, null); return; }
+    // Klok teruggezet: geen blootstelling vastleggen, dus die oefening ook
+    // niet afspelen.
+    if (clockBack()) { beginRun({ ...playable, steps: playable.steps.filter((st) => !ids.includes(st.exerciseId)) }, meta, null); return; }
+    askPainNow(playable, meta, ids);
   }
 
   // Start vanuit een gebruikersgebaar: audio ontgrendelen, dan de speler. De
   // knie-poort wordt hier voor elke stap nog eens toegepast: wat vergrendeld
   // is (W1) of tijdens een opvlamming boven 45° (W8), speelt nooit af.
+  // De begeleide proef mag alleen haar eigen oefening in de status test
+  // afspelen (exposure.trial). Geeft true als de speler start.
   function beginRun(playable, meta, exposure) {
-    const steps = playable.steps.filter((st) => access(lib.exercises.get(st.exerciseId), knee, K).allowed);
-    if (!steps.length) return;
+    const trialIds = exposure?.trial ? exposure.ids : [];
+    const steps = playable.steps.filter((st) => access(lib.exercises.get(st.exerciseId), knee, K, { trial: trialIds.includes(st.exerciseId) }).allowed);
+    if (!steps.length) return false;
     audio.unlock();
-    runExposure = exposure;
-    player.begin({ ...playable, steps }, { id: meta.id, name: meta.name, slot: meta.slot, exposure });
+    if (exposure) {
+      const planned = new Map();
+      for (const seg of compileRoutine({ ...playable, steps }, lib.exercises, { timing: lib.meta.timing, sideSwitchSec: settings.sideSwitchSec }).segments) {
+        if (WORK.includes(seg.kind) && exposure.ids.includes(seg.exerciseId)) planned.set(seg.exerciseId, (planned.get(seg.exerciseId) ?? 0) + seg.durationSec);
+      }
+      runExposure = { ...exposure, planned, recorded: new Map() };
+    } else {
+      runExposure = null;
+    }
+    player.begin({ ...playable, steps }, { id: meta.id, name: meta.name, slot: meta.slot, exposure, note: meta.note ?? null });
     location.hash = '#/speler';
+    return true;
   }
 
   // "Probeer nu" (§6.2): alleen deze oefening met de standaarddosis. De
@@ -910,7 +1063,13 @@ async function boot() {
       // binnen de bouwer (terugvraag bij niet-opgeslagen wijzigingen) blijft
       // de werkkopie staan.
       if (pendingDraft?.routine.id === id) {
-        builder.restore(pendingDraft, routines.find((x) => x.id === id) ?? null);
+        // Wat de knie-poort nu blokkeert en niet al in de opgeslagen routine
+        // stond, komt er niet bij (net als bij kopiëren).
+        const base = routines.find((x) => x.id === id) ?? null;
+        const had = new Set((base?.steps ?? []).map((st) => st.exerciseId));
+        const steps = pendingDraft.routine.steps.filter((st) => had.has(st.exerciseId) || access(lib.exercises.get(st.exerciseId), knee, K).allowed);
+        if (steps.length < pendingDraft.routine.steps.length) flash('Niet overgenomen uit het concept (knie-poort): geblokkeerde oefeningen.');
+        builder.restore({ ...pendingDraft, routine: { ...pendingDraft.routine, steps } }, base);
         pendingDraft = null;
       } else if (current !== 'bouwer' || builder.currentId() !== id) {
         const fresh = pendingNew?.id === id ? pendingNew : null;

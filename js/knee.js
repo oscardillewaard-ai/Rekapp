@@ -37,10 +37,13 @@ export function unlockState(ex, state) {
 
 // Mag deze oefening worden toegevoegd en afgespeeld? W1 en W8 blokkeren
 // (§6.5). Dit is de enige poort; bouwer en speler gebruiken allebei deze
-// functie.
-export function access(ex, state, kneeMeta) {
+// functie. In de status `test` is de begeleide proef (§6.6 "test (sessie)")
+// de enige blootstelling: in een routine telt de oefening dan nog als
+// vergrendeld (W1). Alleen de proef zelf vraagt { trial: true }.
+export function access(ex, state, kneeMeta, { trial = false } = {}) {
   const codes = [];
-  if (ex.locked && unlockState(ex, state) === 'vergrendeld') codes.push('W1');
+  const st = unlockState(ex, state);
+  if (st === 'vergrendeld' || (st === 'test' && !trial)) codes.push('W1');
   if (state.flare.active && ex.kneeFlexionMaxDeg > kneeMeta.flareMaxDeg) codes.push('W8');
   return { allowed: codes.length === 0, codes };
 }
@@ -113,7 +116,22 @@ export function startTest(ex, state, now, confirmations) {
   const rec = next.unlocks[ex.id] ?? freshUnlock();
   rec.state = 'test';
   rec.cleanCount = 0;
+  rec.confirmedAt = now;
   next.unlocks[ex.id] = rec;
+  return next;
+}
+
+// De drie bevestigingen gaan over vandaag en de komende 48 uur. Vindt de
+// proef op een latere dag plaats, dan opnieuw bevestigen.
+export function needsReconfirm(rec, now) {
+  return !rec?.confirmedAt || dayKey(rec.confirmedAt) !== dayKey(now);
+}
+export function reconfirm(exId, state, now, confirmations = {}) {
+  if (!confirmations.pain7d || !confirmations.noLegTrainingToday || !confirmations.noHeavyNext48h) {
+    throw new Error('Bevestig eerst alle drie de voorwaarden.');
+  }
+  const next = clone(state);
+  if (next.unlocks[exId]) next.unlocks[exId].confirmedAt = now;
   return next;
 }
 
@@ -167,13 +185,19 @@ export function recordExposure(exId, state, { at, painBefore, painDuring = null 
 }
 
 // "Kniepijn tijdens" achteraf invullen bij een blootstelling (afrondscherm van
-// de speler). Boven 2/10: de cyclus is niet schoon.
-export function setPainDuring(exId, state, { exposureAt, pain }, kneeMeta) {
+// de speler). Boven 2/10: de cyclus is niet schoon. Na het begin van het
+// 24-uursvenster is het te laat: dan vervalt de cyclus (zoals expireChecks).
+export function setPainDuring(exId, state, { exposureAt, pain, at = exposureAt }, kneeMeta) {
   const next = clone(state);
   const events = [];
   const rec = next.unlocks[exId];
   const c = rec && openCycle(rec);
-  if (!c || c.exposureAt !== exposureAt) return { state: next, events }; // al vervallen of afgesloten
+  if (!c || c.exposureAt !== exposureAt || c.painDuring !== null) return { state: next, events }; // al vervallen of afgesloten
+  if (at - exposureAt >= kneeMeta.checkWindowsHours.h24[0] * HOUR) {
+    c.result = 'vervallen';
+    events.push({ type: 'cyclus_vervallen', exerciseId: exId, reason: 'kniepijn tijdens te laat ingevuld' });
+    return { state: next, events };
+  }
   c.painDuring = pain;
   if (pain > kneeMeta.painMax) failCycle(rec, c, exposureAt, kneeMeta, events, exId);
   return { state: next, events };
@@ -182,6 +206,30 @@ export function setPainDuring(exId, state, { exposureAt, pain }, kneeMeta) {
 function inWindow(cycle, at, [fromH, toH]) {
   const h = (at - cycle.exposureAt) / HOUR;
   return h >= fromH && h <= toH;
+}
+
+// Een blootstelling die niet is afgemaakt (gestopt of overgeslagen vóór de
+// geplande tijd): de cyclus telt niet (vervallen), de teller blijft staan.
+// Zo kan een proef van een paar seconden nooit als schone test tellen.
+export function abandonCycle(exId, state, exposureAt, reason) {
+  const next = clone(state);
+  const events = [];
+  const rec = next.unlocks[exId];
+  const c = rec && openCycle(rec);
+  if (c && c.exposureAt === exposureAt) {
+    c.result = 'vervallen';
+    events.push({ type: 'cyclus_vervallen', exerciseId: exId, reason });
+  }
+  return { state: next, events };
+}
+
+// Het laatste tijdstip in de kniestatus (check, blootstelling, opvlamming).
+// Ligt "nu" daarvoor, dan is de klok van het toestel teruggezet.
+export function latestKneeTime(state) {
+  let t = state.flare.since ?? 0;
+  for (const c of state.checks) t = Math.max(t, c.at);
+  for (const rec of Object.values(state.unlocks)) for (const c of rec.cycles ?? []) t = Math.max(t, c.exposureAt);
+  return t;
 }
 
 // Openstaande 24- en 48-uurschecks die nu in te vullen zijn (§6.6).
@@ -355,9 +403,13 @@ export function flareStreak(state, now, kneeMeta) {
   return streak;
 }
 
-// Instellingen → "ontgrendelingen resetten".
+// Instellingen → "ontgrendelingen resetten": alles terug naar vergrendeld,
+// teller 0, zonder geschiedenis. Een lopende afkoelperiode blijft staan:
+// die is een voorwaarde voor een nieuwe test (§6.6), geen teller.
 export function resetUnlocks(state) {
   const next = clone(state);
-  next.unlocks = {};
+  next.unlocks = Object.fromEntries(Object.entries(state.unlocks)
+    .filter(([, r]) => r.cooldownUntil)
+    .map(([id, r]) => [id, { state: 'vergrendeld', cleanCount: 0, cooldownUntil: r.cooldownUntil, cycles: [] }]));
   return next;
 }

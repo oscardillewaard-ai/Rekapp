@@ -117,13 +117,13 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data, p
       fill(confirmSheet,
         h('div', { class: 'sheet-body' },
           h('h2', { id: 'reset-title' }, 'Ontgrendelingen resetten?'),
-          h('p', null, 'Alle vergrendelde oefeningen gaan terug naar vergrendeld, met de teller op 0 en zonder afkoelperiode. Je kniechecks en logboek blijven bewaard.')),
+          h('p', null, 'Alle vergrendelde oefeningen gaan terug naar vergrendeld, met de teller op 0. Een lopende afkoelperiode blijft staan. Je kniechecks en logboek blijven bewaard.')),
         h('div', { class: 'sheet-foot' },
           h('button', { class: 'btn', type: 'button', onclick: () => confirmSheet.close() }, 'Annuleren'),
           h('button', { class: 'btn danger', type: 'button', onclick: async () => { confirmSheet.close(); await knee.reset(); } }, 'Resetten')));
       confirmSheet.showModal();
     };
-    const hasUnlocks = Object.keys(state.unlocks).length > 0;
+    const hasUnlocks = Object.values(state.unlocks).some((r) => r.state !== 'vergrendeld' || r.cleanCount > 0 || r.cycles.length > 0);
     return h('section', { class: 'section' },
       h('h2', null, 'Knie'),
       flare,

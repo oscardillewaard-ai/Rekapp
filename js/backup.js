@@ -361,3 +361,32 @@ export function exportReminderDue({ lastExportAt, snoozedAt, sessions, now }) {
   const since = lastExportAt ?? Math.min(...sessions.map((s) => Date.parse(s.startedAt)));
   return now - since >= 14 * DAY;
 }
+
+// De opgeslagen kniestatus bij het starten nalopen (dezelfde regels als bij
+// een import). null = niet te lezen (dan geldt de opvlammingsmodus, zie
+// main.js). Een ontgrendeling die haar eigen geschiedenis niet draagt, gaat
+// terug naar vergrendeld.
+export function checkKneeState(raw, lib, now) {
+  if (!raw || typeof raw !== 'object' || !raw.unlocks || typeof raw.unlocks !== 'object' || Array.isArray(raw.unlocks) || !Array.isArray(raw.checks)) return null;
+  const flare = cleanFlare(raw.flare);
+  if (!flare) return null;
+  const warnings = [];
+  const unlocks = {};
+  for (const [id, rec] of Object.entries(raw.unlocks)) {
+    const ex = lib.exercises.get(id);
+    if (!ex || !ex.locked) continue;
+    const problems = checkUnlock(rec, { kneeMeta: lib.meta.knee, now });
+    if (problems.length) {
+      warnings.push(`${ex.name}: terug naar vergrendeld (${problems.join('; ')}).`);
+      unlocks[id] = relock(rec, now);
+    } else {
+      unlocks[id] = rec;
+    }
+  }
+  for (const [id, why] of globalProblems(unlocks, { now, flareActive: flare.active })) {
+    warnings.push(`${lib.exercises.get(id).name}: terug naar vergrendeld (${why}).`);
+    unlocks[id] = relock(unlocks[id], now);
+  }
+  const checks = raw.checks.filter((c) => cleanCheck(c, lib));
+  return { knee: { unlocks, flare: { ...raw.flare, ...flare }, checks, rev: Number.isFinite(raw.rev) ? raw.rev : 0 }, warnings, changed: warnings.length > 0 || checks.length !== raw.checks.length };
+}

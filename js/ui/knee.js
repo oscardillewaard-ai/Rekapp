@@ -7,7 +7,7 @@ import { KNEE } from '../texts.js';
 import { formatMoment, formatDay } from '../format.js';
 import {
   unlockState, canStartTest, currentCycle, cycleSchedule, pendingChecks, dailyCheckDue, flareExitDue, flareStreak,
-  flareExitPostponedToday, lastExposureAt,
+  flareExitPostponedToday, lastExposureAt, needsReconfirm,
 } from '../knee.js';
 
 const HOUR = 3600 * 1000;
@@ -218,19 +218,32 @@ export function createUnlockScreen({ lib, getKnee, actions, onBack }) {
     }
 
     if (st === 'test' && !cycle) {
+      // Bevestigd op een eerdere dag: opnieuw bevestigen, want (2) en (3) gaan
+      // over vandaag en de komende 48 uur (§6.6).
+      const again = needsReconfirm(rec, now);
+      const confirm = { pain7d: !again, noLegTrainingToday: !again, noHeavyNext48h: !again };
+      let pain = null;
       const startTrial = h('button', { class: 'btn primary', type: 'button', disabled: true }, icon('play'), 'Start de proef');
+      const update = () => { startTrial.disabled = pain === null || pain > K.painMax || !Object.values(confirm).every(Boolean); };
       const tooHigh = h('p', { class: 'warn-bar', role: 'alert', hidden: true }, `Boven ${K.painMax}/10: de proef start niet. Probeer het op een andere dag.`);
       const picker = painPicker(`${KNEE.painNow}: je beginwaarde`, {
         onChange: (v) => {
+          pain = v;
           tooHigh.hidden = v <= K.painMax;
-          startTrial.disabled = v > K.painMax;
+          update();
         },
       });
-      startTrial.addEventListener('click', () => actions.startTrial(ex, picker.value()));
+      const sw = (key) => {
+        const input = h('input', { type: 'checkbox', role: 'switch' });
+        input.addEventListener('change', () => { confirm[key] = input.checked; update(); });
+        return h('label', { class: 'switch' }, h('span', null, cap(KNEE[key])), input);
+      };
+      startTrial.addEventListener('click', () => actions.startTrial(ex, pain, { ...confirm }));
       parts.push(h('section', { class: 'section' },
         h('h2', null, 'Begeleide proef'),
         h('p', null, KNEE.trial),
-        h('p', { class: 'note' }, 'Direct na de proef vraagt de app je kniepijn tijdens. Daarna volgen de 24- en 48-uurscheck op het startscherm.'),
+        h('p', { class: 'note' }, 'Direct na de proef vraagt de app je kniepijn tijdens. Daarna volgen de 24- en 48-uurscheck op het startscherm. Een proef die je niet afmaakt, telt niet.'),
+        again ? h('fieldset', null, h('legend', null, 'Bevestig opnieuw (vandaag)'), sw('pain7d'), sw('noLegTrainingToday'), sw('noHeavyNext48h')) : null,
         picker.el, tooHigh,
         h('button', { class: 'btn', type: 'button', onclick: () => actions.cancelTest(ex) }, 'Proef annuleren')));
       toolbar.append(startTrial);

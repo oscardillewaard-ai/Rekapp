@@ -136,8 +136,10 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
 - **Kopiëren en dupliceren** maken een nieuwe routine. Wat de knie-poort op
   dat moment blokkeert (W1, of W8 tijdens een opvlamming), komt er niet in;
   de app meldt welke oefeningen zijn weggelaten (§6.5: W1 en W8 "voorkomen
-  toevoegen"). Een bestaande routine houdt een oefening die later weer
-  vergrendeld raakt; die wordt bij het afspelen overgeslagen.
+  toevoegen"). Hetzelfde geldt voor een concept dat je terugzet: wat er
+  nieuw in staat en nu geblokkeerd is, valt weg. Een bestaande routine houdt
+  een oefening die later weer vergrendeld raakt; die wordt bij het afspelen
+  overgeslagen.
 - **Tijd, dosis en waarschuwingen** (totale tijd in de lijsten en de bouwer,
   "Dosis van deze routine", W3–W7, de geplande laag van "Mijn week") rekenen
   met wat echt wordt afgespeeld: zonder stappen die de knie-poort blokkeert.
@@ -206,16 +208,52 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   en teller, de uitleg uit §6.6, de drie bevestigingen, de begeleide proef,
   de lopende cyclus met zijn vensters en de eerdere cycli.
 - **Begeleide proef:** één stap van 30 s per kant (bilateraal 30 s), in de
-  gewone speler. De beginwaarde ("Kniepijn nu") wordt vooraf gevraagd;
-  boven 2/10 start de proef niet. "Probeer nu" op de kaart van een oefening
-  in de status test leidt naar de proef.
-- **Blootstelling vastleggen:** zodra de sessie bewaard is (ook bij stoppen
-  met gedaan werk aan die oefening), op het eindtijdstip van de sessie.
+  gewone speler, met in beeld "intensiteit 3–4/10, op een dik kussen als je
+  knielt" en de rekintensiteit op 3. De beginwaarde ("Kniepijn nu") wordt
+  vooraf gevraagd; boven 2/10 start de proef niet. Vindt de proef op een
+  andere dag plaats dan de bevestiging, dan vraagt de app de drie
+  bevestigingen opnieuw (ze gaan over vandaag en de komende 48 uur).
+- **Status test:** de begeleide proef is de enige blootstelling (§6.6 "test
+  (sessie)"). In een routine, de kiezer, "Toevoegen aan routine" en "Probeer
+  nu" telt de oefening dan nog als vergrendeld (W1); "Probeer nu" en de
+  kiezer leiden naar de proef. Pas in de status voorlopig mag de oefening in
+  routines (W9 bij minder dan 48 uur).
+- **Niet afgemaakt:** een proef of oefening uit de proefperiode die je stopt
+  of overslaat vóór de geplande tijd, telt als blootstelling, maar de cyclus
+  vervalt meteen (niet schoon, teller blijft staan). Kniepijn tijdens wordt
+  wel gevraagd; boven 2/10 volgt het opvlammingsvoorstel.
+- **Blootstelling vastleggen:** op het moment dat het eerste werkblok van
+  die oefening begint, dus ook als de app daarna wordt afgesloten.
   "Kniepijn tijdens" vraagt het afrondscherm daarna verplicht (geen
   voorgekozen waarde, Opslaan pas na een keuze). Ga je weg zonder Opslaan,
-  dan blijft de pijn tijdens leeg; zo'n cyclus telt niet als schoon en
-  vervalt bij het begin van het 24-uursvenster (de teller blijft staan),
-  net als een niet-ingevulde check (§6.6).
+  of vul je hem pas na het begin van het 24-uursvenster in, dan telt de
+  cyclus niet als schoon en vervalt hij (de teller blijft staan), net als een
+  niet-ingevulde check (§6.6).
+- **Open check bij een nieuwe blootstelling:** staat er voor die oefening een
+  24- of 48-uurscheck open, dan geldt het antwoord op "Kniepijn nu" ook als
+  die check (dezelfde vraag op hetzelfde moment). Zo vervalt een cyclus niet
+  alleen omdat je de kaart nog niet had ingevuld; binnen 48 uur geldt de
+  keuze "Nieuwe blootstelling tijdens een lopende cyclus" hieronder.
+- **"Kniepijn nu" boven 2/10** vóór een routine: die waarde komt als kniecheck
+  (context test) in het logboek, de oefening wordt overgeslagen en de app
+  stelt de opvlammingsmodus voor.
+- **Meerdere vensters:** de kniestatus heeft een versienummer. Een venster
+  dat een verouderde stand heeft, slaat zijn wijziging niet op maar laadt de
+  nieuwste stand (met een melding); andere vensters krijgen een seintje en
+  laden opnieuw, en bij terugkeer naar de app wordt altijd opnieuw geladen.
+  Zo kan een oud tabblad nooit een opvlamming of een vergrendeling
+  terugdraaien.
+- **Klok teruggezet:** staat de klok vóór de laatste kniecheck of
+  blootstelling, dan legt de app niets vast (geen checks, geen proef, geen
+  blootstelling; zo'n oefening wordt overgeslagen) en vraagt hij de klok goed
+  te zetten.
+- **Bij het starten nalopen:** de opgeslagen kniestatus gaat langs dezelfde
+  controles als een import; een ontgrendeling die haar eigen geschiedenis
+  niet draagt, gaat terug naar vergrendeld (met een melding). Niet te lezen:
+  opvlammingsmodus (fail-closed).
+- **Terug in beeld:** komt de app terug uit de achtergrond, dan worden
+  verlopen checks afgehandeld en de kaarten bijgewerkt (dagelijkse check na
+  04:00, 24/48-uursvensters).
 - **Kniechecks in het logboek:** de beginwaarde vóór een blootstelling staat
   als kniecheck met context `test` (met oefening); de pijn tijdens staat in de
   sessie (`kneePainDuring`). Dagelijkse, 24u- en 48u-checks hebben hun eigen
@@ -224,7 +262,8 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   (§6.6): een blad met "Niet nu" en "Aanzetten". Een 24u- of 48u-check boven
   2/10 zet de modus direct aan (§6.7), zonder voorstel.
 - **Opvlamming beëindigen:** alleen via het voorstel na 7 dagen (§6.7 "de
-  gebruiker bevestigt"); er is geen knop om de modus zelf uit te zetten.
+  gebruiker bevestigt"), en alleen als de reeks op dat moment nog klopt; er
+  is geen knop om de modus zelf uit te zetten.
   "Nog niet" vraagt het de volgende dag opnieuw. *Ter beslissing aan Oscar:
   wil je een manier om een per ongeluk aangezette modus direct terug te
   draaien?*
@@ -240,8 +279,9 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   primaire knoppen: de kaarten staan bovenaan en §8.3 wil primaire knoppen
   (64 px) in het onderste derde.
 - **Ontgrendelingen resetten** (Instellingen): alle vergrendelde oefeningen
-  terug naar vergrendeld, teller 0, zonder afkoelperiode; kniechecks en
-  logboek blijven.
+  terug naar vergrendeld, teller 0, zonder geschiedenis. Een lopende
+  afkoelperiode blijft staan: die is een voorwaarde voor een nieuwe test
+  (§6.6). Kniechecks en logboek blijven.
 - **Laatste poort:** vlak voor de speler start, past de app de knie-poort nog
   één keer toe op elke stap, ongeacht de route.
 

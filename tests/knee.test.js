@@ -4,6 +4,7 @@ import {
   emptyKneeState, access, unlockState, canStartTest, startTest, cancelTest, recordExposure, recordKneeCheck,
   pendingChecks, expireChecks, activateFlare, endFlare, flareExitDue, dailyCheckDue, dayKey,
   setPainDuring, trialStep, trialExerciseIds, cycleSchedule, currentCycle, flareStreak, postponeFlareExit, flareExitPostponedToday,
+  needsReconfirm, reconfirm, resetUnlocks, abandonCycle, latestKneeTime,
 } from '../js/knee.js';
 import { routineWarnings, playableRoutine } from '../js/warnings.js';
 import { compileRoutine } from '../js/timeline.js';
@@ -319,4 +320,89 @@ test('"Nog niet" op het voorstel: vandaag niet meer vragen', () => {
   const s = postponeFlareExit(activateFlare(emptyKneeState(), at(0)).state, at(0, 11));
   assert.equal(flareExitPostponedToday(s, at(0, 12)), true);
   assert.equal(flareExitPostponedToday(s, at(1, 11)), false);
+});
+
+// M5-reviews: de knieregels zonder omwegen.
+test('status test: in een routine nog geblokkeerd (W1); alleen de begeleide proef mag', () => {
+  const s = startTest(couch, emptyKneeState(), at(0), ALL);
+  assert.deepEqual(access(couch, s, K).codes, ['W1']);
+  assert.equal(access(couch, s, K, { trial: true }).allowed, true);
+  const { routine } = playableRoutine({ steps: [{ exerciseId: 'couch_stretch', perSideSec: 180 }] }, { lib, knee: s });
+  assert.equal(routine.steps.length, 0);
+  // Voorlopig (na een schone proef) mag wel in een routine.
+  assert.equal(access(couch, u1(), K).allowed, true);
+});
+
+test('bevestigingen gelden voor de dag zelf; op een latere dag opnieuw', () => {
+  const s = startTest(couch, emptyKneeState(), at(0), ALL);
+  assert.equal(needsReconfirm(s.unlocks.couch_stretch, at(0, 18)), false);
+  assert.equal(needsReconfirm(s.unlocks.couch_stretch, at(1, 10)), true);
+  assert.throws(() => reconfirm('couch_stretch', s, at(1), { pain7d: true }));
+  const r = reconfirm('couch_stretch', s, at(1), ALL);
+  assert.equal(needsReconfirm(r.unlocks.couch_stretch, at(1, 18)), false);
+});
+
+test('ontgrendelingen resetten houdt een lopende afkoelperiode vast', () => {
+  let s = startTest(couch, emptyKneeState(), at(0), ALL);
+  s = recordExposure('couch_stretch', s, { at: at(0), painBefore: 1, painDuring: 3 }, K).state; // niet schoon → afkoeling
+  const r = resetUnlocks(s);
+  assert.equal(r.unlocks.couch_stretch.state, 'vergrendeld');
+  assert.equal(r.unlocks.couch_stretch.cooldownUntil, at(0) + 7 * DAY);
+  assert.equal(canStartTest(ex('duif'), r, at(1), ALL).ok, false);
+});
+
+test('niet afgemaakt: de cyclus vervalt, de teller blijft staan', () => {
+  let s = startTest(couch, emptyKneeState(), at(0), ALL);
+  s = recordExposure('couch_stretch', s, { at: at(0), painBefore: 1 }, K).state;
+  const r = abandonCycle('couch_stretch', s, at(0), 'proef niet afgemaakt');
+  assert.equal(r.state.unlocks.couch_stretch.state, 'test');
+  assert.equal(r.state.unlocks.couch_stretch.cycles[0].result, 'vervallen');
+  assert.deepEqual(pendingChecks(r.state, at(0) + 21 * HOUR, K), []);
+});
+
+test('kniepijn tijdens te laat (na het begin van het 24-uursvenster): de cyclus vervalt', () => {
+  let s = startTest(couch, emptyKneeState(), at(0), ALL);
+  s = recordExposure('couch_stretch', s, { at: at(0), painBefore: 1 }, K).state;
+  const late = setPainDuring('couch_stretch', s, { exposureAt: at(0), pain: 0, at: at(0) + 21 * HOUR }, K);
+  assert.equal(late.state.unlocks.couch_stretch.cycles[0].result, 'vervallen');
+  const ok = setPainDuring('couch_stretch', s, { exposureAt: at(0), pain: 0, at: at(0) + HOUR }, K);
+  assert.equal(ok.state.unlocks.couch_stretch.cycles[0].painDuring, 0);
+});
+
+test('latestKneeTime: laatste check of blootstelling (klok teruggezet herkennen)', () => {
+  const s = u1();
+  assert.equal(latestKneeTime(s), at(0) + 48 * HOUR);
+});
+
+test('de kniestatus bij het starten nalopen: een echte U1/U2-geschiedenis blijft staan', async () => {
+  const { checkKneeState } = await import('../js/backup.js');
+  const s = u1();
+  const r = checkKneeState(s, lib, at(3));
+  assert.deepEqual(r.warnings, []);
+  assert.equal(r.knee.unlocks.couch_stretch.state, 'voorlopig');
+  // Vervalst: vrij zonder cycli → vergrendeld met melding.
+  const f = checkKneeState({ ...s, unlocks: { duif: { state: 'vrij', cleanCount: 0, cooldownUntil: null, cycles: [] } } }, lib, at(3));
+  assert.equal(f.knee.unlocks.duif.state, 'vergrendeld');
+  assert.equal(f.warnings.length, 1);
+  // Kapot (geen cycli-lijst) of geen lijst met checks: niet te lezen.
+  assert.equal(checkKneeState({ unlocks: {}, flare: { active: false }, checks: 'x' }, lib, at(3)), null);
+  assert.equal(checkKneeState({ unlocks: { kikker: { state: 'vrij' } }, flare: { active: false }, checks: [] }, lib, at(3)).knee.unlocks.kikker.state, 'vergrendeld');
+});
+
+test('U2 volledig tot vrij blijft geldig bij het nalopen', async () => {
+  const { checkKneeState } = await import('../js/backup.js');
+  let s = u1();
+  const t1 = at(0) + 49 * HOUR;
+  s = cycle(s, 'couch_stretch', t1, [1, 1, 1, 1]).state;
+  s = cycle(s, 'couch_stretch', t1 + 49 * HOUR, [1, 1, 1, 1]).state;
+  assert.equal(s.unlocks.couch_stretch.state, 'vrij');
+  const r = checkKneeState(s, lib, t1 + 100 * HOUR);
+  assert.deepEqual(r.warnings, []);
+  // Daarna een opvlamming en een nieuwe test: ook dat blijft geldig (resetAt).
+  let f = activateFlare(s, t1 + 101 * HOUR).state;
+  f = endFlare(f);
+  f = startTest(couch, f, t1 + 110 * HOUR, ALL);
+  f = cycle(f, 'couch_stretch', t1 + 111 * HOUR, [1, 1, 1, 1]).state;
+  assert.equal(f.unlocks.couch_stretch.state, 'voorlopig');
+  assert.deepEqual(checkKneeState(f, lib, t1 + 200 * HOUR).warnings, []);
 });
