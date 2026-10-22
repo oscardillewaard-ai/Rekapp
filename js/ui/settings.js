@@ -8,7 +8,7 @@ import { formatDay } from '../format.js';
 
 const LETTER_NAMES = { B: 'Bewijs', K: 'Knieveiligheid', D: 'Doelgerichtheid', R: 'Relevantie', P: 'Praktisch' };
 
-export function createSettingsScreen({ audio, getSettings, update, knee }) {
+export function createSettingsScreen({ audio, getSettings, update, knee, data }) {
   const root = h('section', { class: 'screen', 'aria-labelledby': 'settings-title' });
   const extra = h('div'); // secties van latere mijlpalen
   const confirmSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'reset-title' });
@@ -131,6 +131,21 @@ export function createSettingsScreen({ audio, getSettings, update, knee }) {
       hasUnlocks ? null : h('p', { class: 'note' }, 'Er loopt geen ontgrendeling.'));
   }
 
+  // Gegevens (§6.9, §6.11): laatste export, exporteren en importeren.
+  function dataSection() {
+    const last = getSettings().lastExportAt;
+    const file = h('input', { type: 'file', accept: '.json,application/json', hidden: true });
+    file.addEventListener('change', () => { if (file.files[0]) data.importFile(file.files[0]); file.value = ''; });
+    return h('section', { class: 'section' },
+      h('h2', null, 'Gegevens'),
+      h('p', null, `Laatste export: ${last ? formatDay(last) : 'nog nooit'}.`),
+      h('p', { class: 'note' }, 'Je gegevens staan alleen op dit toestel. Een export (JSON) is je back-up; importeren zet alles terug. De CSV-bestanden openen in Excel.'),
+      h('div', { class: 'actions' },
+        h('button', { class: 'btn', type: 'button', onclick: () => data.openExport() }, 'Exporteren'),
+        h('button', { class: 'btn', type: 'button', disabled: !data.canImport(), onclick: () => file.click() }, 'Importeren')),
+      file);
+  }
+
   function render() {
     draft = null;
     fill(root, 
@@ -161,6 +176,7 @@ export function createSettingsScreen({ audio, getSettings, update, knee }) {
         defaultHold()),
       weights(),
       kneeSection(),
+      dataSection(),
       extra,
       confirmSheet);
   }

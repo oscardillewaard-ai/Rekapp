@@ -641,3 +641,44 @@ button.row { width: 100%; border: 0; text-align: left; cursor: pointer; font: in
 }
 .toast .btn { flex: none; }
 .locked-bar p { margin: .5rem 0 0; }
+
+/* ---------- Logboek en zelftests (M6) ---------- */
+
+.log-filter { margin-top: .75rem; }
+.log-row { grid-template-columns: minmax(0, 1fr); min-height: var(--tap); }
+button.log-row { color: var(--text); }
+.log-more { width: 100%; margin-top: 1rem; }
+.log-segments li { font-size: .9375rem; }
+.chip.attention-chip { background: transparent; border-color: var(--warn); color: var(--warn); font-size: .75rem; padding: 0 .5rem; }
+.group-title .attention-chip { margin-left: .5rem; vertical-align: 2px; }
+.chip.warn-chip { background: transparent; border-color: var(--accent); color: var(--accent); font-size: .75rem; }
+.test-row { grid-template-columns: minmax(0, 1fr) auto; }
+.trials { margin-top: .75rem; }
+.trial-inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+.trial-inputs input {
+  width: 100%; min-width: 0; min-height: var(--tap); padding: 0 .75rem; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font-size: 1.125rem; font-variant-numeric: tabular-nums;
+}
+.trial-with-sign { display: grid; grid-template-columns: minmax(0, 1fr); gap: .375rem; }
+.trial-with-sign .sign { width: 100%; }
+.trial-mean { display: block; margin-top: .375rem; color: var(--text-2); font-variant-numeric: tabular-nums; min-height: 1.25rem; }
+.test-chart { margin: .5rem 0 0; }
+.test-chart svg { width: 100%; height: auto; display: block; }
+.test-chart .grid { stroke: var(--line); stroke-width: 1; }
+.test-chart .tick { fill: var(--muted); font-size: 11px; font-family: var(--font); }
+.test-chart .band { fill: var(--accent); opacity: .14; }
+.test-chart .band-R { fill: var(--warn); }
+.test-chart .line { fill: none; stroke-width: 2.5; }
+.test-chart .line-L, .test-chart .dot-L { stroke: var(--accent); fill: none; }
+.test-chart .line-R { stroke: var(--warn); stroke-dasharray: 6 4; }
+.test-chart .dot-L { fill: var(--accent); }
+.test-chart .dot-R { fill: var(--warn); stroke: none; }
+.test-chart .legend .key { display: inline-block; width: 1rem; height: .25rem; margin-right: .375rem; vertical-align: middle; border-radius: 2px; }
+.test-chart .key-L { background: var(--accent); }
+.test-chart .key-R { background: var(--warn); }
+.test-chart .key-band { height: .75rem; background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.test-history li { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .9375rem; }
+.export-files { margin-top: .75rem; }
+.export-files .btn, .export-share { width: 100%; }
+.export-share { margin-top: .5rem; }
+.draft-bar .actions { margin-top: .5rem; }

@@ -14,7 +14,14 @@ import { createBuilderScreen } from './ui/builder.js';
 import { createWeekScreen } from './ui/week.js';
 import { createMoreScreen } from './ui/more.js';
 import { createUnlockScreen, kneeCards, painPicker } from './ui/knee.js';
-import { openStore, loadSettings, saveSettings, loadKneeState, saveKneeState, requestPersistence, newId } from './store.js';
+import { createLogScreen } from './ui/log.js';
+import { createTestsScreen, createTestScreen } from './ui/tests.js';
+import {
+  openStore, loadSettings, saveSettings, loadKneeState, saveKneeState, requestPersistence, newId, readAll, replaceAll,
+} from './store.js';
+import { buildDump, sessionsCsv, kneeChecksCsv, weekDoseCsv, parseDump, exportReminderDue } from './backup.js';
+import { newMeasurement, analyse, attentionGroups } from './selftests.js';
+import { isoWithOffset } from './session.js';
 import { withDefaults } from './settings.js';
 import { createAudio } from './audio.js';
 import {
@@ -87,6 +94,7 @@ async function boot() {
   let routines = storedRoutines.filter((r) => validateUserRoutine(r, lib.exercises).length === 0);
   const skippedRoutines = storedRoutines.length - routines.length;
   let sessions = await store.getAll('sessions').catch(() => []);
+  let tests = await store.getAll('tests').catch(() => []);
   // Niet-opgeslagen werk uit de bouwer van de vorige keer (de app werd op de
   // achtergrond afgesloten, wat iOS vaak doet).
   let builderDraft = await store.get('settings', 'builderDraft').catch(() => null);
@@ -97,7 +105,9 @@ async function boot() {
   audio.configure(settings);
   const getSettings = () => settings;
   const getContext = () => ({ settings, knee, routines });
-  const getData = () => ({ settings, knee, routines, sessions });
+  const getData = () => ({ settings, knee, routines, sessions, tests });
+  // Spiergroepen met "aandacht" uit de zelftests (§6.10), voor de bibliotheek.
+  let attention = attentionGroups([...lib.tests.values()], tests, Date.now());
   const blockedCodes = (ex) => access(ex, knee, lib.meta.knee).codes;
 
   // Vaste meldingen bovenaan de app (opslag, kniestatus).
@@ -324,12 +334,15 @@ async function boot() {
   const home = createHomeScreen({
     lib, getData,
     // Kniekaarten bovenaan (§6.6–6.7) en "Ik heb een opvlamming" onderaan.
-    topCards: () => kneeCards({ lib, knee, now: Date.now(), actions: kneeActions }),
+    topCards: () => [...kneeCards({ lib, knee, now: Date.now(), actions: kneeActions }), ...dataCards()],
     bottom: () => (knee.flare.active || knee.unknown ? null
       : h('button', { class: 'btn flare-button', type: 'button', onclick: askFlare }, KNEE.flareButton)),
   });
   const libState = libraryState(settings.showLocked);
-  const library = createLibraryScreen({ lib, equipmentOrder, showLocked: settings.showLocked, weights: settings.weights, blockedCodes, state: libState });
+  const library = createLibraryScreen({
+    lib, equipmentOrder, showLocked: settings.showLocked, weights: settings.weights, blockedCodes, state: libState,
+    attention: () => attention,
+  });
   const exercise = createExerciseScreen({
     lib, getContext, onBack: goBack('#/bibliotheek'), onTry: tryExercise, onAdd: openAddSheet,
     onUnlock: (ex) => { location.hash = `#/ontgrendelen/${ex.id}`; },
@@ -357,6 +370,7 @@ async function boot() {
       askFlare,
       reset: async () => commitKnee(resetUnlocks(knee)),
     },
+    data: { openExport, importFile, canImport: () => store.persistent },
   });
   const routinesScreen = createRoutinesScreen({
     lib, getData,
@@ -364,6 +378,156 @@ async function boot() {
   });
   const week = createWeekScreen({ lib, getData });
   const more = createMoreScreen();
+  const log = createLogScreen({ lib, getData });
+  const testsScreen = createTestsScreen({ lib, getData });
+  const testScreen = createTestScreen({
+    lib, getData, onBack: goBack('#/zelftests'),
+    onSave: async (test, entries) => {
+      const date = isoWithOffset(Date.now());
+      const ms = entries.map(({ side, trials }) => newMeasurement({ id: newId(), date, test, side, trials }));
+      await store.batch(['tests'], (os) => { for (const m of ms) os('tests').put(m); });
+      tests = [...tests, ...ms];
+      refreshAttention();
+    },
+    onDelete: async (m) => {
+      await store.delete('tests', m.id);
+      tests = tests.filter((x) => x.id !== m.id);
+      refreshAttention();
+    },
+  });
+  function refreshAttention() {
+    attention = attentionGroups([...lib.tests.values()], tests, Date.now());
+    library.refresh();
+    picker.refresh();
+  }
+
+  // ---------- Export en import (§6.9) ----------
+
+  async function exportFiles() {
+    const data = await readAll(store);
+    const now = Date.now();
+    const exportedAt = isoWithOffset(now);
+    const dump = buildDump(data, { exportedAt, librarySchemaVersion: lib.raw.schemaVersion });
+    return [
+      { name: `rekapp-${exportedAt.slice(0, 10)}.json`, type: 'application/json', text: `${JSON.stringify(dump, null, 2)}\n`, backup: true },
+      { name: 'sessies.csv', type: 'text/csv;charset=utf-8', text: sessionsCsv(data.sessions) },
+      { name: 'kniechecks.csv', type: 'text/csv;charset=utf-8', text: kneeChecksCsv(data.kneeChecks) },
+      { name: 'dosis_per_week.csv', type: 'text/csv;charset=utf-8', text: weekDoseCsv(data.sessions, lib) },
+    ];
+  }
+  const markExported = () => updateSettings({ lastExportAt: Date.now(), exportReminderSnoozedAt: null });
+  function download(f) {
+    const url = URL.createObjectURL(new Blob([f.text], { type: f.type }));
+    const a = h('a', { href: url, download: f.name, hidden: true });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  const exportSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'export-title' });
+  exportSheet.addEventListener('click', (e) => { if (e.target === exportSheet) exportSheet.close(); });
+  // Delen (iPhone: "Bewaar in Bestanden") of per bestand downloaden. Elke knop
+  // is een eigen tik, zodat ook iOS de bestanden toestaat.
+  async function openExport() {
+    let files;
+    try {
+      files = await exportFiles();
+    } catch (e) {
+      flash(`Export is niet gelukt: ${e?.message ?? e}`);
+      return;
+    }
+    const asFiles = files.map((f) => new File([f.text], f.name, { type: f.type }));
+    const canShare = typeof navigator.canShare === 'function' && navigator.canShare({ files: asFiles });
+    const status = h('p', { class: 'note', role: 'status' });
+    fill(exportSheet,
+      h('div', { class: 'sheet-body' },
+        h('div', { class: 'sheet-head' },
+          h('h2', { id: 'export-title' }, 'Exporteren'),
+          h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Sluiten', onclick: () => exportSheet.close() }, icon('cross'))),
+        h('p', null, 'Het JSON-bestand is je volledige back-up (importeren zet alles terug). De drie CSV-bestanden openen in Excel.'),
+        canShare ? h('button', {
+          class: 'btn primary export-share', type: 'button',
+          onclick: async () => {
+            try {
+              await navigator.share({ files: asFiles, title: 'Rekapp-export' });
+              markExported();
+              status.textContent = 'Gedeeld.';
+            } catch (e) {
+              if (e?.name !== 'AbortError') status.textContent = `Delen lukte niet: ${e?.message ?? e}. Download de bestanden hieronder.`;
+            }
+          },
+        }, 'Alles delen of bewaren') : null,
+        h('ul', { class: 'plain export-files' }, files.map((f) => h('li', null,
+          h('button', {
+            class: 'btn', type: 'button',
+            onclick: () => { download(f); if (f.backup) markExported(); status.textContent = `${f.name} gedownload.`; },
+          }, `Download ${f.name}`)))),
+        status),
+      h('div', { class: 'sheet-foot' }, h('button', { class: 'btn', type: 'button', onclick: () => exportSheet.close() }, 'Klaar')));
+    exportSheet.showModal();
+  }
+  exportSheet.addEventListener('close', () => { if (current === 'instellingen') settingsScreen.render(); else if (current === 'start') home.render(); });
+
+  // Import: eerst controleren en laten zien wat er komt, dan alles vervangen.
+  const importSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'import-title' });
+  importSheet.addEventListener('click', (e) => { if (e.target === importSheet) importSheet.close(); });
+  async function importFile(file) {
+    let r;
+    try {
+      r = parseDump(await file.text(), lib, { now: Date.now() });
+    } catch (e) {
+      r = { ok: false, errors: [String(e?.message ?? e)], warnings: [] };
+    }
+    const c = r.counts;
+    fill(importSheet,
+      h('div', { class: 'sheet-body' },
+        h('h2', { id: 'import-title' }, r.ok ? 'Alles vervangen door deze import?' : 'Import niet mogelijk'),
+        r.ok ? h('p', null, `${c.routines} routines, ${c.sessions} sessies, ${c.kneeChecks} kniechecks, ${c.tests} metingen en ${c.unlocks} ontgrendelingen. Wat nu in de app staat, wordt vervangen.`) : null,
+        r.errors.length ? h('ul', { class: 'plain' }, r.errors.slice(0, 12).map((e) => h('li', { class: 'locked-bar' }, e))) : null,
+        r.warnings.length ? h('ul', { class: 'plain' }, r.warnings.map((w) => h('li', { class: 'warn-bar' }, w))) : null),
+      h('div', { class: 'sheet-foot' },
+        h('button', { class: 'btn', type: 'button', onclick: () => importSheet.close() }, r.ok ? 'Annuleren' : 'Sluiten'),
+        r.ok ? h('button', {
+          class: 'btn danger', type: 'button',
+          onclick: async (e) => {
+            e.currentTarget.disabled = true;
+            try {
+              await replaceAll(store, r.data);
+            } catch (err) {
+              importSheet.close();
+              flash(`Importeren is niet gelukt: ${err?.message ?? err}. Er is niets veranderd.`);
+              return;
+            }
+            // Opnieuw starten met de geïmporteerde gegevens.
+            history.replaceState(null, '', '#/start');
+            location.reload();
+          },
+        }, 'Alles vervangen') : null));
+    importSheet.showModal();
+  }
+
+  // Kaarten op het startscherm: exportherinnering en open hertests.
+  function dataCards() {
+    const now = Date.now();
+    const out = [];
+    if (exportReminderDue({ lastExportAt: settings.lastExportAt, snoozedAt: settings.exportReminderSnoozedAt, sessions, now })) {
+      out.push(h('section', { class: 'section knee-card', 'aria-labelledby': 'export-card-title' },
+        h('h2', { id: 'export-card-title' }, 'Tijd voor een export'),
+        h('p', null, settings.lastExportAt ? `Je laatste export is van ${formatDay(settings.lastExportAt)}.` : 'Je hebt nog geen export gemaakt.',
+          ' Je gegevens staan alleen op dit toestel; met een export kun je alles terugzetten.'),
+        h('div', { class: 'actions' },
+          h('button', { class: 'btn', type: 'button', onclick: async () => { await updateSettings({ exportReminderSnoozedAt: Date.now() }); home.render(); } }, 'Later'),
+          h('button', { class: 'btn primary', type: 'button', onclick: () => openExport() }, 'Exporteren'))));
+    }
+    const due = [...lib.tests.values()].map((t) => analyse(t, tests, now)).filter((a) => a.retest?.due);
+    if (due.length) {
+      out.push(h('a', { class: 'section week-card', href: '#/zelftests' },
+        h('h2', null, 'Hertest zelftests'),
+        h('p', null, due.map((a) => `${a.test.name} (week ${a.retest.due.week})`).join(', '), '.')));
+    }
+    return out;
+  }
 
   // Kiesblad voor de bouwer: de bibliotheek met dezelfde filters, maar een tik
   // kiest de oefening. Geblokkeerd (W1/W8) kan niet; dan staat de reden erbij.
@@ -533,7 +697,10 @@ async function boot() {
   const tabbar = h('nav', { class: 'tabbar', 'aria-label': 'Hoofdmenu' },
     TABS.map(([route, text, ic]) => h('a', { href: `#/${route}`, dataset: { route } }, icon(ic), h('span', null, text))));
   // Welke tab oplicht bij een scherm (instellingen hoort bij "Meer").
-  const TAB_OF = { start: 'start', routines: 'routines', bibliotheek: 'bibliotheek', week: 'week', meer: 'meer', instellingen: 'meer' };
+  const TAB_OF = {
+    start: 'start', routines: 'routines', bibliotheek: 'bibliotheek', week: 'week', meer: 'meer',
+    instellingen: 'meer', logboek: 'meer', zelftests: 'meer',
+  };
 
   const views = {
     start: h('div', null, home.root),
@@ -542,6 +709,9 @@ async function boot() {
     week: h('div', null, week.root),
     meer: h('div', null, more.root),
     instellingen: h('div', null, settingsScreen.root),
+    logboek: h('div', null, log.root),
+    zelftests: h('div', null, testsScreen.root),
+    zelftest: h('div', null, testScreen.root, testScreen.toolbar),
     oefening: h('div', null, exercise.root, exercise.toolbar),
     routine: h('div', null, routine.root, routine.toolbar),
     bouwer: h('div', null, builder.root, builder.toolbar),
@@ -550,7 +720,7 @@ async function boot() {
   };
   for (const v of Object.values(views)) v.hidden = true;
   fill(app, notices, ...Object.values(views), tabbar,
-    library.sheet, exercise.sheet, picker.sheet, pickerDialog, addSheet, ...builder.sheets, flareSheet, painSheet, toasts);
+    library.sheet, exercise.sheet, picker.sheet, pickerDialog, addSheet, ...builder.sheets, flareSheet, painSheet, exportSheet, importSheet, toasts);
   watchBars();
 
   // ---------- Router ----------
@@ -597,6 +767,8 @@ async function boot() {
     '#/week': () => { week.render(); show('week', 'Mijn week'); window.scrollTo(0, 0); },
     '#/meer': () => { more.render(); show('meer', 'Meer'); window.scrollTo(0, 0); },
     '#/instellingen': () => { settingsScreen.render(); show('instellingen', 'Instellingen'); window.scrollTo(0, 0); },
+    '#/logboek': () => { log.render(); show('logboek', 'Logboek'); window.scrollTo(0, 0); },
+    '#/zelftests': () => { testsScreen.render(); show('zelftests', 'Zelftests'); window.scrollTo(0, scrollOf.zelftests ?? 0); },
   };
 
   // Een kapotte link (#/bouwer/%) mag de router niet laten vastlopen.
@@ -661,6 +833,12 @@ async function boot() {
         pendingNew = null;
       }
       show('bouwer', 'Routine bewerken');
+      return;
+    }
+    if ((m = /^#\/zelftest\/([a-z0-9_]+)$/.exec(hash))) {
+      testScreen.render(m[1]);
+      show('zelftest', lib.tests.get(m[1])?.name ?? 'Zelftest');
+      window.scrollTo(0, 0);
       return;
     }
     if (hash === '#/speler') {

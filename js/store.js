@@ -144,3 +144,33 @@ export async function requestPersistence() {
     return false;
   }
 }
+
+// ---------- Export en import (§6.9) ----------
+
+const DATA_STORES = ['routines', 'sessions', 'kneeChecks', 'unlocks', 'tests', 'flare', 'settings'];
+
+// Alles wat in de export hoort (het concept uit de bouwer niet).
+export async function readAll(store) {
+  const [routines, sessions, kneeChecks, unlocks, tests, flare, settings] = await Promise.all([
+    store.getAll('routines'), store.getAll('sessions'), store.getAll('kneeChecks'), store.getAllKeyed('unlocks'),
+    store.getAll('tests'), store.get('flare', 'state'), store.get('settings', 'settings'),
+  ]);
+  return {
+    routines, sessions, kneeChecks, unlocks: Object.fromEntries(unlocks), tests,
+    flare: flare ?? { active: false, since: null, exitProposedAt: null }, settings: settings ?? null,
+  };
+}
+
+// Import: alles vervangen, in één transactie (alles of niets).
+export function replaceAll(store, data) {
+  return store.batch(DATA_STORES, (os) => {
+    for (const name of DATA_STORES) os(name).clear();
+    for (const r of data.routines) os('routines').put(r);
+    for (const s of data.sessions) os('sessions').put(s);
+    for (const c of data.kneeChecks) os('kneeChecks').put(c);
+    for (const t of data.tests) os('tests').put(t);
+    for (const [id, rec] of Object.entries(data.unlocks)) os('unlocks').put(rec, id);
+    os('flare').put(data.flare, 'state');
+    if (data.settings) os('settings').put(data.settings, 'settings');
+  });
+}

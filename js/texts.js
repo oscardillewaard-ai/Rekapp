@@ -88,6 +88,13 @@ export const KNEE = {
   flareButton: 'Ik heb een opvlamming',
 };
 
+// §6.10 zelftests.
+export const SELFTEST = {
+  protocol: "altijd op hetzelfde tijdstip, bij voorkeur 's avonds vóór de routine. Na 5 minuten lopen: één oefenpoging, daarna drie metingen.",
+  baseline: 'Het verschil is je persoonlijke meetfout. Een verandering van meer dan 1,5 × die meetfout (of de MDC uit de literatuur als die er is) telt als echt.',
+  retest: 'in week 4, 8 en 12, daarna elke 8 weken.',
+};
+
 // §6.1 filters: "alleen K ≥ 4" en "toon vergrendelde".
 export const FILTERS = {
   onlyK4: 'alleen K ≥ 4',

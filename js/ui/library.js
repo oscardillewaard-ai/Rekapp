@@ -30,7 +30,7 @@ export const libraryState = (showLocked) => ({ filters: { ...defaultFilters(), s
 export function createLibraryScreen({
   lib, equipmentOrder, showLocked = true, weights, title = 'Bibliotheek', onPick = null,
   blockedCodes = (ex) => (ex.locked ? ['W1'] : []), scrollTop = () => window.scrollTo(0, 0), headerExtra = null,
-  state = libraryState(showLocked),
+  state = libraryState(showLocked), attention = () => new Map(),
 }) {
   const uid = ++instances;
   // "Vergrendelde oefeningen tonen" (§6.11) is de standaard van het filter.
@@ -78,7 +78,8 @@ export function createLibraryScreen({
         mini,
         h('div', { class: 'main' },
           h('div', { class: 'name' }, ex.name),
-          h('div', { class: 'meta' }, starsWithScore(rating), h('span', null, groupLabels))),
+          h('div', { class: 'meta' }, starsWithScore(rating), h('span', null, groupLabels),
+            primaryGroups(ex).some((g) => attention().has(g)) ? h('span', { class: 'chip attention-chip' }, 'aandacht') : null)),
         h('div', { class: 'side' },
           h('span', { class: 'knee-badge', title: 'Maximale kniebuiging' }, h('span', { class: 'sr-only' }, 'Knie maximaal '), `${ex.kneeFlexionMaxDeg}°`),
           locked ? h('span', { title: 'Vergrendeld' }, icon('lock', 'lock'), h('span', { class: 'sr-only' }, 'Vergrendeld')) : null));
@@ -107,7 +108,9 @@ export function createLibraryScreen({
         listHost.append(h('h2', { class: 'region-title' }, region));
         for (const { group, items: list } of groups) {
           listHost.append(
-            h('h3', { class: 'group-title' }, group.label, h('small', null, String(list.length))),
+            h('h3', { class: 'group-title' }, group.label,
+              attention().has(group.id) ? h('span', { class: 'chip attention-chip', title: 'Verschil links–rechts groter dan je meetfout (zelftests)' }, 'aandacht') : null,
+              h('small', null, String(list.length))),
             h('ul', { class: 'list' }, list.map(row)));
         }
       }
