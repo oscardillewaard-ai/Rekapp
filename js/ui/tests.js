@@ -92,17 +92,24 @@ export function createTestScreen({ lib, getData, onSave, onDelete, onBack }) {
     return { v, filled, valid };
   }
   const outs = {};
+  // Opslaan kan als minstens één kant drie geldige pogingen heeft en geen
+  // kant half is ingevuld (die zou anders stil verdwijnen).
   function updateMeans() {
     let ready = false;
-    let bad = false;
+    const notNumber = [];
+    const incomplete = [];
     for (const side of SIDES) {
       const st = sideState(side);
-      if (st.filled && !st.valid) bad = st.v.some((x, i) => x === null && inputs[side][i].input.value.trim() !== '') || bad;
+      const typed = inputs[side].filter((x) => x.input.value.trim() !== '');
+      if (typed.some((x) => parseTrial(x.input.value) === null)) notNumber.push(SIDE_TEXT[side]);
+      else if (st.filled > 0 && st.filled < TRIALS) incomplete.push(SIDE_TEXT[side]);
       outs[side].textContent = st.valid ? `gemiddeld ${num(round1(mean(st.v)))} ${test.unit}` : '';
       if (st.valid) ready = true;
     }
-    save.disabled = !ready || bad;
-    hint.textContent = bad ? 'Vul getallen in, bv. 12 of 12,5.' : '';
+    save.disabled = !ready || notNumber.length > 0 || incomplete.length > 0;
+    hint.textContent = notNumber.length
+      ? `Vul getallen in bij ${notNumber.join(' en ').toLowerCase()}, bv. 12 of 12,5.`
+      : incomplete.length ? `Vul drie pogingen in bij ${incomplete.join(' en ').toLowerCase()}, of maak die kant leeg.` : '';
   }
 
   const save = h('button', { class: 'btn primary', type: 'button', disabled: true, onclick: () => doSave() }, 'Opslaan');

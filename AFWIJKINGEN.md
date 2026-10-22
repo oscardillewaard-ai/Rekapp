@@ -24,6 +24,13 @@ Naast §9.2 regel 1–7 controleert `library.js` ook:
 deze velden; een mismatch zou een verkeerde weergave of tijd geven. De huidige
 bibliotheek voldoet aan alle drie.
 
+### Ontgrendeling: veld `resetAt` (M6)
+Naast de velden uit §8.2 bewaart een ontgrendeling `resetAt`: het moment
+waarop de teller op 0 ging (een niet-schone cyclus of een opvlamming).
+**Reden:** bij een import moet de app kunnen nagaan of status en teller
+kloppen met de cycli sinds die reset; na een opvlamming vanuit "vrij" is er
+anders geen spoor van die reset.
+
 ### Bibliotheek: schakelaar "Groeperen per spiergroep" (M2)
 §6.1 vraagt een lijst gegroepeerd per regio en spiergroep, te sorteren op
 score, naam, R of tijd. Gegroepeerd sorteert de app binnen elke spiergroep
@@ -234,9 +241,12 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
 
 - **Logboek** (Meer → Logboek): sessies, kniechecks en zelftestmetingen per
   dag, nieuwste eerst, met het filter Alles · Sessies · Kniechecks ·
-  Zelftests. De laatste 30 dagen, met "Oudere tonen". Een tik op een sessie
-  toont per oefening en kant de gedane werktijd. Sessies tonen datum en tijd
-  zoals ze zijn vastgelegd (in de tijdzone van dat moment).
+  Zelftests. Eerst de 30 meest recente kalenderdagen (vanaf de dag van het
+  nieuwste item), met "Oudere tonen" voor de 30 daarvoor. Een tik op een
+  sessie toont per oefening en kant de gedane werktijd. Sessies en metingen
+  tonen datum en tijd zoals ze zijn vastgelegd (in de tijdzone van dat
+  moment); kniechecks hebben alleen een tijdstempel en staan in de tijdzone
+  van het toestel.
 - **Export:** één blad met "Alles delen of bewaren" (deelmenu van het toestel;
   op de iPhone o.a. "Bewaar in Bestanden") en per bestand een
   downloadknop. Het JSON-bestand heet `rekapp-JJJJ-MM-DD.json`; de CSV's
@@ -254,11 +264,27 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   `dosis_per_week.csv`: de werkelijke dosis per kalenderweek (maandag tot en
   met zondag) uit het logboek, alleen spiergroepen die die week iets kregen.
 - **Import:** eerst controleren en tonen wat er komt; daarna vervangt de
-  import alles in één keer (alles of niets) en start de app opnieuw. De
-  knieregels zijn hard: een ontgrendeling die niet klopt met haar eigen
-  cycli (bv. "vrij" zonder drie schone cycli op rij, een cyclus als schoon
-  gemarkeerd terwijl de waarden dat niet zijn, ontgrendeld tijdens een
-  opvlamming), gaat terug naar vergrendeld, met een melding.
+  import alles in één keer (alles of niets) en start de app opnieuw. Ook het
+  concept uit de bouwer verdwijnt dan.
+  - Een losse routine, sessie, kniecheck of meting die niet klopt (onbekende
+    oefening of test, ontbrekende of verkeerd getypte velden), wordt
+    overgeslagen met een melding; de rest komt mee. Dubbele id's worden
+    samengevoegd. Gemiddelde en eenheid van een meting rekent de app opnieuw
+    uit de pogingen en de bibliotheek.
+  - Instellingen: alleen bekende waarden met het goede type (de rest wordt
+    de standaard); een weging die niet samen 100 % is, valt weg. Zit er geen
+    instellingen in het bestand, dan blijven de huidige staan. "Laatste
+    export" is minstens het moment van die export.
+  - De knieregels zijn hard. Een ontgrendeling gaat terug naar vergrendeld
+    (met een melding, met behoud van een lopende afkoelperiode) als:
+    status en teller niet kloppen met de schone cycli sinds de laatste reset
+    (test 0, voorlopig 1–2, vrij precies 3; vergrendeld 0 zonder lopende
+    cyclus); een cyclus als schoon staat terwijl de waarden dat niet zijn of
+    de 24/48-uurscheck nog niet kon (vóór het venster, of vóór de volgende
+    blootstelling); er meer dan één oefening in de proefperiode zit; er een
+    proefperiode loopt tijdens een afkoelperiode; of er tijdens een
+    opvlamming iets ontgrendeld is. Een ongeldige opvlammingsmodus weigert
+    het hele bestand.
 - **Exportherinnering:** een kaart op het startscherm 14 dagen na de laatste
   export (of, zonder export, na de eerste sessie). "Later" vraagt het de
   volgende dag opnieuw.

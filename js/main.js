@@ -26,7 +26,7 @@ import {
 import { buildDump, sessionsCsv, kneeChecksCsv, weekDoseCsv, parseDump, exportReminderDue } from './backup.js';
 import { newMeasurement, analyse, attentionGroups } from './selftests.js';
 import { isoWithOffset } from './session.js';
-import { withDefaults } from './settings.js';
+import { withDefaults, DEFAULT_SETTINGS } from './settings.js';
 import { createAudio } from './audio.js';
 import {
   access, unlockState, startTest, cancelTest, recordExposure, setPainDuring, recordKneeCheck, expireChecks, activateFlare,
@@ -111,7 +111,9 @@ async function boot() {
   const getContext = () => ({ settings, knee, routines });
   const getData = () => ({ settings, knee, routines, sessions, tests });
   // Spiergroepen met "aandacht" uit de zelftests (§6.10), voor de bibliotheek.
-  let attention = attentionGroups([...lib.tests.values()], tests, Date.now());
+  // Opgeslagen metingen die niet te lezen zijn, mogen de start niet blokkeren.
+  const safeAttention = () => { try { return attentionGroups([...lib.tests.values()], tests, Date.now()); } catch { return new Map(); } };
+  let attention = safeAttention();
   const blockedCodes = (ex) => access(ex, knee, lib.meta.knee).codes;
 
   // Vaste meldingen bovenaan de app (opslag, kniestatus).
@@ -414,7 +416,7 @@ async function boot() {
     },
   });
   function refreshAttention() {
-    attention = attentionGroups([...lib.tests.values()], tests, Date.now());
+    attention = safeAttention();
     library.refresh();
     picker.refresh();
   }
@@ -493,7 +495,9 @@ async function boot() {
   async function importFile(file) {
     let r;
     try {
-      r = parseDump(await file.text(), lib, { now: Date.now() });
+      r = parseDump(await file.text(), lib, { now: Date.now(), defaults: DEFAULT_SETTINGS });
+      // Zonder instellingen in het bestand blijven de huidige staan.
+      if (r.ok && !r.data.settings) r.data.settings = settings;
     } catch (e) {
       r = { ok: false, errors: [String(e?.message ?? e)], warnings: [] };
     }

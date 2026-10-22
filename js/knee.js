@@ -3,7 +3,7 @@
 // nieuwe status terug; opslaan doet de aanroeper.
 //
 // KneeState = {
-//   unlocks: { [exerciseId]: { state, cleanCount, cooldownUntil, cycles: [Cycle] } },
+//   unlocks: { [exerciseId]: { state, cleanCount, cooldownUntil, cycles: [Cycle], resetAt? } },
 //   flare:   { active, since, exitProposedAt },
 //   checks:  [{ id, at, pain, context: 'dagelijks'|'test'|'24u'|'48u', exerciseId? }],
 // }
@@ -132,6 +132,7 @@ function failCycle(rec, cycle, at, kneeMeta, events, exId) {
   rec.state = 'vergrendeld';
   rec.cleanCount = 0;
   rec.cooldownUntil = at + kneeMeta.cooldownDays * DAY;
+  rec.resetAt = at; // teller vanaf hier weer 0 (zie backup.js: import nagaan)
   events.push({ type: 'status', exerciseId: exId, from, to: 'vergrendeld' });
   events.push({ type: 'afkoeling', exerciseId: exId, until: rec.cooldownUntil });
   const values = [cycle.painDuring, cycle.p24, cycle.p48].filter((v) => v !== null && v !== undefined);
@@ -232,6 +233,7 @@ export function activateFlare(state, at, reason = 'handmatig') {
       rec.state = 'vergrendeld';
     }
     rec.cleanCount = 0;
+    rec.resetAt = at;
   }
   return { state: next, events };
 }

@@ -1,12 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDump, sessionsCsv, kneeChecksCsv, weekDoseCsv, weekStart, parseDump, checkUnlock, exportReminderDue, DUMP_SCHEMA_VERSION } from '../js/backup.js';
+import { buildDump, sessionsCsv, kneeChecksCsv, weekDoseCsv, weekStart, parseDump as parse, checkUnlock, exportReminderDue, DUMP_SCHEMA_VERSION } from '../js/backup.js';
+import { DEFAULT_SETTINGS } from '../js/settings.js';
 import { copyTemplate } from '../js/routines.js';
 import { emptyKneeState, startTest, recordExposure, recordKneeCheck } from '../js/knee.js';
 import { isoWithOffset } from '../js/session.js';
 import { lib, at, HOUR, DAY } from './helpers.js';
 
 const K = lib.meta.knee;
+const parseDump = (d, l, o) => parse(d, l, { defaults: DEFAULT_SETTINGS, ...o });
 const ALL = { pain7d: true, noLegTrainingToday: true, noHeavyNext48h: true };
 
 const session = (startMs, extra = {}) => ({
@@ -48,6 +50,10 @@ test('JSON-dump met schemaVersion; heen en terug zonder verlies', () => {
   assert.deepEqual(r.warnings, []);
   assert.deepEqual(r.data.routines, d.data.routines);
   assert.deepEqual(r.data.unlocks, d.data.unlocks);
+  assert.deepEqual(r.data.sessions, d.data.sessions);
+  assert.deepEqual(r.data.kneeChecks, d.data.kneeChecks);
+  assert.deepEqual(r.data.tests, d.data.tests);
+  assert.deepEqual(r.data.settings, { voiceOn: true, lastExportAt: at(5) });
   assert.equal(r.data.unlocks.couch_stretch.state, 'voorlopig');
   assert.deepEqual(r.counts, { routines: 1, sessions: 1, kneeChecks: 2, tests: 1, unlocks: 1 });
 });
@@ -78,11 +84,47 @@ test('import weigert wat geen Rekapp-export is', () => {
   assert.equal(parseDump('{niet json', lib, { now: at(5) }).ok, false);
   assert.equal(parseDump({ foo: 1 }, lib, { now: at(5) }).ok, false);
   assert.equal(parseDump({ ...dump(), schemaVersion: 99 }, lib, { now: at(5) }).ok, false);
+  const noList = dump();
+  delete noList.data.sessions;
+  assert.equal(parseDump(noList, lib, { now: at(5) }).ok, false);
+});
+
+test('import: losse kapotte records worden overgeslagen met een melding, de rest komt mee', () => {
   const d = dump();
-  d.data.routines[0].timesPerWeek = 40;
+  d.data.routines.push({ ...d.data.routines[0], id: 'r2', name: 'Oud', steps: [{ exerciseId: 'bestaat_niet', perSideSec: 30 }] });
+  d.data.sessions.push({ ...d.data.sessions[0], id: 's-kapot', endedAt: undefined }, { ...d.data.sessions[0], id: 's-0', startedAt: 0 });
+  d.data.tests.push({ id: 't2', date: 0, testId: 'aslr', side: 'L', trials: [1], mean: 1, unit: 'graden' }, { id: 't3', date: isoWithOffset(at(0)), testId: 'onbekend', side: 'L', trials: [1] });
+  d.data.kneeChecks.push({ id: 'k', at: 'gisteren', pain: 1, context: 'dagelijks' });
   const r = parseDump(d, lib, { now: at(5) });
-  assert.equal(r.ok, false);
-  assert.ok(r.errors.some((e) => /timesPerWeek/.test(e)));
+  assert.equal(r.ok, true, r.errors.join());
+  assert.deepEqual(r.counts, { routines: 1, sessions: 1, kneeChecks: 2, tests: 1, unlocks: 1 });
+  assert.ok(r.warnings.some((w) => /Routine 2 \(Oud\) overgeslagen/.test(w)));
+  assert.ok(r.warnings.some((w) => /2 sessies overgeslagen/.test(w)));
+  assert.ok(r.warnings.some((w) => /2 metingen overgeslagen/.test(w)));
+});
+
+test('import: gemiddelde en eenheid van een meting komen uit de pogingen en de bibliotheek', () => {
+  const d = dump();
+  d.data.tests[0] = { ...d.data.tests[0], mean: 999, unit: 'mijl' };
+  const t = parseDump(d, lib, { now: at(5) }).data.tests[0];
+  assert.equal(t.mean, 71);
+  assert.equal(t.unit, 'graden');
+});
+
+test('import: ongeldige opvlammingsmodus weigert; instellingen alleen bekende waarden met het goede type', () => {
+  const d = dump();
+  d.data.flare = { active: true, since: '2026-10-20T08:00:00+02:00' };
+  assert.equal(parseDump(d, lib, { now: at(5) }).ok, false);
+  const e = dump();
+  e.data.settings = { voiceOn: 'ja', beepVolume: 0.5, weights: { B: 90 }, onbekend: 1, reminders: { morning: '07:15', evening: 'nu' } };
+  const st = parseDump(e, lib, { now: at(5) }).data.settings;
+  assert.deepEqual(st, { beepVolume: 0.5, reminders: { morning: '07:15' }, lastExportAt: at(5) });
+});
+
+test('import: "laatste export" is minstens het moment van de export zelf', () => {
+  const d = dump();
+  d.data.settings = { lastExportAt: at(1) };
+  assert.equal(parseDump(d, lib, { now: at(6) }).data.settings.lastExportAt, at(5));
 });
 
 // De knieregels zijn hard: een import kan geen oefening vrijgeven zonder de
@@ -107,15 +149,72 @@ test('import: tijdens een opvlamming mag niets ontgrendeld zijn; niet-vergrendel
   const d = dump();
   d.data.flare = { active: true, since: at(4), exitProposedAt: null };
   d.data.unlocks.gastroc_muur = { state: 'vrij', cleanCount: 3, cooldownUntil: null, cycles: [] };
+  d.data.flare.since = at(4);
   const r = parseDump(d, lib, { now: at(5) });
   assert.equal(r.data.unlocks.couch_stretch.state, 'vergrendeld');
   assert.equal(r.data.unlocks.gastroc_muur, undefined);
 });
 
-test('checkUnlock: geldige geschiedenis vrij; blootstelling in de toekomst ongeldig', () => {
+test('checkUnlock: geldige geschiedenis klopt; blootstelling in de toekomst ongeldig', () => {
   const rec = voorlopig().unlocks.couch_stretch;
-  assert.deepEqual(checkUnlock(rec, { kneeMeta: K, now: at(5), flareActive: false }), []);
-  assert.ok(checkUnlock(rec, { kneeMeta: K, now: at(-1), flareActive: false }).length > 0);
+  assert.deepEqual(checkUnlock(rec, { kneeMeta: K, now: at(5) }), []);
+  assert.ok(checkUnlock(rec, { kneeMeta: K, now: at(-1) }).length > 0);
+});
+
+// M6-review: aanvallen op de import die het protocol zouden overslaan.
+const vr = (unlocks, extra = {}) => { const d = dump(); d.data.unlocks = unlocks; Object.assign(d.data, extra); return parseDump(d, lib, { now: at(20) }); };
+const state = (r, id) => r.data.unlocks[id]?.state;
+const T = (state, cleanCount = 0, cycles = [], extra = {}) => ({ state, cleanCount, cooldownUntil: null, cycles, ...extra });
+const clean = (t) => ({ exposureAt: t, painBefore: 1, painDuring: 1, p24: 1, p48: 1, result: 'schoon' });
+
+test('import: meer dan één oefening in test of voorlopig → allemaal terug naar vergrendeld', () => {
+  const r = vr({ kikker: T('test'), duif: T('test') });
+  assert.equal(state(r, 'kikker'), 'vergrendeld');
+  assert.equal(state(r, 'duif'), 'vergrendeld');
+  assert.equal(state(vr({ kikker: T('test') }), 'kikker'), 'test'); // één mag
+});
+
+test('import: geen proefperiode tijdens een afkoelperiode (ook niet van een andere oefening); afkoeling blijft', () => {
+  const r = vr({ kikker: T('test'), duif: T('vergrendeld', 0, [], { cooldownUntil: at(25) }) });
+  assert.equal(state(r, 'kikker'), 'vergrendeld');
+  assert.equal(r.data.unlocks.duif.cooldownUntil, at(25));
+  const own = vr({ kikker: T('test', 0, [], { cooldownUntil: at(25) }) });
+  assert.equal(state(own, 'kikker'), 'vergrendeld');
+  assert.equal(own.data.unlocks.kikker.cooldownUntil, at(25));
+});
+
+test('import: vergrendeld met een teller of een lopende cyclus → opgeschoond (lopende cyclus vervalt)', () => {
+  const r = vr({ kikker: T('vergrendeld', 2, [clean(at(1)), clean(at(4)), { exposureAt: at(19), painBefore: 1, painDuring: 1, p24: null, p48: null, result: null }]) });
+  assert.equal(state(r, 'kikker'), 'vergrendeld');
+  assert.equal(r.data.unlocks.kikker.cleanCount, 0);
+  assert.equal(r.data.unlocks.kikker.cycles.at(-1).result, 'vervallen');
+});
+
+test('import: schone cycli moeten tijd hebben gehad (48-uurscheck vóór nu en vóór de volgende blootstelling)', () => {
+  const now = at(20);
+  // Drie "schone" cycli van een minuut geleden.
+  const fast = [clean(now - 3 * 60000), clean(now - 2 * 60000), clean(now - 60000)];
+  assert.equal(state(vr({ kikker: T('vrij', 3, fast) }), 'kikker'), 'vergrendeld');
+  // Elke 24 uur een "schone" cyclus: de 48-uurscheck kon niet vóór de volgende.
+  const daily = [clean(at(10)), clean(at(11)), clean(at(12))];
+  assert.equal(state(vr({ kikker: T('vrij', 3, daily) }), 'kikker'), 'vergrendeld');
+  // Echt: om de twee dagen.
+  const ok = [clean(at(10)), clean(at(12)), clean(at(14))];
+  assert.equal(state(vr({ kikker: T('vrij', 3, ok) }), 'kikker'), 'vrij');
+});
+
+test('import: de teller telt vanaf de laatste reset (niet-schone cyclus of opvlamming)', () => {
+  const broken = { ...clean(at(12)), p48: 3, result: 'niet schoon' };
+  assert.equal(state(vr({ kikker: T('vrij', 3, [clean(at(8)), clean(at(10)), broken, clean(at(14))]) }), 'kikker'), 'vergrendeld');
+  assert.equal(state(vr({ kikker: T('voorlopig', 1, [clean(at(8)), clean(at(10)), broken, clean(at(14))]) }), 'kikker'), 'voorlopig');
+  // Na een opvlamming (resetAt) begint het opnieuw.
+  assert.equal(state(vr({ kikker: T('voorlopig', 2, [clean(at(8)), clean(at(10)), clean(at(14))], { resetAt: at(12) }) }), 'kikker'), 'vergrendeld');
+  assert.equal(state(vr({ kikker: T('voorlopig', 1, [clean(at(8)), clean(at(10)), clean(at(14))], { resetAt: at(12) }) }), 'kikker'), 'voorlopig');
+});
+
+test('import: een 24-uurscheck vóór zijn venster kan niet', () => {
+  const open = { exposureAt: at(20) - 2 * 3600000, painBefore: 1, painDuring: 1, p24: 1, p48: null, result: null };
+  assert.equal(state(vr({ kikker: T('test', 0, [open]) }), 'kikker'), 'vergrendeld');
 });
 
 test('exportherinnering elke 14 dagen; "Later" wacht een dag', () => {
@@ -127,4 +226,30 @@ test('exportherinnering elke 14 dagen; "Later" wacht een dag', () => {
   assert.equal(exportReminderDue({ lastExportAt: at(10), sessions, now: at(24) }), true);
   assert.equal(exportReminderDue({ lastExportAt: at(10), snoozedAt: at(24) - HOUR, sessions, now: at(24) }), false);
   assert.equal(exportReminderDue({ lastExportAt: at(10), snoozedAt: at(24) - DAY, sessions, now: at(24) }), true);
+});
+
+test('dosis_per_week.csv: ook de week van de wissel naar wintertijd (25 okt 2026) telt de zondagavond mee', () => {
+  // Week van ma 19 okt; zondag 25 okt 23:30 lokale tijd (na de wissel).
+  const sun = new Date(2026, 9, 25, 23, 30).getTime();
+  const out = weekDoseCsv([session(sun)], lib);
+  assert.ok(out.includes('2026-10-19;Kuit: gastrocnemius;45;45;0'), out);
+});
+
+test('opslag: readAll en replaceAll heen en terug (geheugenopslag, zoals zonder IndexedDB)', async () => {
+  const { openStore, readAll, replaceAll } = await import('../js/store.js');
+  const store = await openStore();
+  assert.equal(store.persistent, false);
+  await store.put('settings', { x: 1 }, 'builderDraft');
+  const d = dump().data;
+  await replaceAll(store, d);
+  const back = await readAll(store);
+  assert.deepEqual(back.routines, d.routines);
+  assert.deepEqual(back.sessions, d.sessions);
+  assert.deepEqual(back.kneeChecks, d.kneeChecks);
+  assert.deepEqual(back.tests, d.tests);
+  assert.deepEqual(back.unlocks, d.unlocks);
+  assert.deepEqual(back.flare, d.flare);
+  assert.deepEqual(back.settings, d.settings);
+  // Een import vervangt alles, ook het concept uit de bouwer.
+  assert.equal(await store.get('settings', 'builderDraft'), undefined);
 });

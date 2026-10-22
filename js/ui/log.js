@@ -11,6 +11,9 @@ const PAGE_DAYS = 30;
 const DAY = 24 * 3600 * 1000;
 
 const pad = (n) => String(n).padStart(2, '0');
+// 'JJJJ-MM-DD' ↔ een datum (12:00 lokaal, buiten elke zomertijdwissel).
+const dateOf = (key) => { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+const keyOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const dayFmt = new Intl.DateTimeFormat('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const num = (v) => new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 1 }).format(v);
 
@@ -21,7 +24,9 @@ export function createLogScreen({ lib, getData }) {
   let filter = 'alles';
   let days = PAGE_DAYS;
 
-  // Alles als { at, day, kind, el } met de lokale dag van het item.
+  // Alles als { at, day, kind, el }. Sessies en metingen hebben hun eigen
+  // datum en tijd (in de tijdzone van dat moment); kniechecks een tijdstempel,
+  // die in de tijdzone van het toestel.
   function items() {
     const { sessions, knee, tests } = getData();
     const out = [];
@@ -87,7 +92,7 @@ export function createLogScreen({ lib, getData }) {
         h('div', { class: 'sheet-head' },
           h('h2', { id: 'log-detail-title' }, s.routineName),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Sluiten', onclick: () => detail.close() }, icon('cross'))),
-        h('p', { class: 'note' }, `${dayFmt.format(Date.parse(s.startedAt))}, ${s.startedAt.slice(11, 16)}–${s.endedAt.slice(11, 16)} (${s.tz}) · ${STATUS[s.status] ?? s.status}`),
+        h('p', { class: 'note' }, `${dayFmt.format(dateOf(s.startedAt.slice(0, 10)))}, ${s.startedAt.slice(11, 16)}–${s.endedAt.slice(11, 16)} (${s.tz}) · ${STATUS[s.status] ?? s.status}`),
         h('dl', null,
           h('dt', null, 'Actief'), h('dd', null, `${formatDuration(Math.round(s.activeSec))} van ${formatDuration(s.plannedSec)}`),
           h('dt', null, 'Rekintensiteit'), h('dd', null, s.stretchIntensity ?? '–'),
@@ -106,19 +111,21 @@ export function createLogScreen({ lib, getData }) {
 
   function renderScreen() {
     const all = items();
-    const newest = all[0]?.at ?? Date.now();
-    const shown = all.filter((x) => x.at > newest - days * DAY);
-    const byDay = new Map();
-    for (const x of shown) byDay.set(x.day, [...(byDay.get(x.day) ?? []), x]);
+    // Hele dagen: de nieuwste dag en de `days` − 1 dagen ervoor, nieuwste eerst.
+    const dayKeys = [...new Set(all.map((x) => x.day))].sort().reverse();
+    const firstDay = dayKeys.length ? keyOf(new Date(dateOf(dayKeys[0]).getTime() - (days - 1) * DAY)) : null;
+    const shown = all.filter((x) => x.day >= firstDay);
+    const byDay = new Map(dayKeys.filter((k) => k >= firstDay).map((k) => [k, []]));
+    for (const x of shown) byDay.get(x.day).push(x);
     fill(root,
       h('header', { class: 'topbar' }, h('h1', { id: 'log-title', tabindex: '-1' }, 'Logboek')),
       h('div', { class: 'chipset log-filter', role: 'group', 'aria-label': 'Toon' }, FILTERS.map(([v, text]) =>
         h('button', { type: 'button', 'aria-pressed': String(filter === v), onclick: () => { filter = v; days = PAGE_DAYS; render(); } }, text))),
       all.length ? null : h('p', { class: 'empty' }, 'Nog niets vastgelegd.'),
-      ...[...byDay.entries()].flatMap(([day, list]) => {
-        const [y, m, d] = day.split('-').map(Number);
-        return [h('h2', { class: 'region-title' }, dayFmt.format(new Date(y, m - 1, d))), h('ul', { class: 'list' }, list.map((x) => h('li', null, x.el)))];
-      }),
+      ...[...byDay.entries()].flatMap(([day, list]) => [
+        h('h2', { class: 'region-title' }, dayFmt.format(dateOf(day))),
+        h('ul', { class: 'list' }, list.map((x) => h('li', null, x.el))),
+      ]),
       shown.length < all.length
         ? h('button', { class: 'btn log-more', type: 'button', onclick: () => { days += PAGE_DAYS; render(); } }, 'Oudere tonen')
         : null,

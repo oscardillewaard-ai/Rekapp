@@ -56,11 +56,15 @@ export function baseline(points) {
   for (let i = 0; i + 1 < points.length; i++) {
     if (daysBetween(points[i].day, points[i + 1].day) === 1) {
       const [a, b] = [points[i], points[i + 1]];
-      return { days: [a.day, b.day], start: a.at, mean: (a.mean + b.mean) / 2, error: Math.abs(a.mean - b.mean) };
+      return { days: [a.day, b.day], start: a.at, mean: (a.mean + b.mean) / 2, error: round1(Math.abs(a.mean - b.mean)) };
     }
   }
   return null;
 }
+
+// Vergelijken in honderdsten: 1,4 − 0,0000000000000014 is gewoon 1,4 (wat
+// het scherm ook toont), en "meer dan" blijft echt meer dan.
+const hundredths = (v) => Math.round(v * 100);
 
 // Alles wat het scherm per test nodig heeft.
 export function analyse(test, measurements, now) {
@@ -76,18 +80,19 @@ export function analyse(test, measurements, now) {
   const error = bases.length === SIDES.length ? Math.max(MIN_ERROR, ...bases.map((b) => b.error)) : null;
   // Echte verandering: meer dan 1,5 × de meetfout, of de MDC uit de
   // literatuur als die er is.
-  const threshold = test.mdc ?? (error === null ? null : 1.5 * error);
+  const threshold = test.mdc ?? (error === null ? null : hundredths(1.5 * error) / 100);
+  // Alleen metingen ná de nulmeting tellen als verandering.
   for (const side of SIDES) {
     const { baseline: b, latest } = sides[side];
-    sides[side].change = b && latest && threshold !== null && latest.at > b.start
-      ? { diff: round1(latest.mean - b.mean), real: Math.abs(latest.mean - b.mean) > threshold }
+    sides[side].change = b && latest && threshold !== null && latest.day > b.days[1]
+      ? { diff: round1(latest.mean - b.mean), real: hundredths(Math.abs(latest.mean - b.mean)) > hundredths(threshold) }
       : null;
   }
   // Verschil links–rechts groter dan de meetfout → "aandacht" (§6.10).
   const L = sides.L.latest;
   const R = sides.R.latest;
   const lrDiff = L && R ? round1(Math.abs(L.mean - R.mean)) : null;
-  const attention = error !== null && lrDiff !== null && lrDiff > error;
+  const attention = error !== null && lrDiff !== null && hundredths(lrDiff) > hundredths(error);
   const start = bases.length ? Math.min(...bases.map((b) => b.start)) : null;
   const last = Math.max(0, ...SIDES.flatMap((s) => sides[s].points.map((p) => p.at)));
   return { test, sides, error, threshold, lrDiff, attention, retest: start === null ? null : retestStatus(start, last, now) };
