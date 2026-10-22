@@ -319,7 +319,7 @@ dialog.sheet[open] { display: flex; flex-direction: column; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .sheet-head h2 { margin: 0; font-size: 1.25rem; }
 .sheet-foot { flex: none; display: flex; flex-wrap: wrap; gap: .5rem; padding: .625rem 1rem calc(.625rem + var(--safe-b)); border-top: 1px solid var(--line); }
-.sheet-foot .btn { flex: 1; }
+.sheet-foot .btn { flex: 1 1 auto; overflow-wrap: normal; }
 .sheet-foot .btn.primary { flex: 1.6; }
 
 fieldset { margin: 1.25rem 0 0; padding: 0; border: 0; }
@@ -609,14 +609,16 @@ button.row { width: 100%; border: 0; text-align: left; cursor: pointer; font: in
 .pain-field { margin-top: .75rem; }
 .pain-label { margin: 0 0 .5rem; font-weight: 600; }
 /* 0–10 in vier kolommen: elke knop minstens 56 px breed op 390 px. */
-.pain-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
+.pain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(56px, 3.5rem), 1fr)); gap: .5rem; }
 .pain-grid button {
   min-height: var(--tap); border-radius: var(--radius); border: 1px solid var(--line);
   background: var(--surface-2); color: var(--text); font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums;
-  cursor: pointer; touch-action: manipulation;
+  cursor: pointer; touch-action: manipulation; white-space: nowrap; overflow-wrap: normal;
 }
 .pain-grid button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
-.knee-card .btn.primary { width: 100%; margin-top: .75rem; }
+.knee-card > .btn { width: 100%; margin-top: .75rem; }
+.btn.card-save { border-color: var(--accent); color: var(--accent); }
+.btn.card-save[disabled] { border-color: var(--line); color: var(--muted); }
 .flare-banner { border: 2px solid var(--warn); }
 .flare-banner h2 { display: flex; align-items: center; gap: .5rem; color: var(--warn); }
 .flare-banner h2 svg { width: 1.5rem; height: 1.5rem; flex: none; }
@@ -633,7 +635,6 @@ button.row { width: 100%; border: 0; text-align: left; cursor: pointer; font: in
   position: fixed; left: 0; right: 0; z-index: 12; top: calc(env(safe-area-inset-top, 0px) + .5rem);
   display: grid; gap: .5rem; max-width: 40rem; margin: 0 auto; padding: 0 1rem; pointer-events: none;
 }
-.toasts:empty { display: none; }
 .toast {
   display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin: 0; padding: .625rem .75rem .625rem 1rem;
   border-radius: var(--radius); border: 1px solid var(--accent); background: var(--surface); color: var(--text);
@@ -666,7 +667,7 @@ button.log-row { color: var(--text); }
 .test-chart svg { width: 100%; height: auto; display: block; }
 .test-chart .grid { stroke: var(--line); stroke-width: 1; }
 .test-chart .tick { fill: var(--muted); font-size: 11px; font-family: var(--font); }
-.test-chart .band { fill: var(--accent); opacity: .14; }
+.test-chart .band { fill: var(--accent); opacity: .3; stroke: var(--accent); stroke-opacity: 1; stroke-width: 1; stroke-dasharray: 3 3; }
 .test-chart .band-R { fill: var(--warn); }
 .test-chart .line { fill: none; stroke-width: 2.5; }
 .test-chart .line-L, .test-chart .dot-L { stroke: var(--accent); fill: none; }

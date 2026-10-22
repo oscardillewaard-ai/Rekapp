@@ -50,14 +50,22 @@ export function painPicker(label, { onChange = () => {} } = {}) {
 
 // Kaart met één pijnvraag en Opslaan.
 function checkCard({ title, text, label = KNEE.painNow, onSave }) {
-  const save = h('button', { class: 'btn primary', type: 'button', disabled: true }, 'Opslaan');
+  // Geen primaire knop: een kaart staat bovenaan, en primaire knoppen horen
+  // in het onderste derde (§8.3).
+  const save = h('button', { class: 'btn card-save', type: 'button', disabled: true }, 'Opslaan');
   const picker = painPicker(label, { onChange: () => { save.disabled = false; } });
+  // Tijdens het opslaan niet uitschakelen (dan verliest de knop de focus en
+  // weet de app niet meer waar je was), maar een tweede tik negeren.
+  let busy = false;
   save.addEventListener('click', async () => {
-    save.disabled = true;
+    if (busy) return;
+    busy = true;
+    save.setAttribute('aria-busy', 'true');
     try {
       await onSave(picker.value());
     } finally {
-      save.disabled = false;
+      busy = false;
+      save.removeAttribute('aria-busy');
     }
   });
   return h('section', { class: 'section knee-card' }, h('h2', null, title), text ? h('p', null, text) : null, picker.el, save);
@@ -103,7 +111,7 @@ export function kneeCards({ lib, knee, now, actions }) {
         h('p', null, `Je dagelijkse kniecheck was ${K.flareExitDays} dagen op rij ≤${K.painMax}/10. Wil je de opvlammingsmodus beëindigen? Vergrendelde oefeningen blijven vergrendeld tot je ze opnieuw test.`),
         h('div', { class: 'actions' },
           h('button', { class: 'btn', type: 'button', onclick: () => actions.postponeFlareExit() }, 'Nog niet'),
-          h('button', { class: 'btn primary', type: 'button', onclick: () => actions.endFlare() }, 'Beëindigen'))));
+          h('button', { class: 'btn card-save', type: 'button', onclick: () => actions.endFlare() }, 'Beëindigen'))));
     }
   }
 
@@ -186,7 +194,7 @@ export function createUnlockScreen({ lib, getKnee, actions, onBack }) {
     }
 
     if (st === 'vergrendeld') {
-      const blockers = canStartTest(ex, knee, now, { pain7d: true, noLegTrainingToday: true, noHeavyNext48h: true }).reasons;
+      const blockers = canStartTest(ex, knee, now, { pain7d: true, noLegTrainingToday: true, noHeavyNext48h: true }, (x) => lib.exercises.get(x)?.name ?? x).reasons;
       if (blockers.length) {
         parts.push(h('div', { class: 'locked-bar', role: 'note' },
           h('strong', null, icon('lock'), 'Nu niet mogelijk'),

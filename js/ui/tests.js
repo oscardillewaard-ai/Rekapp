@@ -1,7 +1,7 @@
 // Zelftests (§6.10): overzicht van de acht tests en per test het invoeren van
 // drie pogingen per kant, de grafiek met de band voor je meetfout en wat de
 // metingen betekenen.
-import { h, s, fill, preserveFocus } from './dom.js';
+import { h, s, fill, preserveFocus, announce } from './dom.js';
 import { icon } from './graphics.js';
 import { SELFTEST } from '../texts.js';
 import { analyse, parseTrial, mean, round1, TRIALS, SIDES } from '../selftests.js';
@@ -188,7 +188,7 @@ export function createTestScreen({ lib, getData, onSave, onDelete, onBack }) {
       h('h2', null, 'Metingen'),
       h('ul', { class: 'plain test-history' }, list.map((m) => h('li', null,
         h('span', null, `${day(Date.parse(m.date))} ${m.date.slice(11, 16)} · ${SIDE_TEXT[m.side]}: `, h('strong', null, `${num(m.mean)} ${m.unit}`), ` (${m.trials.map(num).join(' · ')})`),
-        h('button', { class: 'btn icon', type: 'button', 'aria-label': `Meting ${SIDE_TEXT[m.side].toLowerCase()} van ${day(Date.parse(m.date))} verwijderen`, onclick: () => askDelete(m) }, icon('cross'))))));
+        h('button', { class: 'btn icon', type: 'button', 'aria-label': `Meting ${SIDE_TEXT[m.side].toLowerCase()} van ${day(Date.parse(m.date))} ${m.date.slice(11, 16)} verwijderen`, onclick: () => askDelete(m) }, icon('cross'))))));
   }
 
   function askDelete(m) {
@@ -231,7 +231,7 @@ export function createTestScreen({ lib, getData, onSave, onDelete, onBack }) {
       h('header', { class: 'card-head' },
         h('h1', { tabindex: '-1' }, test.name),
         h('p', { class: 'evidence' }, `Eenheid: ${test.unit}${test.mdc !== null ? ` · MDC ${num(test.mdc)} ${test.unit}` : ''}`)),
-      message ? h('p', { class: 'info-bar', role: 'status' }, message) : null,
+      message ? h('p', { class: 'info-bar test-message', tabindex: '-1' }, message) : null,
       h('section', { class: 'section' },
         h('h2', null, 'Uitvoering'),
         h('ol', { class: 'cues' }, test.instructions.map((t) => h('li', null, t))),
@@ -248,6 +248,12 @@ export function createTestScreen({ lib, getData, onSave, onDelete, onBack }) {
       h('section', { class: 'section' }, h('h2', null, 'Verloop'), chart(a), ...analysis(a)),
       history(tests),
       confirm));
+    // Na opslaan of verwijderen: de focus naar de melding (de knop is dan
+    // uit of weg), en de melding voorlezen.
+    if (message) {
+      root.querySelector('.test-message')?.focus({ preventScroll: true });
+      announce(message);
+    }
     message = null;
     toolbar.append(save);
     updateMeans();

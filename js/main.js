@@ -1,7 +1,7 @@
 // Opstarten en hash-router (§8.1). De bibliotheek wordt bij elke start
 // gevalideerd; met kapotte data start de app niet (§9.2 regel 8).
 import { loadLibrary, LibraryError } from './library.js';
-import { h, clear, fill } from './ui/dom.js';
+import { h, clear, fill, preserveFocus } from './ui/dom.js';
 import { loadGraphics, icon } from './ui/graphics.js';
 import { createLibraryScreen, libraryState } from './ui/library.js';
 import { createExerciseScreen } from './ui/exercise.js';
@@ -126,7 +126,10 @@ async function boot() {
   // is als je gescrold bent, en zonder de knoppen in de duimzone te bedekken.
   // Verdwijnt na 10 s of met OK; de stand zelf staat ook op de schermen.
   const toasts = h('div', { class: 'toasts', role: 'status' });
+  // Staat er een blad open (bv. het opvlammingsvoorstel), dan wacht het
+  // bericht tot dat dicht is: anders valt het eronder en is het niet te lezen.
   const flash = (text) => {
+    if (document.querySelector('dialog[open]')) { setTimeout(() => flash(text), 400); return; }
     const p = h('p', { class: 'toast' }, h('span', null, text));
     p.append(h('button', { class: 'btn', type: 'button', onclick: () => p.remove() }, 'OK'));
     toasts.append(p);
@@ -487,11 +490,14 @@ async function boot() {
       h('div', { class: 'sheet-foot' }, h('button', { class: 'btn', type: 'button', onclick: () => exportSheet.close() }, 'Klaar')));
     exportSheet.showModal();
   }
-  exportSheet.addEventListener('close', () => { if (current === 'instellingen') settingsScreen.render(); else if (current === 'start') home.render(); });
+  // "Laatste export" en de herinneringskaart bijwerken; de focus is dan al
+  // terug op de knop die het blad opende.
+  exportSheet.addEventListener('close', () => setTimeout(refreshView, 0));
 
   // Import: eerst controleren en laten zien wat er komt, dan alles vervangen.
   const importSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'import-title' });
   importSheet.addEventListener('click', (e) => { if (e.target === importSheet) importSheet.close(); });
+  const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
   async function importFile(file) {
     let r;
     try {
@@ -505,7 +511,7 @@ async function boot() {
     fill(importSheet,
       h('div', { class: 'sheet-body' },
         h('h2', { id: 'import-title' }, r.ok ? 'Alles vervangen door deze import?' : 'Import niet mogelijk'),
-        r.ok ? h('p', null, `${c.routines} routines, ${c.sessions} sessies, ${c.kneeChecks} kniechecks, ${c.tests} metingen en ${c.unlocks} ontgrendelingen. Wat nu in de app staat, wordt vervangen.`) : null,
+        r.ok ? h('p', null, `${n(c.routines, 'routine', 'routines')}, ${n(c.sessions, 'sessie', 'sessies')}, ${n(c.kneeChecks, 'kniecheck', 'kniechecks')}, ${n(c.tests, 'meting', 'metingen')} en ${n(c.unlocks, 'ontgrendeling', 'ontgrendelingen')}. Wat nu in de app staat, wordt vervangen.`) : null,
         r.errors.length ? h('ul', { class: 'plain' }, r.errors.slice(0, 12).map((e) => h('li', { class: 'locked-bar' }, e))) : null,
         r.warnings.length ? h('ul', { class: 'plain' }, r.warnings.map((w) => h('li', { class: 'warn-bar' }, w))) : null),
       h('div', { class: 'sheet-foot' },
@@ -542,7 +548,7 @@ async function boot() {
         h('p', null, 'Zet Rekapp op je beginscherm. Dan werkt hij offline en blijven je gegevens beter bewaard.'),
         h('div', { class: 'actions' },
           h('button', { class: 'btn', type: 'button', onclick: () => { installHintHidden = true; home.render(); } }, 'Niet nu'),
-          h('a', { class: 'btn primary', href: '#/installeren' }, 'Hoe?'))));
+          h('a', { class: 'btn card-save', href: '#/installeren' }, 'Hoe?'))));
     }
     if (exportReminderDue({ lastExportAt: settings.lastExportAt, snoozedAt: settings.exportReminderSnoozedAt, sessions, now })) {
       out.push(h('section', { class: 'section knee-card', 'aria-labelledby': 'export-card-title' },
@@ -551,7 +557,7 @@ async function boot() {
           ' Je gegevens staan alleen op dit toestel; met een export kun je alles terugzetten.'),
         h('div', { class: 'actions' },
           h('button', { class: 'btn', type: 'button', onclick: async () => { await updateSettings({ exportReminderSnoozedAt: Date.now() }); home.render(); } }, 'Later'),
-          h('button', { class: 'btn primary', type: 'button', onclick: () => openExport() }, 'Exporteren'))));
+          h('button', { class: 'btn card-save', type: 'button', onclick: () => openExport() }, 'Exporteren'))));
     }
     const due = [...lib.tests.values()].map((t) => analyse(t, tests, now)).filter((a) => a.retest?.due);
     if (due.length) {
@@ -607,9 +613,11 @@ async function boot() {
     onDelete: async (r) => {
       await store.delete('routines', r.id);
       routines = routines.filter((x) => x.id !== r.id);
+      if (builderDraft?.routine.id === r.id) dropDraft();
     },
     onDeleted: () => replaceRoute('#/routines'),
     onDuplicate: async (r) => {
+      if (builderDraft?.routine.id === r.id) dropDraft();
       const d = withoutBlocked(duplicateRoutine(r, { id: newId(), now: Date.now() }));
       try {
         await saveRoutine(d);
@@ -620,14 +628,21 @@ async function boot() {
       location.hash = `#/bouwer/${encodeURIComponent(d.id)}`;
     },
     onStart: (r) => {
+      if (builderDraft?.routine.id === r.id) dropDraft();
       const { routine: playable } = playableRoutine(r, { lib, knee });
       if (playable.steps.length) startRoutine(playable, r);
     },
     onBack: goBack('#/routines'),
     onForget: () => dropDraft(),
   });
+  // Het concept vervalt zodra die routine wordt opgeslagen, gestart,
+  // gedupliceerd of verwijderd, of als je "Niet opslaan" kiest.
+  let draftBar = null;
   function dropDraft() {
+    if (!builderDraft && !draftBar) return;
     builderDraft = null;
+    draftBar?.remove();
+    draftBar = null;
     store.delete('settings', 'builderDraft').catch(() => {});
   }
   // Naar de achtergrond met niet-opgeslagen wijzigingen: concept bewaren.
@@ -641,10 +656,13 @@ async function boot() {
     const bar = h('div', { class: 'warn-bar draft-bar' },
       h('p', null, `"${d.routine.name}" had wijzigingen die niet waren opgeslagen.`),
       h('div', { class: 'actions' },
-        h('button', { class: 'btn', type: 'button', onclick: () => { bar.remove(); dropDraft(); } }, 'Weggooien'),
+        h('button', { class: 'btn', type: 'button', onclick: () => dropDraft() }, 'Weggooien'),
         h('button', {
-          class: 'btn primary', type: 'button',
+          class: 'btn', type: 'button',
           onclick: () => {
+            // Niets overschrijven wat je nu aan het bewerken bent.
+            if (builder.isDirty()) { flash('Sla eerst je huidige wijzigingen op, of kies "Niet opslaan".'); return; }
+            draftBar = null;
             bar.remove();
             pendingDraft = d;
             const target = `#/bouwer/${encodeURIComponent(d.routine.id)}`;
@@ -654,6 +672,7 @@ async function boot() {
             else location.hash = target;
           },
         }, 'Verder bewerken')));
+    draftBar = bar;
     notices.append(bar);
   }
   let pendingDraft = null;
@@ -856,6 +875,7 @@ async function boot() {
     if (player.isFinishing() && hash !== '#/speler') player.leave();
     // Weg uit de bouwer met niet-opgeslagen wijzigingen: eerst vragen.
     if (current === 'bouwer' && builder.isDirty() && hash !== `#/bouwer/${encodeURIComponent(builder.currentId())}`) {
+      pendingDraft = null;
       history.pushState({ depth: ++depth }, '', `#/bouwer/${encodeURIComponent(builder.currentId())}`);
       builder.leave();
       return;
@@ -930,11 +950,16 @@ async function boot() {
   }
 
   // Na een wijziging in de kniestatus: het open scherm opnieuw opbouwen.
+  // Focus blijft op dezelfde knop, of gaat naar de kop als die weg is.
   function refreshView() {
-    if (current === 'start') home.render();
-    else if (current === 'oefening') exercise.render(lastExerciseId);
-    else if (current === 'ontgrendelen') unlock.render(unlock.currentId());
-    else if (current === 'instellingen') settingsScreen.render();
+    const view = views[current];
+    if (!view) return;
+    preserveFocus(view, () => {
+      if (current === 'start') home.render();
+      else if (current === 'oefening') exercise.render(lastExerciseId);
+      else if (current === 'ontgrendelen') unlock.render(unlock.currentId());
+      else if (current === 'instellingen') settingsScreen.render({ keepDraft: true });
+    });
   }
 
   window.addEventListener('hashchange', route);

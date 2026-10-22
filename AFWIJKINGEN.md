@@ -153,7 +153,9 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   de bouwer naar de achtergrond, dan bewaart hij die als concept (in de
   store `settings`, sleutel `builderDraft`). iOS sluit webapps op de
   achtergrond vaak af; bij de volgende start vraagt de app "Verder bewerken"
-  of "Weggooien".
+  of "Weggooien". Het concept vervalt zodra die routine wordt opgeslagen,
+  gestart, gedupliceerd of verwijderd, of bij "Niet opslaan". "Verder
+  bewerken" overschrijft geen wijzigingen die nu open staan.
 - **Totale tijd in beeld:** de balk met de totale tijd blijft bovenaan staan
   tijdens het bewerken (§6.3 zet hem in de kop), zodat je ziet wanneer je
   over 15:00 gaat.
@@ -231,6 +233,12 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
 - **Meldingen** over de kniestatus ("schone cyclus", "afkoelperiode tot …",
   "cyclus vervallen") verschijnen kort bovenin en verdwijnen na 10 s of met
   OK; de stand zelf staat ook op het startscherm en het ontgrendelscherm.
+  Staat er een blad open (bv. het opvlammingsvoorstel), dan wacht de melding
+  tot dat dicht is.
+- **Knoppen in kaarten** (Opslaan bij een kniecheck, Beëindigen,
+  Exporteren, Hoe?) zijn gewone knoppen van 56 px met een gekleurde rand, geen
+  primaire knoppen: de kaarten staan bovenaan en §8.3 wil primaire knoppen
+  (64 px) in het onderste derde.
 - **Ontgrendelingen resetten** (Instellingen): alle vergrendelde oefeningen
   terug naar vergrendeld, teller 0, zonder afkoelperiode; kniechecks en
   logboek blijven.

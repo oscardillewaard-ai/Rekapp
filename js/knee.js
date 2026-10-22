@@ -89,8 +89,9 @@ function cooldownActive(state, now) {
 
 // Voorwaarden vergrendeld → test (§6.6). confirmations: { pain7d,
 // noLegTrainingToday, noHeavyNext48h } — de drie bevestigingen van de
-// gebruiker. Geeft { ok, reasons[] } terug.
-export function canStartTest(ex, state, now, confirmations = {}) {
+// gebruiker. nameOf(id) geeft de naam van een oefening voor de melding.
+// Geeft { ok, reasons[] } terug.
+export function canStartTest(ex, state, now, confirmations = {}, nameOf = (id) => id) {
   const reasons = [];
   if (!ex.locked) reasons.push('Deze oefening is niet vergrendeld.');
   else if (unlockState(ex, state) !== 'vergrendeld') reasons.push('Deze oefening zit al in het ontgrendelprotocol.');
@@ -98,7 +99,7 @@ export function canStartTest(ex, state, now, confirmations = {}) {
   const cooling = cooldownActive(state, now);
   if (cooling) reasons.push(`Afkoelperiode loopt tot ${new Date(cooling[1].cooldownUntil).toLocaleDateString('nl-NL')}.`);
   const busy = Object.entries(state.unlocks).find(([id, r]) => id !== ex.id && (r.state === 'test' || r.state === 'voorlopig'));
-  if (busy) reasons.push(`Er zit al een andere oefening in de proefperiode (${busy[0]}).`);
+  if (busy) reasons.push(`Er zit al een andere oefening in de proefperiode (${nameOf(busy[0])}).`);
   if (!confirmations.pain7d) reasons.push('Bevestig: kniepijn de afgelopen 7 dagen steeds ≤2/10.');
   if (!confirmations.noLegTrainingToday) reasons.push('Bevestig: vandaag geen loop- of beentraining.');
   if (!confirmations.noHeavyNext48h) reasons.push('Bevestig: de komende 48 uur geen afdaalsessie of zware beentraining gepland.');

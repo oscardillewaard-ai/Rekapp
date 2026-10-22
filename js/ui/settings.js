@@ -189,8 +189,10 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data, p
       file);
   }
 
-  function render() {
-    draft = null;
+  // keepDraft: bij een verversing (bv. na een export) blijft een weging die
+  // nog niet op 100 % staat, staan.
+  function render({ keepDraft = false } = {}) {
+    if (!keepDraft) draft = null;
     fill(root, 
       h('header', { class: 'topbar' }, h('h1', { id: 'settings-title', tabindex: '-1' }, 'Instellingen')),
       h('section', { class: 'section' },

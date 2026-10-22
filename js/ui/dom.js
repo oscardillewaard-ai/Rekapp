@@ -67,14 +67,20 @@ export function announce(text) {
 // plek kwijtraken: daarna staat de focus weer op het element met hetzelfde
 // aria-label (of dezelfde tekst), en een stepper of keuzeknop meldt zijn
 // nieuwe stand.
+// Bestaat het element niet meer (bv. een kaart die na Opslaan verdwijnt),
+// dan gaat de focus naar de kop van het scherm, niet naar <body>.
 export function preserveFocus(container, rebuild) {
   const active = document.activeElement;
-  const keyOf = (el) => el.getAttribute('aria-label') ?? el.textContent.trim();
-  const key = active && active !== document.body && container.contains(active) ? keyOf(active) : null;
+  const keyOf = (el) => (el.getAttribute('aria-label') ?? el.labels?.[0]?.textContent ?? el.textContent).trim();
+  const had = Boolean(active && active !== document.body && container.contains(active));
+  const key = had ? keyOf(active) : null;
   rebuild();
-  if (key === null) return;
-  const match = [...container.querySelectorAll('button, input, select, a[href], textarea')].find((el) => keyOf(el) === key);
-  if (!match) return;
+  if (!had) return;
+  const match = key ? [...container.querySelectorAll('button, input, select, a[href], textarea, [tabindex="-1"]')].find((el) => keyOf(el) === key && !el.disabled) : null;
+  if (!match) {
+    container.querySelector('h1[tabindex="-1"]')?.focus({ preventScroll: true });
+    return;
+  }
   match.focus({ preventScroll: true });
   const group = match.closest('.stepper');
   if (group) announce(`${group.getAttribute('aria-label')}: ${group.querySelector('output')?.textContent ?? ''}`);
