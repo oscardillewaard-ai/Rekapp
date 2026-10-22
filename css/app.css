@@ -693,10 +693,12 @@ button.log-row { color: var(--text); }
 .about-list { margin: 0; padding-left: 1.25rem; display: grid; gap: .5rem; }
 .formula { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8125rem; background: var(--surface-2); padding: .75rem; border-radius: 10px; color: var(--text); }
 .about details.sources { margin-top: .5rem; }
-.reminder-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .5rem; margin-top: .75rem; }
-.reminder-row .field { flex-direction: column; align-items: stretch; gap: .375rem; min-width: 0; }
+/* Tijd naast het label, de knop eronder over de volle breedte: past ook met
+   een 12-uursklok ("09:15 PM") en grote tekst. */
+.reminder-row { display: grid; gap: .5rem; margin-top: .75rem; }
+.reminder-row .field { min-width: 0; }
 .reminder-row input[type="time"] {
-  width: 100%; min-width: 0;
+  width: 10rem; max-width: 100%;
   min-height: var(--tap); padding: 0 .75rem; border-radius: 10px; border: 1px solid var(--line);
   background: var(--surface-2); color: var(--text); font-size: 1rem; color-scheme: dark;
 }
