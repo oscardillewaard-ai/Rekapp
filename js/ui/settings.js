@@ -201,6 +201,7 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data, p
       h('section', { class: 'section' },
         h('h2', null, 'Speler'),
         toggle('Auto-pauze bij een verborgen scherm', 'autoPauseOnHide', 'Uit: de routine loopt door op de achtergrond en springt bij terugkomst naar de juiste plek.'),
+        toggle('Groot stokfiguur', 'largeFigure', 'Het figuur in de speler wordt groter en de timerring kleiner; de cijfers blijven even groot.'),
         sideSwitch()),
       h('section', { class: 'section' },
         h('h2', null, 'Weergave'),

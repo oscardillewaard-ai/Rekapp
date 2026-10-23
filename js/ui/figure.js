@@ -1,76 +1,86 @@
-// Stokfiguur tekenen (§6.2, fase 2; proef). De houding komt uit figures.js;
-// hier alleen de SVG en de animatie. Tijd altijd uit tijdstempels
+// Stokfiguur tekenen (§6.2, fase 2). De houding komt uit figures.js; hier
+// alleen de SVG en de animatie. Tijd altijd uit tijdstempels
 // (performance.now), per animatieframe.
 import { s, h } from './dom.js';
 import { icon } from './graphics.js';
-import { FIGURES, hasFigure, joints, poseAt, dir, BONES } from '../figures.js';
+import { FIGURES, hasFigure, pointsOf, poseAt, dir, at, BONES } from '../figures.js';
 
 export { hasFigure };
 
 const reducedMotion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 
-// Botten in tekenvolgorde: eerst de verre kant (gedimd), dan romp en hoofd,
-// dan de nabije kant.
-const BONE_LIST = [
-  ['f.thigh', 'pelvis', 'f.knee'], ['f.shin', 'f.knee', 'f.ankle'], ['f.foot', 'f.ankle', 'f.toe'],
-  ['f.upper', 'shoulder', 'f.elbow'], ['f.fore', 'f.elbow', 'f.hand'],
-  ['torso', 'pelvis', 'neck'],
-  ['n.thigh', 'pelvis', 'n.knee'], ['n.shin', 'n.knee', 'n.ankle'], ['n.foot', 'n.ankle', 'n.toe'],
-  ['n.upper', 'shoulder', 'n.elbow'], ['n.fore', 'n.elbow', 'n.hand'],
+// Botten per kant, en de romp. Vooraanzicht: ook bekken en schouders.
+const LIMBS = (k) => [
+  [`${k}.thigh`, `${k}.hip`, `${k}.knee`], [`${k}.shin`, `${k}.knee`, `${k}.ankle`], [`${k}.foot`, `${k}.ankle`, `${k}.toe`],
+  [`${k}.arm`, `${k}.shoulder`, `${k}.elbow`], [`${k}.fore`, `${k}.elbow`, `${k}.hand`], [`${k}.palm`, `${k}.hand`, `${k}.fingers`],
 ];
-const at = (pts, key) => (key.includes('.') ? pts[key[0]][key.slice(2)] : pts[key]);
+const SPINE = [['hips', 'f.hip', 'n.hip'], ['spine.low', 'pelvis', 'mid'], ['spine.high', 'mid', 'neck'], ['shoulders', 'f.shoulder', 'n.shoulder'], ['neck', 'neck', 'head']];
 const f2 = (n) => n.toFixed(2);
+
+// Punt voor een band om de voetzool: midden van de voet, iets voorbij de zool.
+function sole(pts, k) {
+  const { knee, ankle, toe } = pts[k];
+  const len = Math.hypot(ankle[0] - knee[0], ankle[1] - knee[1]) || 1;
+  const along = [(ankle[0] - knee[0]) / len, (ankle[1] - knee[1]) / len];
+  const mid = [(ankle[0] + toe[0]) / 2, (ankle[1] + toe[1]) / 2];
+  return { point: [mid[0] + along[0] * 2, mid[1] + along[1] * 2], along };
+}
+const point = (pts, key) => (key.endsWith('.sole') ? sole(pts, key[0]).point : at(pts, key));
+
+function prop(p, [x, , w]) {
+  if (p.floor !== undefined) return s('line', { class: 'prop', x1: x, y1: p.floor, x2: x + w, y2: p.floor });
+  if (p.wall !== undefined) return s('line', { class: 'prop', x1: p.wall, y1: p.y1, x2: p.wall, y2: p.y2 });
+  if (p.line) return s('line', { class: 'prop', x1: p.line[0], y1: p.line[1], x2: p.line[2], y2: p.line[3] });
+  if (p.rect) return s('rect', { class: `prop${p.solid ? ' solid' : ''}`, x: p.rect[0], y: p.rect[1], width: p.rect[2], height: p.rect[3], rx: 1.5 });
+  if (p.circle) return s('circle', { class: `prop${p.solid ? ' solid' : ''}`, cx: p.circle[0], cy: p.circle[1], r: p.circle[2] });
+  return null;
+}
 
 // Eén SVG met een update(fase, ms, { round }) die de punten verzet.
 export function createFigure(id, className = '') {
   const fig = FIGURES[id];
   const [x, y, w, hgt] = fig.viewBox;
+  const front = fig.view === 'front';
   const svg = s('svg', { viewBox: `${x} ${y} ${w} ${hgt}`, class: `figure ${className}`.trim(), 'aria-hidden': 'true', focusable: 'false' });
-  for (const p of fig.props) {
-    if (p.type === 'floor') svg.append(s('line', { class: 'prop', x1: x, y1: p.y, x2: x + w, y2: p.y }));
-    if (p.type === 'wall') svg.append(s('line', { class: 'prop', x1: p.x, y1: p.y1, x2: p.x, y2: p.y2 }));
+  svg.append(...fig.props.map((p) => prop(p, fig.viewBox)).filter(Boolean));
+  const line = ([name, a, b]) => ({ el: s('line', { class: fig.active.includes(name) ? 'bone active' : 'bone' }), a, b });
+  const far = LIMBS('f').map(line);
+  const near = LIMBS('n').map(line);
+  const spine = SPINE.filter(([name]) => front || (name !== 'hips' && name !== 'shoulders')).map(line);
+  const head = s('circle', { class: fig.active.includes('head') ? 'head active' : 'head', r: BONES.head });
+  const bands = (fig.bands ?? []).map(([a, b]) => ({ el: s('line', { class: 'band' }), a, b }));
+  const effort = fig.effort ? [s('line', { class: 'effort' }), s('line', { class: 'effort' })] : [];
+  // Volgorde: verre kant (in zijaanzicht als geheel gedimd, zodat overlappende
+  // uiteinden niet lichter worden), romp en hoofd, banden, nabije kant,
+  // inspanning.
+  svg.append(front ? s('g', null, ...far.map((l) => l.el)) : s('g', { class: 'far' }, ...far.map((l) => l.el)));
+  svg.append(...spine.map((l) => l.el), head, ...bands.map((b) => b.el), ...near.map((l) => l.el), ...effort);
+
+  function place(l, p, q) {
+    if (!p || !q) { l.el.style.display = 'none'; return; }
+    l.el.style.display = '';
+    l.el.setAttribute('x1', f2(p[0])); l.el.setAttribute('y1', f2(p[1]));
+    l.el.setAttribute('x2', f2(q[0])); l.el.setAttribute('y2', f2(q[1]));
   }
-  const band = fig.band ? s('line', { class: 'band' }) : null;
-  const effort = [s('line', { class: 'effort' }), s('line', { class: 'effort' })];
-  const lines = BONE_LIST.map(([name, a, b]) => {
-    const el = s('line', { class: fig.active.includes(name) ? 'bone active' : 'bone' });
-    return { el, a, b };
-  });
-  const head = s('circle', { class: 'head', r: BONES.head });
-  // Volgorde: verre kant (als geheel gedimd, zodat overlappende uiteinden
-  // niet lichter worden), romp en hoofd, band, nabije kant, inspanning.
-  const far = s('g', { class: 'far' }, ...lines.slice(0, 5).map((l) => l.el));
-  svg.append(far, lines[5].el, head);
-  if (band) svg.append(band);
-  svg.append(...lines.slice(6).map((l) => l.el), ...effort);
 
   function draw(pose, ms) {
-    const pts = joints(pose);
-    for (const l of lines) {
-      const [p, q] = [at(pts, l.a), at(pts, l.b)];
-      l.el.setAttribute('x1', f2(p[0])); l.el.setAttribute('y1', f2(p[1]));
-      l.el.setAttribute('x2', f2(q[0])); l.el.setAttribute('y2', f2(q[1]));
-    }
+    const pts = pointsOf(fig, pose);
+    for (const l of [...far, ...spine, ...near]) place(l, at(pts, l.a), at(pts, l.b));
     head.setAttribute('cx', f2(pts.head[0]));
     head.setAttribute('cy', f2(pts.head[1]));
-    // Band om de voetzool, naar de hand; inspanning als twee streepjes
-    // voorbij de zool, die zacht pulseren.
-    const { knee, ankle } = pts.n;
-    const len = Math.hypot(ankle[0] - knee[0], ankle[1] - knee[1]) || 1;
-    const along = [(ankle[0] - knee[0]) / len, (ankle[1] - knee[1]) / len];
-    const footDir = dir(pose.legs.n.foot);
-    const sole = [ankle[0] + footDir[0] * 3.5 + along[0] * 2, ankle[1] + footDir[1] * 3.5 + along[1] * 2];
-    if (band) {
-      band.setAttribute('x1', f2(pts.n.hand[0])); band.setAttribute('y1', f2(pts.n.hand[1]));
-      band.setAttribute('x2', f2(sole[0])); band.setAttribute('y2', f2(sole[1]));
-    }
+    for (const b of bands) place(b, point(pts, b.a), point(pts, b.b));
+    // Inspanning (PNF): twee streepjes voorbij de zool die zacht pulseren.
+    if (!effort.length) return;
+    const k = fig.effort;
+    const { point: p, along } = sole(pts, k);
+    const across = dir(pose.legs[k].foot ?? 90);
     const e = pose.effort ?? 0;
     const pulse = reducedMotion.matches ? 1 : 0.65 + 0.35 * Math.sin((ms / 700) * 2 * Math.PI);
     effort.forEach((el, i) => {
-      const c = [sole[0] + along[0] * (3 + 2.5 * i), sole[1] + along[1] * (3 + 2.5 * i)];
+      const c = [p[0] + along[0] * (3 + 2.5 * i), p[1] + along[1] * (3 + 2.5 * i)];
       const half = 2.5 + i;
-      el.setAttribute('x1', f2(c[0] - footDir[0] * half)); el.setAttribute('y1', f2(c[1] - footDir[1] * half));
-      el.setAttribute('x2', f2(c[0] + footDir[0] * half)); el.setAttribute('y2', f2(c[1] + footDir[1] * half));
+      el.setAttribute('x1', f2(c[0] - across[0] * half)); el.setAttribute('y1', f2(c[1] - across[1] * half));
+      el.setAttribute('x2', f2(c[0] + across[0] * half)); el.setAttribute('y2', f2(c[1] + across[1] * half));
       el.style.opacity = e > 0.01 ? String(e * pulse) : '0';
     });
   }

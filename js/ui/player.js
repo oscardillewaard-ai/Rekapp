@@ -251,6 +251,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
       fill(visual,
         ex ? bodyMap(ex.targets, { crop: 'mini', aspect: 72 / 104, className: 'mini-lg' }) : null,
         figure ? figure.el : ex ? positionIcon(ex.position, 'pos-lg') : null);
+      root.classList.toggle('big-figure', Boolean(figure && getSettings().largeFigure));
       cue.textContent = ex ? ex.cues[0] : '';
       breath.textContent = ex ? BREATHING[ex.type] : '';
       const after = nextExerciseAfter(state.segments, idx, lib.exercises);
