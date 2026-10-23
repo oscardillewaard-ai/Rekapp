@@ -6,6 +6,7 @@ import { formatDose, evidenceLabel, SLOT_LABELS, TYPE_LABELS, SIDED_LABELS } fro
 import { RUBRICS, BREATHING, CARD } from '../texts.js';
 import { WARNINGS } from '../warnings.js';
 import { access } from '../knee.js';
+import { hasFigure, figureDemo } from './figure.js';
 
 const LETTERS = ['B', 'K', 'D', 'R', 'P'];
 const LETTER_NAMES = { B: 'Bewijs', K: 'Knieveiligheid', D: 'Doelgerichtheid', R: 'Relevantie', P: 'Praktisch' };
@@ -67,10 +68,12 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) 
     const secondary = ex.targets.filter((t) => t.weight !== 1).map((t) => lib.groups.get(t.group));
     const evidence = evidenceLabel(ex.scores.B, lib.meta);
 
-    // 1. Naam, sterren, score, bewijslabel, moment.
+    // 1. Naam, sterren, score, bewijslabel, moment. Met een stokfiguur (fase
+    // 2, proef) staat dat eronder en vervalt hier het positie-icoon.
+    const figure = hasFigure(ex.id);
     const visual = h('div', { style: 'display:flex;align-items:flex-end;gap:.75rem;float:right;margin-left:.75rem' },
       bodyMap(ex.targets, { crop: 'mini', aspect: 72 / 104, className: 'mini-lg' }),
-      positionIcon(ex.position, 'pos-lg'));
+      figure ? null : positionIcon(ex.position, 'pos-lg'));
     root.append(h('header', { class: 'card-head' },
       visual,
       h('h1', { tabindex: '-1' }, ex.name),
@@ -81,6 +84,7 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) 
         h('span', { class: 'chip' }, positionIcon(ex.position), cap(ex.position)),
         h('span', { class: 'chip' }, cap(SIDED_LABELS[ex.sided])),
         ...(ex.equipment.length ? ex.equipment.map((e) => h('span', { class: 'chip' }, cap(e))) : [h('span', { class: 'chip' }, 'Geen materiaal')]))));
+    if (figure) root.append(figureDemo(ex.id));
 
     // 2. Vijf deelscores; tik toont de rubriek uit §3.1.
     root.append(section('Deelscores',

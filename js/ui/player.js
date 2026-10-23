@@ -13,6 +13,7 @@ import { formatDuration } from '../format.js';
 import { BREATHING } from '../texts.js';
 import { vibrate } from '../audio.js';
 import { createWakeLock } from '../wakelock.js';
+import { createFigure, hasFigure } from './figure.js';
 
 const RING_R = 45;
 const RING_C = 2 * Math.PI * RING_R;
@@ -32,6 +33,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
   let routine = null;
   let raf = 0;
   let shownIndex = -1;
+  let figure = null; // stokfiguur van het huidige segment
   let wakeStatus = 'onbekend';
   let finishing = false;
   let shownPaused = null;
@@ -243,9 +245,12 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
       exName.textContent = ex?.name ?? '';
       side.textContent = d.sideLabel;
       label.textContent = d.label;
-      fill(visual, 
+      // Stokfiguur (fase 2, proef) in plaats van het positie-icoon; hij
+      // beweegt mee met de timer en staat dus ook stil bij pauze.
+      figure = ex && hasFigure(ex.id) ? createFigure(ex.id, 'fig-lg') : null;
+      fill(visual,
         ex ? bodyMap(ex.targets, { crop: 'mini', aspect: 72 / 104, className: 'mini-lg' }) : null,
-        ex ? positionIcon(ex.position, 'pos-lg') : null);
+        figure ? figure.el : ex ? positionIcon(ex.position, 'pos-lg') : null);
       cue.textContent = ex ? ex.cues[0] : '';
       breath.textContent = ex ? BREATHING[ex.type] : '';
       const after = nextExerciseAfter(state.segments, idx, lib.exercises);
@@ -256,6 +261,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
       root.dataset.kind = state.segments[idx].kind;
     }
     const seg = v.segment;
+    figure?.update(seg.kind, seg.durationSec * 1000 - v.remainingMs, { round: seg.round ?? 1 });
     const frac = seg.durationSec ? Math.min(1, Math.max(0, v.remainingMs / (seg.durationSec * 1000))) : 0;
     ringFill.setAttribute('stroke-dashoffset', String(RING_C * (1 - frac)));
     const text = clock(v.remainingMs);

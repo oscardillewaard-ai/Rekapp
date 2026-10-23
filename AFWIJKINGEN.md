@@ -78,6 +78,41 @@ weer alleen de weg van §6.7 (7 dagen op rij ≤ 2/10). De klok-terug-controle
 geldt ook hier: ligt "nu" vóór het aanzetten, dan kan het niet. **Reden:**
 keuze van Oscar; zonder deze knop zat je na een vergissing 7 dagen vast.
 
+## Proef: geanimeerde stokfiguren (§6.2 fase 2, afgesproken met Oscar)
+
+Fase 2 van §6.2 ("eigen eenvoudige stokfiguren per oefening") als proef voor
+drie oefeningen, één per soort: Kuit tegen de muur (statisch), Hamstrings met
+band (PNF) en Enkel-rocks tegen de muur (dynamisch). De andere oefeningen
+houden lichaamskaart plus positie-icoon, zoals de spec voorschrijft zolang er
+geen figuur is.
+
+- **Vorm (wijkt af van `img/ex/<id>.svg`):** geen los SVG-bestand per
+  oefening, maar één gedeeld skelet met houdingen per oefening in
+  `js/figures.js` (puur, getest) en tekenen in `js/ui/figure.js`.
+  **Reden:** zo beweegt het figuur mee met de timer van de speler (staat stil
+  bij pauze, aanspannen en loslaten vallen samen met de PNF-fasen, het ritme
+  van de enkel-rocks is de 2,5 s uit de cue), werkt het in Safari en Chrome
+  hetzelfde (geen CSS-animaties in SVG) en blijven alle figuren in dezelfde
+  stijl. Handen en voeten staan vast waar de houding dat zegt (muur, vloer);
+  knieën en ellebogen rekent de module uit.
+- **Knie:** een test controleert dat de tekening de knie nooit verder buigt
+  dan `kneeFlexionMaxDeg` uit de bibliotheek (kuit ≤ 20°, hamstrings 0°,
+  enkel-rocks ~30–45°, nooit boven 45°).
+- **Kaart:** een paneel met de demo direct onder de kop; het positie-icoon
+  naast de lichaamskaart vervalt dan (het figuur toont de positie al). De
+  demo loopt alleen als hij in beeld is, en heeft een knop "Animatie
+  pauzeren" / "Animatie afspelen" (bewegend beeld langer dan 5 s moet te
+  pauzeren zijn). Die twee teksten zijn eigen teksten; de spec geeft ze niet.
+- **Speler:** het figuur staat waar het positie-icoon stond, naast de
+  lichaamskaart, en volgt het segment: voorbereiding en wissels in de
+  beginhouding, statisch rekken gaat in ruim 2 s naar de rekstand, PNF toont
+  aanspannen (streepjes bij de voet) en loslaten (been verder), dynamisch
+  herhaalt de beweging.
+- **Minder beweging** (instelling van het toestel): geen animatie, alleen de
+  eindhouding, en geen pauzeknop.
+- **Kleuren:** themakleuren, dus ook in de nachtmodus alleen rood en amber; de
+  spier die rekt in de accentkleur, de verre arm en het verre been gedimd.
+
 ## Aanvullingen (geen gedragsverschil)
 
 ### `data/library.schema.json`
