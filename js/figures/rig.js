@@ -69,6 +69,8 @@ export const onLeg = (ankle, angle, flex = 0) => add(ankle, dir(angle), legReach
 //   pelvis: [x, y], torso (onderrug), chest? (bovenrug, standaard torso),
 //   head? (standaard chest), effort?, place?: { joint, at | x | y },
 //   twist? (zijaanzicht: verre schouder zoveel naar voren),
+//   spineScale? (rug korter getekend: voorverkorting), en per been of arm
+//   scale? (idem; shinScale en foreScale alleen het onderbeen of de onderarm),
 //   legs: { n, f }: { ankle: [x, y], bend | straight: true, foot } (vast punt) of
 //                   { angle, shin?, foot } (hoeken; shin standaard = angle),
 //   arms: { n, f }: { hand: [x, y] | 'punt', bend, palm? } of
@@ -92,24 +94,29 @@ export function joints(pose, view = 'side') {
 function solve(pose, P, view) {
   const front = view === 'front';
   const chest = pose.chest ?? pose.torso;
-  const mid = add(P, dir(pose.torso), BONES.low);
-  const neck = add(mid, dir(chest), BONES.high);
-  const base = add(mid, dir(chest), BONES.shoulderAt);
+  // Voorverkorting: een rug die van de kijker af wijst (bijv. gezien vanaf de
+  // voeten) wordt korter getekend; zo ook ledematen met scale.
+  const k = pose.spineScale ?? 1;
+  const mid = add(P, dir(pose.torso), BONES.low * k);
+  const neck = add(mid, dir(chest), BONES.high * k);
+  const base = add(mid, dir(chest), BONES.shoulderAt * k);
   const out = { pelvis: P, mid, chest: base, neck, head: add(neck, dir(pose.head ?? chest), BONES.neck + BONES.head) };
   for (const side of ['n', 'f']) {
     const sign = side === 'n' ? -1 : 1;
     const hip = front ? add(P, dir(pose.torso + sign * 90), BONES.hipW) : P;
     const leg = pose.legs[side];
+    const thigh = BONES.thigh * (leg.scale ?? 1);
+    const shin = BONES.shin * (leg.scale ?? 1) * (leg.shinScale ?? 1);
     let knee;
     let ankle;
     if (leg.ankle && leg.straight) {
       // Gestrekt naar het doel: de knie buigt nooit, de enkel staat op een
       // haar na (onderweg tussen twee houdingen) op haar plek.
       const u = dir(angleOf(hip, leg.ankle));
-      knee = add(hip, u, BONES.thigh);
-      ankle = add(hip, u, BONES.thigh + BONES.shin);
-    } else if (leg.ankle) ({ joint: knee, end: ankle } = twoBone(hip, leg.ankle, BONES.thigh, BONES.shin, leg.bend));
-    else { knee = add(hip, dir(leg.angle), BONES.thigh); ankle = add(knee, dir(leg.shin ?? leg.angle), BONES.shin); }
+      knee = add(hip, u, thigh);
+      ankle = add(hip, u, thigh + shin);
+    } else if (leg.ankle) ({ joint: knee, end: ankle } = twoBone(hip, leg.ankle, thigh, shin, leg.bend));
+    else { knee = add(hip, dir(leg.angle), thigh); ankle = add(knee, dir(leg.shin ?? leg.angle), shin); }
     const half = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
     out[side] = { hip, knee, ankle, toe: add(ankle, dir(leg.foot ?? 90), BONES.foot), thighMid: half(hip, knee), shinMid: half(knee, ankle) };
   }
@@ -120,13 +127,15 @@ function solve(pose, P, view) {
     const shoulder = front ? add(base, dir(chest + sign * 90), BONES.shoulderW)
       : side === 'f' && pose.twist ? add(base, dir(chest - 90), pose.twist) : base;
     const arm = pose.arms[side];
+    const upper = BONES.arm * (arm.scale ?? 1);
+    const fore = BONES.fore * (arm.scale ?? 1) * (arm.foreScale ?? 1);
     let elbow;
     let hand;
     if (arm.hand) {
       const target = typeof arm.hand === 'string' ? at(out, arm.hand) : arm.hand;
-      ({ joint: elbow, end: hand } = twoBone(shoulder, target, BONES.arm, BONES.fore, arm.bend));
-    } else { elbow = add(shoulder, dir(arm.angle), BONES.arm); hand = add(elbow, dir(arm.fore ?? arm.angle), BONES.fore); }
-    Object.assign(out[side], { shoulder, elbow, hand });
+      ({ joint: elbow, end: hand } = twoBone(shoulder, target, upper, fore, arm.bend));
+    } else { elbow = add(shoulder, dir(arm.angle), upper); hand = add(elbow, dir(arm.fore ?? arm.angle), fore); }
+    Object.assign(out[side], { shoulder, elbow, hand, foreMid: [(elbow[0] + hand[0]) / 2, (elbow[1] + hand[1]) / 2] });
     if (arm.palm !== undefined) out[side].fingers = add(hand, dir(arm.palm), BONES.hand);
   }
   return out;

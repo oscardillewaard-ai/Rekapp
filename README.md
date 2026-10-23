@@ -117,6 +117,9 @@ Handig om ook even te proberen:
 - [ ] Een kantwissel wordt aangekondigd met spraak, piep en flits.
 - [ ] Tijdens een opvlamming is een oefening boven 45° nergens toe te voegen
       of af te spelen; "Terugdraaien" werkt binnen 24 uur na het aanzetten.
+- [ ] Stokfiguren: op een paar kaarten loopt de demo vloeiend en stopt hij met
+      de pauzeknop; in de speler volgt het figuur de fasen, ook met "Groot
+      stokfiguur" aan en in de nachtmodus.
 
 ## Ontwikkelen
 

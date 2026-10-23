@@ -27,6 +27,12 @@ test('elk figuur hoort bij een bestaande oefening; houdingen en tijdlijnen klopp
   assert.equal(hasFigure('toString'), false);
 });
 
+test('elke oefening uit de bibliotheek heeft een stokfiguur', () => {
+  const missing = [...lib.exercises.keys()].filter((id) => !hasFigure(id));
+  assert.deepEqual(missing, []);
+  assert.equal(ALL.length, lib.exercises.size);
+});
+
 test('twoBone: beide botten houden hun lengte; te ver weg wordt gestrekt', () => {
   const { joint, end } = twoBone([0, 0], [10, 30], 20, 19, 'front');
   assert.ok(Math.abs(dist([0, 0], joint) - 20) < 1e-9);
@@ -37,17 +43,22 @@ test('twoBone: beide botten houden hun lengte; te ver weg wordt gestrekt', () =>
   assert.ok(Math.abs(far.end[1] - 39) < 1e-6 && Math.abs(far.joint[0]) < 1e-6);
 });
 
+// Voorverkorte delen (spineScale, scale) zijn zoveel korter.
 test('elk frame: botten op lengte, alles binnen het beeld', () => {
   const near = (a, b, len) => Math.abs(dist(a, b) - len) < 1e-6;
   for (const [id, fig] of ALL) {
     const [x, y, w, h] = fig.viewBox;
-    for (const [phase, t, p] of frames(fig)) {
+    for (const [phase, t, p, pose] of frames(fig)) {
       const where = `${id} ${phase} ${t}`;
-      assert.ok(near(p.pelvis, p.mid, BONES.low) && near(p.mid, p.neck, BONES.high), `${where} rug`);
+      const k = pose.spineScale ?? 1;
+      assert.ok(near(p.pelvis, p.mid, BONES.low * k) && near(p.mid, p.neck, BONES.high * k), `${where} rug`);
       for (const s of ['n', 'f']) {
         const q = p[s];
-        assert.ok(near(q.hip, q.knee, BONES.thigh) && near(q.knee, q.ankle, BONES.shin) && near(q.ankle, q.toe, BONES.foot), `${where} been ${s}`);
-        assert.ok(near(q.shoulder, q.elbow, BONES.arm) && near(q.elbow, q.hand, BONES.fore), `${where} arm ${s}`);
+        const lk = pose.legs[s].scale ?? 1;
+        const ak = pose.arms[s].scale ?? 1;
+        const sk = lk * (pose.legs[s].shinScale ?? 1);
+        assert.ok(near(q.hip, q.knee, BONES.thigh * lk) && near(q.knee, q.ankle, BONES.shin * sk) && near(q.ankle, q.toe, BONES.foot), `${where} been ${s}`);
+        assert.ok(near(q.shoulder, q.elbow, BONES.arm * ak) && near(q.elbow, q.hand, BONES.fore * ak * (pose.arms[s].foreScale ?? 1)), `${where} arm ${s}`);
         if (q.fingers) assert.ok(near(q.hand, q.fingers, BONES.hand), `${where} hand ${s}`);
       }
       const pts = [p.pelvis, p.mid, p.neck, ...['n', 'f'].flatMap((s) => Object.values(p[s]))];
@@ -60,16 +71,20 @@ test('elk frame: botten op lengte, alles binnen het beeld', () => {
 
 // De tekening mag de knie nooit verder buigen dan de bibliotheek zegt: in de
 // houdingen zelf exact, onderweg tussen twee houdingen hooguit 4° meer (een
-// gestrekt been dat even meegeeft).
+// gestrekt been dat even meegeeft). Een voorverkort been (scale) heeft geen
+// echte hoek in beeld en telt hier niet mee; kneeCheck beperkt de controle tot
+// het rekkende been waar de bibliotheek alleen dat bedoelt.
 test('kniebuiging nooit boven kneeFlexionMaxDeg uit de bibliotheek', () => {
   for (const [id, fig] of ALL) {
     const max = ex(id).kneeFlexionMaxDeg;
+    const sides = fig.kneeCheck ?? ['n', 'f'];
+    const real = (pose, s) => (pose.legs[s].scale ?? 1) === 1 && (pose.legs[s].shinScale ?? 1) === 1;
     for (const [name, pose] of Object.entries(fig.poses)) {
       const p = pointsOf(fig, pose);
-      for (const s of ['n', 'f']) assert.ok(kneeFlexion(p, s) <= max + 0.5, `${id} ${name} knie ${s}: ${kneeFlexion(p, s).toFixed(1)}° > ${max}°`);
+      for (const s of sides) if (real(pose, s)) assert.ok(kneeFlexion(p, s) <= max + 0.5, `${id} ${name} knie ${s}: ${kneeFlexion(p, s).toFixed(1)}° > ${max}°`);
     }
-    for (const [phase, t, p] of frames(fig)) {
-      for (const s of ['n', 'f']) assert.ok(kneeFlexion(p, s) <= max + 4, `${id} ${phase} ${t} knie ${s}: ${kneeFlexion(p, s).toFixed(1)}° > ${max}°`);
+    for (const [phase, t, p, pose] of frames(fig)) {
+      for (const s of sides) if (real(pose, s)) assert.ok(kneeFlexion(p, s) <= max + 4, `${id} ${phase} ${t} knie ${s}: ${kneeFlexion(p, s).toFixed(1)}° > ${max}°`);
     }
   }
 });
@@ -84,6 +99,28 @@ test('voeten en handen staan waar de houding dat zegt (vloer, muur), op een halv
         if (target) assert.ok(dist(p[s].hand, target) < 0.5, `${id} ${name}: hand ${s} haalt haar plek niet (${dist(p[s].hand, target).toFixed(2)})`);
       }
       if (pose.place?.at) assert.ok(dist(at(p, pose.place.joint), pose.place.at) < 1e-6, `${id} ${name}: place`);
+    }
+  }
+});
+
+// Een waarde die maar in één van twee houdingen staat (bijv. chest of scale),
+// of een andere buigrichting, zou aan het begin of halverwege de overgang
+// verspringen in plaats van mee te bewegen.
+test('vloeiend: geen enkel punt verspringt (≤ 1 eenheid per ms)', () => {
+  const points = (pts) => [pts.pelvis, pts.mid, pts.chest, pts.neck, pts.head, ...['n', 'f'].flatMap((k) => Object.values(pts[k]))];
+  for (const [id, fig] of ALL) {
+    for (const [phase, tl] of Object.entries(fig.timelines)) {
+      const end = tl.loop ?? tl.keys[tl.keys.length - 1][0] + 500;
+      const times = [...tl.keys.map(([t]) => t), ...Array.from({ length: Math.floor(end / 25) + 1 }, (_, i) => i * 25)];
+      for (const t of times) {
+        for (const [a, b] of [[t - 1, t], [t, t + 1]]) {
+          if (a < 0) continue;
+          const p = points(pointsOf(fig, poseAt(fig, phase, a)));
+          const q = points(pointsOf(fig, poseAt(fig, phase, b)));
+          const jump = Math.max(...p.map((x, i) => dist(x, q[i])));
+          assert.ok(jump <= 1, `${id} ${phase} ${a}→${b} ms: ${jump.toFixed(2)}`);
+        }
+      }
     }
   }
 });

@@ -4,13 +4,15 @@
 // figures/rig.js, de houdingen per positie in figures/<positie>.js.
 import { joints, at } from './figures/rig.js';
 import { STAAND } from './figures/staand.js';
+import { STOEL } from './figures/stoel.js';
+import { VLOER } from './figures/vloer.js';
 import { LIGGEND } from './figures/liggend.js';
 
 export { BONES, dir, dist, twoBone, kneeFlexion, at } from './figures/rig.js';
 
 // Figuur = { view?: 'side' | 'front', viewBox: [x, y, w, h], props, active,
 // bands?, effort?, poses, timelines }.
-export const FIGURES = { ...STAAND, ...LIGGEND };
+export const FIGURES = { ...STAAND, ...STOEL, ...VLOER, ...LIGGEND };
 
 export const hasFigure = (id) => Object.hasOwn(FIGURES, id);
 
@@ -60,23 +62,25 @@ export function poseAt(fig, phase, ms, { round = 1, reduced = false } = {}) {
   return fig.poses[keys[keys.length - 1][1]];
 }
 
-// Een hand die een punt van het figuur vastpakt ('n.ankle'): voor het
-// mengen van twee houdingen eerst omzetten naar een vaste plek, zodat de hand
-// vloeiend meebeweegt.
+// Voor het mengen van twee houdingen: een hand die een punt van het figuur
+// vastpakt ('n.ankle') wordt een vaste plek, zodat de hand vloeiend
+// meebeweegt, en wat een houding weglaat krijgt de standaardwaarde uit rig.js.
+// Anders springt een waarde die maar één van beide noemt (chest, scale) al
+// aan het begin van de overgang naar het eind.
 const fixedCache = new WeakMap();
 function fixed(fig, name) {
   const pose = fig.poses[name];
   if (fixedCache.has(pose)) return fixedCache.get(pose);
-  let out = pose;
-  if (['n', 'f'].some((k) => typeof pose.arms[k].hand === 'string')) {
-    const pts = pointsOf(fig, pose);
-    const arms = {};
-    for (const k of ['n', 'f']) {
-      const arm = pose.arms[k];
-      arms[k] = typeof arm.hand === 'string' ? { ...arm, hand: at(pts, arm.hand) } : arm;
-    }
-    out = { ...pose, arms };
+  const pts = pointsOf(fig, pose);
+  const chest = pose.chest ?? pose.torso;
+  const arms = {};
+  const legs = {};
+  for (const k of ['n', 'f']) {
+    const arm = { scale: 1, foreScale: 1, ...pose.arms[k] };
+    arms[k] = typeof arm.hand === 'string' ? { ...arm, hand: at(pts, arm.hand) } : arm;
+    legs[k] = { scale: 1, shinScale: 1, ...pose.legs[k] };
   }
+  const out = { spineScale: 1, ...pose, chest, head: pose.head ?? chest, arms, legs };
   fixedCache.set(pose, out);
   return out;
 }

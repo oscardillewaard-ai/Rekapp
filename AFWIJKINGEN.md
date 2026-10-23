@@ -78,40 +78,58 @@ weer alleen de weg van §6.7 (7 dagen op rij ≤ 2/10). De klok-terug-controle
 geldt ook hier: ligt "nu" vóór het aanzetten, dan kan het niet. **Reden:**
 keuze van Oscar; zonder deze knop zat je na een vergissing 7 dagen vast.
 
-## Proef: geanimeerde stokfiguren (§6.2 fase 2, afgesproken met Oscar)
+## Geanimeerde stokfiguren (§6.2 fase 2, afgesproken met Oscar)
 
-Fase 2 van §6.2 ("eigen eenvoudige stokfiguren per oefening") als proef voor
-drie oefeningen, één per soort: Kuit tegen de muur (statisch), Hamstrings met
-band (PNF) en Enkel-rocks tegen de muur (dynamisch). De andere oefeningen
-houden lichaamskaart plus positie-icoon, zoals de spec voorschrijft zolang er
-geen figuur is.
+Fase 2 van §6.2 ("eigen eenvoudige stokfiguren per oefening"): eerst als proef
+voor drie oefeningen, daarna op verzoek van Oscar voor alle oefeningen uit de
+bibliotheek. Een test controleert dat elke oefening een figuur heeft; de
+lichaamskaart blijft, het positie-icoon vervalt waar een figuur staat.
 
 - **Vorm (wijkt af van `img/ex/<id>.svg`):** geen los SVG-bestand per
-  oefening, maar één gedeeld skelet met houdingen per oefening in
-  `js/figures.js` (puur, getest) en tekenen in `js/ui/figure.js`.
+  oefening, maar één gedeeld skelet (`js/figures/rig.js`) met houdingen per
+  oefening, gegroepeerd naar positie (`staand.js`, `stoel.js`, `vloer.js`,
+  `liggend.js`), puur en getest; tekenen in `js/ui/figure.js`.
   **Reden:** zo beweegt het figuur mee met de timer van de speler (staat stil
   bij pauze, aanspannen en loslaten vallen samen met de PNF-fasen, het ritme
-  van de enkel-rocks is de 2,5 s uit de cue), werkt het in Safari en Chrome
+  van dynamische oefeningen volgt de dosering), werkt het in Safari en Chrome
   hetzelfde (geen CSS-animaties in SVG) en blijven alle figuren in dezelfde
-  stijl. Handen en voeten staan vast waar de houding dat zegt (muur, vloer);
-  knieën en ellebogen rekent de module uit.
-- **Knie:** een test controleert dat de tekening de knie nooit verder buigt
-  dan `kneeFlexionMaxDeg` uit de bibliotheek (kuit ≤ 20°, hamstrings 0°,
-  enkel-rocks ~30–45°, nooit boven 45°).
-- **Kaart:** een paneel met de demo direct onder de kop; het positie-icoon
-  naast de lichaamskaart vervalt dan (het figuur toont de positie al). De
-  demo loopt alleen als hij in beeld is, en heeft een knop "Animatie
-  pauzeren" / "Animatie afspelen" (bewegend beeld langer dan 5 s moet te
-  pauzeren zijn). Die twee teksten zijn eigen teksten; de spec geeft ze niet.
+  stijl. Handen en voeten staan vast waar de houding dat zegt (muur, vloer,
+  stoel, band); knieën en ellebogen rekent de module uit.
+- **Aanzichten:** standaard zijaanzicht met het gezicht naar rechts; de verre
+  arm en het verre been zijn gedimd. Waar een zijaanzicht de oefening niet laat
+  zien, een ander aanzicht: vooraanzicht (o.a. zijwaarts buigen, nek, triceps
+  boven het hoofd, gebedshouding), van boven op een mat (o.a. kikker, duif, 90/90, vlinder,
+  rotaties in ruglig, open boek, sleeper) en Spreidzit tegen de muur gezien
+  vanaf de muur. Ledematen die naar de kijker of van de kijker af wijzen,
+  worden korter getekend (voorverkorting); rotaties om de lengteas (nek
+  draaien, heup-CAR, gate opener) zijn in 2D alleen bij benadering te tonen.
+- **Knie:** een test controleert in elke houding en in tussenstanden dat de
+  tekening de knie nooit verder buigt dan `kneeFlexionMaxDeg` uit de
+  bibliotheek (+0,5° in de houdingen, +4° in tussenstanden door afronding).
+  Voorverkorte benen kan de test niet meten en slaat hij over; waar het niet
+  rekkende been bewust verder buigt (bijv. het onderste been bij zijlig aan de
+  bedrand),
+  noemt de figuur expliciet welk been telt (`kneeCheck`).
+- **Kaart:** een paneel met de demo direct onder de kop. De demo loopt alleen
+  als hij in beeld is, en heeft een knop "Animatie pauzeren" / "Animatie
+  afspelen" (bewegend beeld langer dan 5 s moet te pauzeren zijn). Die twee
+  teksten zijn eigen teksten; de spec geeft ze niet.
 - **Speler:** het figuur staat waar het positie-icoon stond, naast de
   lichaamskaart, en volgt het segment: voorbereiding en wissels in de
   beginhouding, statisch rekken gaat in ruim 2 s naar de rekstand, PNF toont
   aanspannen (streepjes bij de voet) en loslaten (been verder), dynamisch
-  herhaalt de beweging.
+  herhaalt de beweging in het tempo van de standaarddosering.
+- **Instelling "Groot stokfiguur"** (Instellingen → Speler, standaard uit,
+  keuze Oscar): het figuur in de speler wordt groter en de timerring kleiner;
+  de cijfers blijven even groot. Eigen tekst; de spec kent deze instelling
+  niet.
 - **Minder beweging** (instelling van het toestel): geen animatie, alleen de
   eindhouding, en geen pauzeknop.
 - **Kleuren:** themakleuren, dus ook in de nachtmodus alleen rood en amber; de
-  spier die rekt in de accentkleur, de verre arm en het verre been gedimd.
+  spier die rekt in de accentkleur.
+- **Bekend, niet door de figuren veroorzaakt:** op een heel klein scherm
+  (320 × 568) scrolt de speler al een klein stuk (ongeveer 57 px), ook zonder
+  figuur. Op 390 px breed past alles.
 
 ## Aanvullingen (geen gedragsverschil)
 
