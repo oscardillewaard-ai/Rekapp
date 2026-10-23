@@ -1,8 +1,16 @@
 // Stokfiguren: liggende oefeningen. Zie rig.js voor het skelet en de hoeken.
 // Zijaanzicht: hoofd links, de rug langs de vloer (y 78). Waar een beweging
-// dwars op het beeld loopt, is het figuur van boven, vanaf de voeten of vanaf
-// het hoofd getekend; delen die naar de kijker wijzen zijn dan voorverkort.
+// dwars op het beeld loopt, staat het figuur in 3D op een mat en kijkt een
+// camera er schuin naar (zie rig3d.js).
 import { joints, staticTimelines, loopTimelines } from './rig.js';
+import { floorRect } from './rig3d.js';
+
+// In 3D (zie rig3d.js). Ruglig: hoofd naar -x, de n-kant naar de kijker (z+),
+// de borst omhoog. Zijlig: hoofd naar +x, de n-kant boven, de borst naar de
+// kijker.
+const supine3 = (extra) => ({ pelvis: [0, 4, 0], torso: [-1, 0, 0], head: [-1, 0.12, 0], side: [0, 0, 1], ...extra });
+const flat3 = { thigh: [1, -0.05, 0], foot: [0, 1, 0] }; // gestrekt op de vloer, tenen omhoog
+const sideLying = (extra) => ({ pelvis: [0, 8, 0], torso: [1, 0, 0], head: [1, 0.05, 0], side: [0, 1, 0], ...extra });
 
 const FLOOR = 82;
 const BODY = 78; // hoogte van de rug op de vloer
@@ -150,15 +158,19 @@ LIGGEND.figuur4_muur = (() => {
   };
 })();
 
-// Piriformis diagonaal: de knie naar de andere schouder, het onderbeen dwars
-// (naar de kijker: voorverkort); één hand op de knie, de andere bij de enkel.
+// Piriformis diagonaal (3D, schuin vanaf de voeten): de knie van het te
+// rekken been (n) diagonaal naar de andere schouder, het onderbeen dwars
+// (knie ≤ 90°); de ene hand op de knie, de andere bij de enkel. Het andere
+// been ligt gestrekt.
 LIGGEND.piriformis_diagonaal = {
-  viewBox: [26, 30, 110, 56],
-  props: [{ floor: FLOOR }],
+  view: '3d',
+  camera: { yaw: 25, pitch: 40 },
+  viewBox: [38, 46, 86, 56],
+  props: [floorRect(-34, 34, -26, 16)],
   active: ['n.thigh'],
   poses: {
-    start: supine(80, { legs: { n: { angle: 205, shin: 110, shinScale: 0.35, foot: 200 }, f: flat }, arms: { n: { hand: 'n.knee', bend: 'down' }, f: { hand: 'n.shinMid', bend: 'down' } } }),
-    stretch: supine(80, { legs: { n: { angle: 215, shin: 100, shinScale: 0.35, foot: 190 }, f: flat }, arms: { n: { hand: 'n.knee', bend: 'down' }, f: { hand: 'n.shinMid', bend: 'down' } } }),
+    start: supine3({ legs: { n: { thigh: [-0.45, 0.9, 0], shin: [0.9, 0.6, 0], foot: [-0.55, 0.85, 0] }, f: flat3 }, arms: { n: { hand: 'n.knee', elbow: [0, 0.5, 1] }, f: { hand: 'n.knee', elbow: [0, 0.5, -1] } } }),
+    stretch: supine3({ legs: { n: { thigh: [-0.6, 0.7, -0.4], shin: [0.3, -0.1, -1], foot: [0, 1, -0.1] }, f: flat3 }, arms: { n: { hand: 'n.knee', elbow: [0, 0.5, 1] }, f: { hand: 'n.ankle', elbow: [0, 0.5, -1] } } }),
   },
   timelines: staticTimelines(),
 };
@@ -194,163 +206,223 @@ LIGGEND.thoracaal_handdoekrol = (() => {
 
 // ---------- Andere aanzichten ----------
 
-// Rectus femoris zijlig, van boven gezien (voorkant van het lichaam onder in
-// beeld): onderste heup en knie op 90° (f), de band om de enkel van het
-// bovenste been (n); die heup naar achteren, knie ≤ 90°.
-LIGGEND.rf_zijlig = {
-  viewBox: [24, 26, 112, 62],
-  props: [{ rect: [26, 28, 108, 58] }],
-  bands: [['n.hand', 'n.ankle']],
-  active: ['n.thigh'],
-  poses: {
-    start: { pelvis: [80, 58], torso: -90, head: -90, legs: { n: { angle: 90, shin: 180, foot: 270 }, f: { angle: 0, shin: 90, foot: 90 } }, arms: { n: { angle: 140, fore: 110 }, f: { angle: -40, fore: -100 } } },
-    stretch: { pelvis: [80, 58], torso: -90, head: -90, legs: { n: { angle: 112, shin: 200, foot: 290 }, f: { angle: 0, shin: 90, foot: 90 } }, arms: { n: { angle: 150, fore: 118 }, f: { angle: -40, fore: -100 } } },
-  },
-  timelines: staticTimelines(),
-};
-
-// Van boven, ruglig (vooraanzicht-rig: heupen en schouders naast elkaar).
-const fromAbove = (extra) => ({ pelvis: [80, 56], torso: -90, head: -90, ...extra });
-const mat = { rect: [22, 22, 116, 68] };
-
-// Been over het lichaam (van boven): armen in een T, het gestrekte been (n)
-// over het lichaam naar de andere kant; schouders blijven liggen.
-LIGGEND.heup_buiten_kruis_ruglig = {
-  view: 'front',
-  viewBox: [20, 20, 120, 72],
-  props: [mat],
-  active: ['n.thigh'],
-  poses: {
-    start: fromAbove({ legs: { n: { angle: 92, foot: 92 }, f: { angle: 88, foot: 88 } }, arms: { n: { angle: 180, fore: 180 }, f: { angle: 0, fore: 0 } } }),
-    stretch: fromAbove({ legs: { n: { angle: 38, foot: 38 }, f: { angle: 88, foot: 88 } }, arms: { n: { angle: 180, fore: 180 }, f: { angle: 0, fore: 0 } } }),
-  },
-  timelines: staticTimelines(),
-};
-
-// Banaan (van boven): armen boven het hoofd; voeten en handen naar dezelfde
-// kant, zodat het lichaam een boog vormt. Billen blijven liggen.
-LIGGEND.banaan_ruglig = {
-  view: 'front',
-  viewBox: [8, 20, 136, 72],
-  props: [{ rect: [10, 22, 132, 68] }],
-  active: ['spine.low', 'spine.high'],
-  poses: {
-    start: fromAbove({ legs: { n: { angle: 92, foot: 92 }, f: { angle: 88, foot: 88 } }, arms: { n: { angle: -92, fore: -92 }, f: { angle: -88, fore: -88 } } }),
-    stretch: fromAbove({ torso: -100, chest: -116, head: -122, legs: { n: { angle: 74, foot: 74 }, f: { angle: 70, foot: 70 } }, arms: { n: { angle: -126, fore: -130 }, f: { angle: -122, fore: -126 } } }),
-  },
-  timelines: staticTimelines(),
-};
-
-// Rugdraai (van boven): armen in een T; de gebogen knieën wijzen eerst naar
-// het plafond (voorverkort) en zakken samen naar één kant.
-LIGGEND.rug_rotatie_ruglig = {
-  view: 'front',
-  viewBox: [20, 20, 120, 72],
-  props: [mat],
-  active: ['spine.low'],
-  poses: {
-    start: fromAbove({ legs: { n: { angle: 90, shin: 90, scale: 0.35, foot: 90 }, f: { angle: 90, shin: 90, scale: 0.35, foot: 90 } }, arms: { n: { angle: 180, fore: 180 }, f: { angle: 0, fore: 0 } } }),
-    stretch: fromAbove({ torso: -88, legs: { n: { angle: 32, shin: 122, foot: 122 }, f: { angle: 40, shin: 130, foot: 130 } }, arms: { n: { angle: 180, fore: 180 }, f: { angle: 0, fore: 0 } } }),
-  },
-  timelines: staticTimelines(),
-};
-
-// Vanaf de voeten gezien: de rug wijst van de kijker af (voorverkort).
-const fromFeet = (extra) => ({ pelvis: [80, 72], torso: 180, head: 180, spineScale: 0.35, ...extra });
-const feetFloor = { floor: 86 };
-
-// Spreidzit tegen de muur (vanaf de muur gezien): billen tegen de muur, de
-// gestrekte benen omhoog en dan in een V naar buiten.
-LIGGEND.spreidzit_muur = {
-  view: 'front',
-  viewBox: [36, 14, 88, 76],
-  props: [feetFloor, { rect: [40, 16, 80, 70] }],
-  active: ['n.thigh', 'f.thigh'],
-  poses: {
-    start: fromFeet({ pelvis: [80, 68], torso: 0, head: 0, spineScale: 0.3, legs: { n: { angle: 176, foot: 176 }, f: { angle: -176, foot: -176 } }, arms: { n: { angle: 60, fore: 60 }, f: { angle: -60, fore: -60 } } }),
-    stretch: fromFeet({ pelvis: [80, 68], torso: 0, head: 0, spineScale: 0.3, legs: { n: { angle: 140, foot: 140 }, f: { angle: -140, foot: -140 } }, arms: { n: { angle: 62, fore: 62 }, f: { angle: -62, fore: -62 } } }),
-  },
-  timelines: staticTimelines(),
-};
-
-// Brede vlinder (van boven): voetzolen tegen elkaar, hielen ver weg; de knieën
-// wijzen eerst naar het plafond (voorverkort) en zakken naar buiten.
-LIGGEND.vlinder_breed = (() => {
-  const legs = (scale) => ({ n: { ankle: [106, 55], bend: 'up', scale, foot: 60 }, f: { ankle: [106, 57], bend: 'down', scale, foot: 120 } });
-  const arms = { n: { angle: 150, fore: 120 }, f: { angle: 30, fore: 60 } };
+// Rectus femoris zijlig (3D, schuin van boven): onderste heup en knie op 90°
+// (f) zetten het bekken vast; de band om de enkel van het bovenste been (n),
+// die heup gaat naar achteren met de knie op 90°.
+LIGGEND.rf_zijlig = (() => {
+  const bottom = { thigh: [0, -0.05, 1], shin: [-1, 0, 0], foot: [0, 0, 1] };
+  const arm = { upper: [0.2, 0.02, 1], fore: [0.8, 0.05, 0.5] }; // onderste arm onder het hoofd
   return {
-    view: 'front',
-    viewBox: [20, 20, 120, 72],
-    props: [mat],
-    active: ['n.thigh', 'f.thigh'],
+    view: '3d',
+    camera: { yaw: -20, pitch: 50 },
+    viewBox: [44, 50, 86, 66],
+    props: [floorRect(-32, 36, -30, 24)],
+    bands: [['n.hand', 'n.ankle']],
+    active: ['n.thigh'],
     poses: {
-      start: fromAbove({ legs: legs(0.7), arms }),
-      stretch: fromAbove({ legs: legs(0.9), arms }),
+      start: sideLying({ legs: { n: { thigh: [-1, 0, 0], shin: [0, 0, -1], foot: [0, 0, -1] }, f: bottom }, arms: { n: { hand: [2, 13, -8], elbow: [0, 1, -0.3] }, f: arm } }),
+      stretch: sideLying({ legs: { n: { thigh: [-0.94, 0, -0.34], shin: [0.34, 0, -0.94], foot: [0.34, 0, -0.94] }, f: bottom }, arms: { n: { hand: [0, 13, -10], elbow: [0, 1, -0.3] }, f: arm } }),
     },
     timelines: staticTimelines(),
   };
 })();
 
-// Borst open op een handdoekrol (van boven): de rol in de lengte onder de rug,
-// knieën gebogen (voorverkort); de armen zakken in een T naar de vloer en
-// worden in beeld dus langer.
-LIGGEND.borst_ruglig_handdoek = {
-  view: 'front',
-  viewBox: [20, 14, 120, 84],
-  props: [{ rect: [22, 16, 116, 80] }, { rect: [52, 54, 30, 4], solid: true }],
-  active: ['shoulders', 'n.arm', 'f.arm'],
-  poses: {
-    start: fromAbove({ legs: { n: { angle: 90, foot: 90, scale: 0.45 }, f: { angle: 90, foot: 90, scale: 0.45 } }, arms: { n: { angle: 165, fore: 165, scale: 0.45 }, f: { angle: 15, fore: 15, scale: 0.45 } } }),
-    stretch: fromAbove({ legs: { n: { angle: 90, foot: 90, scale: 0.45 }, f: { angle: 90, foot: 90, scale: 0.45 } }, arms: { n: { angle: 168, fore: 168 }, f: { angle: 12, fore: 12 } } }),
-  },
-  timelines: staticTimelines(),
-};
-
-// Zijlig van boven gezien (voorkant onder in beeld): knieën 90° naar voren.
-const sideAbove = (extra) => ({ pelvis: [84, 52], torso: -90, head: -90, legs: { n: { angle: 0, shin: 90, foot: 180 }, f: { angle: 2, shin: 92, foot: 182 } }, ...extra });
-
-// Open boek (van boven): knieën op elkaar; de bovenste arm (n) draait in een
-// boog van voor naar achter (halverwege wijst hij naar het plafond en is hij
-// in beeld kort), 5 s in de eindstand.
-LIGGEND.open_boek = {
-  viewBox: [24, 14, 112, 78],
-  props: [{ rect: [26, 16, 108, 74] }],
-  active: ['n.arm', 'spine.high'],
-  poses: {
-    closed: sideAbove({ arms: { n: { angle: 4, fore: 4 }, f: { angle: 0, fore: 0 } } }),
-    mid: sideAbove({ head: -110, arms: { n: { angle: 90, fore: 90, scale: 0.15 }, f: { angle: 0, fore: 0 } } }),
-    open: sideAbove({ head: -125, arms: { n: { angle: 176, fore: 176 }, f: { angle: 0, fore: 0 } } }),
-  },
-  timelines: loopTimelines(6667, [[0, 'closed'], [0.08, 'mid'], [0.16, 'open'], [0.9, 'open'], [0.95, 'mid'], [1, 'closed']], 'open'),
-};
-
-// Sleeper stretch aangepast (van boven): op de te rekken schouder (n); de
-// bovenarm voor je op 90°, elleboog 90° met de onderarm naar het plafond
-// (voorverkort); de andere hand duwt de onderarm zacht naar de grond, in beeld
-// richting de voeten.
-LIGGEND.sleeper_aangepast = {
-  viewBox: [24, 14, 112, 78],
-  props: [{ rect: [26, 16, 108, 74] }],
-  active: ['n.arm'],
-  poses: {
-    start: sideAbove({ arms: { n: { angle: 0, fore: 90, foreScale: 0.2 }, f: { hand: 'n.foreMid', bend: 'up' } } }),
-    stretch: sideAbove({ arms: { n: { angle: 0, fore: 90, foreScale: 0.85 }, f: { hand: 'n.foreMid', bend: 'up' } } }),
-  },
-  timelines: staticTimelines(),
-};
-
-// Zijlig aan de bedrand (Ober-houding), van voren gezien: onderste knie
-// gebogen (naar de kijker, voorverkort), het bovenste been (n) gestrekt iets
-// naar achteren en ontspannen omlaag over de rand. Alleen dat been moet
-// gestrekt blijven (kneeFlexionMaxDeg 0).
-LIGGEND.heup_buiten_bedrand = {
-  viewBox: [16, 20, 112, 70],
-  kneeCheck: ['n'],
-  props: [{ floor: 86 }, { rect: [14, 58, 70, 28] }],
+// Been over het lichaam (3D, schuin vanaf de voeten): armen in een T, het
+// gestrekte been (n) over het lichaam naar de andere kant; het bekken draait
+// mee, de schouders blijven liggen.
+const tArms = { n: { upper: [0.05, -0.1, 1] }, f: { upper: [0.05, -0.1, -1] } };
+LIGGEND.heup_buiten_kruis_ruglig = {
+  view: '3d',
+  camera: { yaw: 30, pitch: 55 },
+  viewBox: [38, 46, 86, 64],
+  props: [floorRect(-30, 38, -28, 26)],
   active: ['n.thigh'],
   poses: {
-    start: { pelvis: [72, 54], torso: -90, head: -92, legs: { n: { angle: 90, foot: 90 }, f: { angle: 90, shin: 90, scale: 0.6, foot: 90 } }, arms: { n: { angle: 92, fore: 92 }, f: { angle: -100, fore: -170 } } },
-    stretch: { pelvis: [72, 54], torso: -90, head: -92, legs: { n: { angle: 70, foot: 70 }, f: { angle: 90, shin: 90, scale: 0.6, foot: 90 } }, arms: { n: { angle: 92, fore: 92 }, f: { angle: -100, fore: -170 } } },
+    start: supine3({ legs: { n: flat3, f: flat3 }, arms: tArms }),
+    stretch: supine3({ side: [0, 0.45, 0.9], chestSide: [0, 0, 1], legs: { n: { thigh: [0.7, -0.12, -0.7], foot: [0.3, 0.6, 0.3] }, f: flat3 }, arms: tArms }),
   },
   timelines: staticTimelines(),
 };
+
+// Banaan (3D, van schuin boven): armen boven het hoofd; voeten en handen naar
+// dezelfde kant (f), zodat het lichaam een boog vormt. De billen blijven
+// liggen.
+LIGGEND.banaan_ruglig = (() => {
+  const up = (z) => ({ upper: [-1, -0.04, z] });
+  return {
+    view: '3d',
+    camera: { yaw: 20, pitch: 65 },
+    viewBox: [24, 41, 102, 66],
+    props: [floorRect(-58, 40, -26, 20)],
+    active: ['spine.low', 'spine.high'],
+    poses: {
+      start: supine3({ legs: { n: flat3, f: flat3 }, arms: { n: up(0.12), f: up(-0.12) } }),
+      stretch: supine3({ torso: [-1, 0, -0.18], chest: [-0.9, 0, -0.45], head: [-0.8, 0.1, -0.55], legs: { n: { thigh: [0.9, -0.05, -0.45], foot: [0, 1, 0] }, f: { thigh: [0.86, -0.05, -0.52], foot: [0, 1, 0] } }, arms: { n: up(-0.5), f: up(-0.75) } }),
+    },
+    timelines: staticTimelines(),
+  };
+})();
+
+// Rugdraai (3D, schuin vanaf de voeten): armen in een T, knieën gebogen met de
+// voeten plat; beide knieën zakken samen naar één kant (f), het bekken draait
+// mee en de schouders blijven liggen. Knie ≤ 90°.
+LIGGEND.rug_rotatie_ruglig = (() => {
+  const X = 28.5; // enkels zo ver dat de knie niet voorbij 90° buigt
+  return {
+    view: '3d',
+    camera: { yaw: -40, pitch: 40 },
+    viewBox: [35, 56, 80, 61],
+    props: [floorRect(-30, 36, -28, 24)],
+    active: ['spine.low'],
+    poses: {
+      start: supine3({ legs: { n: { ankle: [X, 2, 4], knee: [0, 1, 0.1], foot: [1, -0.2, 0] }, f: { ankle: [X, 2, -4], knee: [0, 1, -0.1], foot: [1, -0.2, 0] } }, arms: tArms }),
+      stretch: supine3({ side: [0, 0.7, 0.7], chestSide: [0, 0, 1], legs: { n: { ankle: [X, 5, -4], knee: [0, 0.02, -1], foot: [1, -0.2, -0.3] }, f: { ankle: [X, 2, -10], knee: [0, -0.1, -1], foot: [1, -0.2, -0.3] } }, arms: tArms }),
+    },
+    timelines: staticTimelines(),
+  };
+})();
+
+// Spreidzit tegen de muur (3D, schuin vanuit de kamer): ruglig met de billen
+// tegen de muur, de gestrekte benen omhoog en dan in een V naar buiten.
+LIGGEND.spreidzit_muur = (() => {
+  const WALL = 3.5;
+  const legs = (deg) => {
+    const [c, s] = [Math.cos((deg * Math.PI) / 180), Math.sin((deg * Math.PI) / 180)];
+    return { n: { thigh: [0.05, c, s], foot: [-1, 0.3, 0] }, f: { thigh: [0.05, c, -s], foot: [-1, 0.3, 0] } };
+  };
+  const arms = { n: { upper: [-0.6, -0.11, 0.8] }, f: { upper: [-0.6, -0.11, -0.8] } };
+  return {
+    view: '3d',
+    camera: { yaw: -80, pitch: 30 },
+    viewBox: [36, 38, 82, 76],
+    props: [floorRect(-36, WALL, -24, 24), { poly: [[WALL, 0, -32], [WALL, 0, 32], [WALL, 42, 32], [WALL, 42, -32]] }],
+    active: ['n.thigh', 'f.thigh'],
+    poses: {
+      start: supine3({ legs: legs(6), arms }),
+      stretch: supine3({ legs: legs(40), arms }),
+    },
+    timelines: staticTimelines(),
+  };
+})();
+
+// Brede vlinder (3D, schuin vanaf de voeten): ruglig, voetzolen tegen elkaar
+// met de hielen ver weg (knie ≤ 80°); de knieën wijzen eerst omhoog en zakken
+// naar buiten.
+LIGGEND.vlinder_breed = (() => {
+  const X = 30.5; // enkels zo ver dat de knie niet voorbij 80° buigt
+  const legs = (out) => ({
+    n: { ankle: [X, 3, 1.5], knee: [0, 1 - out, out], foot: [0.6, 0.3, -0.8] },
+    f: { ankle: [X, 3, -1.5], knee: [0, 1 - out, -out], foot: [0.6, 0.3, 0.8] },
+  });
+  const arms = { n: { upper: [0.7, -0.1, 0.7] }, f: { upper: [0.7, -0.1, -0.7] } };
+  return {
+    view: '3d',
+    camera: { yaw: 75, pitch: 35 },
+    viewBox: [46, 52, 66, 56],
+    props: [floorRect(-30, 36, -24, 24)],
+    active: ['n.thigh', 'f.thigh'],
+    poses: {
+      start: supine3({ legs: legs(0.15), arms }),
+      stretch: supine3({ legs: legs(0.7), arms }),
+    },
+    timelines: staticTimelines(),
+  };
+})();
+
+// Borst open op een handdoekrol (3D, schuin vanaf de voeten): de rol in de
+// lengte onder de rug, knieën gebogen; de armen in een T met de handpalmen
+// omhoog zakken met de schouders naar de vloer.
+LIGGEND.borst_ruglig_handdoek = (() => {
+  const roll = { poly: [[-34, 3, -2], [2, 3, -2], [2, 3, 2], [-34, 3, 2]], solid: true };
+  const legs = { n: { ankle: [27, 2, 7], knee: [0, 1, 0.2], foot: [1, -0.2, 0] }, f: { ankle: [27, 2, -7], knee: [0, 1, -0.2], foot: [1, -0.2, 0] } };
+  const arms = (y) => ({ n: { upper: [0.05, y, 1] }, f: { upper: [0.05, y, -1] } });
+  const base = { pelvis: [0, 6.5, 0], torso: [-1, 0, 0], head: [-1, 0.05, 0], side: [0, 0, 1], legs };
+  return {
+    view: '3d',
+    camera: { yaw: 80, pitch: 30 },
+    viewBox: [36, 51, 80, 58],
+    props: [floorRect(-34, 34, -32, 32), roll],
+    active: ['shoulders', 'n.arm', 'f.arm'],
+    poses: {
+      start: { ...base, arms: arms(0.45) },
+      stretch: { ...base, arms: arms(-0.2) },
+    },
+    timelines: staticTimelines(),
+  };
+})();
+
+// Open boek (3D): zijlig, knieën op 90° op elkaar met een kussen ertussen; de
+// bovenste arm (n) draait in een boog van voor naar achter en de borst draait
+// mee open, 5 s in de eindstand.
+LIGGEND.open_boek = (() => {
+  const legs = { n: { thigh: [0, -0.25, 1], shin: [-1, 0, 0], foot: [0, 0, 1] }, f: { thigh: [0, -0.1, 1], shin: [-1, 0, 0], foot: [0, 0, 1] } };
+  const pose = (chestSide, top, bottom, head) => sideLying({ chestSide, head, legs, arms: { n: { upper: top }, f: { upper: bottom } } });
+  return {
+    view: '3d',
+    camera: { yaw: 70, pitch: 35 },
+    viewBox: [43, 57, 82, 54],
+    props: [floorRect(-26, 32, -38, 30)],
+    active: ['n.arm', 'spine.high'],
+    poses: {
+      closed: pose([0, 1, 0], [0, -0.5, 0.87], [0, -0.02, 1], [1, 0.05, 0]),
+      mid: pose([0, 0.85, -0.5], [0, 1, 0.05], [0, -0.05, 1], [1, 0.2, -0.15]),
+      open: pose([0, 0.35, -0.94], [0, -0.3, -0.95], [0, -0.18, 1], [1, 0.2, -0.35]),
+    },
+    timelines: loopTimelines(6667, [[0, 'closed'], [0.08, 'mid'], [0.16, 'open'], [0.9, 'open'], [0.95, 'mid'], [1, 'closed']], 'open'),
+  };
+})();
+
+// Sleeper stretch aangepast (3D): zijlig op de te rekken schouder (n onder),
+// 25° naar achteren gerold; de bovenarm (n) op de vloer recht voor je, de
+// elleboog 90° met de onderarm omhoog; de andere hand duwt die onderarm zacht
+// richting de vloer aan de kant van de voeten.
+LIGGEND.sleeper_aangepast = (() => {
+  const roll = (25 * Math.PI) / 180;
+  const legs = { n: { thigh: [0.7, 0, 0.7], shin: [0.7, 0, -0.7], foot: [0.7, 0, 0.7] }, f: { thigh: [0.7, -0.25, 0.7], shin: [0.7, 0, -0.7], foot: [0.7, 0, 0.7] } };
+  const pose = (fore) => ({
+    pelvis: [0, 7.6, 0], torso: [-1, 0, 0], head: [-1, 0.05, 0.1], side: [0, -Math.cos(roll), Math.sin(roll)], legs,
+    arms: { n: { upper: [0, 0.03, 1], fore }, f: { hand: 'n.foreMid', elbow: [0, 1, -0.3] } },
+  });
+  return {
+    view: '3d',
+    camera: { yaw: -30, pitch: 18 },
+    viewBox: [38, 58, 84, 46],
+    props: [floorRect(-32, 36, -20, 26)],
+    active: ['n.arm'],
+    poses: {
+      start: pose([0, 1, 0]),
+      stretch: pose([0.75, 0.66, 0]),
+    },
+    timelines: staticTimelines(),
+  };
+})();
+
+// Zijlig aan de bedrand (Ober-houding, 3D): met de rug bij de rand van het
+// bed, onderste knie gebogen (f); het bovenste been (n) gestrekt iets naar
+// achteren en ontspannen omlaag over de rand. Alleen dat been moet gestrekt
+// blijven (kneeFlexionMaxDeg 0).
+LIGGEND.heup_buiten_bedrand = (() => {
+  const BED = 20; // hoogte van het matras; de rugkant van het bed op z = -10
+  // Gezien van achter het bed: bovenkant, achterkant (z = -10) en hoofdeinde.
+  const bed = [
+    { poly: [[-52, BED, -10], [34, BED, -10], [34, BED, 26], [-52, BED, 26]] },
+    { poly: [[-52, 0, -10], [34, 0, -10], [34, BED, -10], [-52, BED, -10]] },
+    { poly: [[34, 0, -10], [34, 0, 26], [34, BED, 26], [34, BED, -10]] },
+  ];
+  const base = { pelvis: [0, BED + 8, -4], torso: [1, 0, 0], head: [1, 0.05, 0], side: [0, 1, 0] };
+  const bottom = { thigh: [-0.7, 0, 0.7], shin: [-0.7, 0, -0.7], foot: [-0.7, 0, 0.7] };
+  const arms = { n: { hand: [12, BED + 1, 8], elbow: [0, 1, 0.5] }, f: { upper: [0.2, 0.05, 1], fore: [0.85, 0.1, 0.5] } };
+  return {
+    view: '3d',
+    camera: { yaw: 160, pitch: 20 },
+    viewBox: [34, 42, 94, 56],
+    kneeCheck: ['n'],
+    props: bed,
+    active: ['n.thigh'],
+    poses: {
+      start: { ...base, legs: { n: { thigh: [-0.98, 0, -0.2], foot: [0, 0, 1] }, f: bottom }, arms },
+      stretch: { ...base, legs: { n: { thigh: [-0.85, -0.38, -0.36], foot: [0, -0.3, 1] }, f: bottom }, arms },
+    },
+    timelines: staticTimelines(),
+  };
+})();

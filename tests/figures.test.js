@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FIGURES, hasFigure, pointsOf, kneeFlexion, poseAt, timeline, twoBone, dist, at, BONES } from '../js/figures.js';
+import { FIGURES, hasFigure, pointsOf, points3dOf, kneeFlexion, poseAt, timeline, twoBone, dist, at, BONES } from '../js/figures.js';
+import { twoBone3, project, joints3d, behind } from '../js/figures/rig3d.js';
 import { lib, ex } from './helpers.js';
 
 // Alle tijdlijnen van een figuur, elke 25 ms (een lus één keer rond, anders
@@ -12,11 +13,14 @@ function* frames(fig) {
   }
 }
 const ALL = Object.entries(FIGURES);
+// Bij een 3D-figuur rekenen de controles in de ruimte, niet in beeld.
+const real = (fig, pose) => (fig.view === '3d' ? points3dOf(fig, pose) : pointsOf(fig, pose));
 
 test('elk figuur hoort bij een bestaande oefening; houdingen en tijdlijnen kloppen', () => {
   for (const [id, fig] of ALL) {
     assert.ok(lib.exercises.has(id), id);
-    assert.ok(['side', 'front', undefined].includes(fig.view), id);
+    assert.ok(['side', 'front', '3d', undefined].includes(fig.view), id);
+    if (fig.view === '3d') assert.ok(Number.isFinite(fig.camera.yaw) && Number.isFinite(fig.camera.pitch), `${id}: camera`);
     for (const tl of Object.values(fig.timelines)) {
       for (const [, name] of tl.keys) assert.ok(fig.poses[name], `${id}: houding ${name} ontbreekt`);
       if (tl.still) assert.ok(fig.poses[tl.still], `${id}: houding ${tl.still} ontbreekt`);
@@ -43,6 +47,29 @@ test('twoBone: beide botten houden hun lengte; te ver weg wordt gestrekt', () =>
   assert.ok(Math.abs(far.end[1] - 39) < 1e-6 && Math.abs(far.joint[0]) < 1e-6);
 });
 
+test('3D: twoBone3 houdt de botlengtes en buigt naar de poolrichting; camera 0, 0 is het zijaanzicht', () => {
+  const { joint, end } = twoBone3([0, 0, 0], [0, -30, 10], 20, 19, [1, 0, 0]);
+  assert.ok(Math.abs(dist([0, 0, 0], joint) - 20) < 1e-9 && Math.abs(dist(joint, end) - 19) < 1e-9);
+  assert.ok(dist(end, [0, -30, 10]) < 1e-9);
+  assert.ok(joint[0] > 5); // knie naar voren (x), zoals gevraagd
+  assert.deepEqual(project([10, 20, 0]), [90, 66]); // x naar rechts, y omhoog: in beeld omlaag gemeten
+  assert.deepEqual(project([10, 20, 7]), [90, 66]); // diepte telt niet mee
+  const [x, y] = project([0, 0, 10], { yaw: 90, pitch: 0 });
+  assert.ok(Math.abs(x - 70) < 1e-9 && Math.abs(y - 86) < 1e-9); // gedraaid: de n-kant schuift naar links
+  assert.ok(project([0, 0, 10], { yaw: 0, pitch: 30 })[1] > 86); // van boven: dichterbij is lager in beeld
+});
+
+test('3D: alleen het duidelijk verste been of de verste arm wordt gedimd, een rekkend lid niet', () => {
+  const pts = joints3d({
+    pelvis: [0, 41, 0], torso: [0, 1, 0],
+    legs: { n: { thigh: [0, -1, 0] }, f: { thigh: [0, -1, 0] } },
+    arms: { n: { upper: [0, -1, 0.1] }, f: { upper: [0, -1, -0.1] } },
+  });
+  assert.deepEqual(behind(pts, { yaw: 0, pitch: 0 }), { 'n.leg': false, 'f.leg': true, 'n.arm': false, 'f.arm': true });
+  assert.equal(behind(pts, { yaw: 90, pitch: 0 })['f.leg'], false); // van voren: even ver
+  assert.equal(behind(pts, { yaw: 0, pitch: 0 }, { 'f.leg': true })['f.leg'], false);
+});
+
 // Voorverkorte delen (spineScale, scale) zijn zoveel korter.
 test('elk frame: botten op lengte, alles binnen het beeld', () => {
   const near = (a, b, len) => Math.abs(dist(a, b) - len) < 1e-6;
@@ -50,15 +77,17 @@ test('elk frame: botten op lengte, alles binnen het beeld', () => {
     const [x, y, w, h] = fig.viewBox;
     for (const [phase, t, p, pose] of frames(fig)) {
       const where = `${id} ${phase} ${t}`;
-      const k = pose.spineScale ?? 1;
-      assert.ok(near(p.pelvis, p.mid, BONES.low * k) && near(p.mid, p.neck, BONES.high * k), `${where} rug`);
+      const r = real(fig, pose);
+      const flat = fig.view !== '3d'; // voorverkorting bestaat alleen in 2D
+      const k = flat ? pose.spineScale ?? 1 : 1;
+      assert.ok(near(r.pelvis, r.mid, BONES.low * k) && near(r.mid, r.neck, BONES.high * k), `${where} rug`);
       for (const s of ['n', 'f']) {
-        const q = p[s];
-        const lk = pose.legs[s].scale ?? 1;
-        const ak = pose.arms[s].scale ?? 1;
-        const sk = lk * (pose.legs[s].shinScale ?? 1);
+        const q = r[s];
+        const lk = flat ? pose.legs[s].scale ?? 1 : 1;
+        const ak = flat ? pose.arms[s].scale ?? 1 : 1;
+        const sk = lk * (flat ? pose.legs[s].shinScale ?? 1 : 1);
         assert.ok(near(q.hip, q.knee, BONES.thigh * lk) && near(q.knee, q.ankle, BONES.shin * sk) && near(q.ankle, q.toe, BONES.foot), `${where} been ${s}`);
-        assert.ok(near(q.shoulder, q.elbow, BONES.arm * ak) && near(q.elbow, q.hand, BONES.fore * ak * (pose.arms[s].foreScale ?? 1)), `${where} arm ${s}`);
+        assert.ok(near(q.shoulder, q.elbow, BONES.arm * ak) && near(q.elbow, q.hand, BONES.fore * ak * (flat ? pose.arms[s].foreScale ?? 1 : 1)), `${where} arm ${s}`);
         if (q.fingers) assert.ok(near(q.hand, q.fingers, BONES.hand), `${where} hand ${s}`);
       }
       const pts = [p.pelvis, p.mid, p.neck, ...['n', 'f'].flatMap((s) => Object.values(p[s]))];
@@ -78,13 +107,14 @@ test('kniebuiging nooit boven kneeFlexionMaxDeg uit de bibliotheek', () => {
   for (const [id, fig] of ALL) {
     const max = ex(id).kneeFlexionMaxDeg;
     const sides = fig.kneeCheck ?? ['n', 'f'];
-    const real = (pose, s) => (pose.legs[s].scale ?? 1) === 1 && (pose.legs[s].shinScale ?? 1) === 1;
+    const measurable = (pose, s) => fig.view === '3d' || ((pose.legs[s].scale ?? 1) === 1 && (pose.legs[s].shinScale ?? 1) === 1);
     for (const [name, pose] of Object.entries(fig.poses)) {
-      const p = pointsOf(fig, pose);
-      for (const s of sides) if (real(pose, s)) assert.ok(kneeFlexion(p, s) <= max + 0.5, `${id} ${name} knie ${s}: ${kneeFlexion(p, s).toFixed(1)}° > ${max}°`);
+      const p = real(fig, pose);
+      for (const s of sides) if (measurable(pose, s)) assert.ok(kneeFlexion(p, s) <= max + 0.5, `${id} ${name} knie ${s}: ${kneeFlexion(p, s).toFixed(1)}° > ${max}°`);
     }
-    for (const [phase, t, p, pose] of frames(fig)) {
-      for (const s of sides) if (real(pose, s)) assert.ok(kneeFlexion(p, s) <= max + 4, `${id} ${phase} ${t} knie ${s}: ${kneeFlexion(p, s).toFixed(1)}° > ${max}°`);
+    for (const [phase, t, , pose] of frames(fig)) {
+      const p = real(fig, pose);
+      for (const s of sides) if (measurable(pose, s)) assert.ok(kneeFlexion(p, s) <= max + 4, `${id} ${phase} ${t} knie ${s}: ${kneeFlexion(p, s).toFixed(1)}° > ${max}°`);
     }
   }
 });
@@ -92,7 +122,7 @@ test('kniebuiging nooit boven kneeFlexionMaxDeg uit de bibliotheek', () => {
 test('voeten en handen staan waar de houding dat zegt (vloer, muur), op een halve eenheid na', () => {
   for (const [id, fig] of ALL) {
     for (const [name, pose] of Object.entries(fig.poses)) {
-      const p = pointsOf(fig, pose);
+      const p = real(fig, pose);
       for (const s of ['n', 'f']) {
         if (pose.legs[s].ankle) assert.ok(dist(p[s].ankle, pose.legs[s].ankle) < 0.5, `${id} ${name}: enkel ${s} haalt haar plek niet (${dist(p[s].ankle, pose.legs[s].ankle).toFixed(2)})`);
         const target = typeof pose.arms[s].hand === 'string' ? at(p, pose.arms[s].hand) : pose.arms[s].hand;

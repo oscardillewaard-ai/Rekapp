@@ -1,5 +1,7 @@
-// Stokfiguren: staande oefeningen. Zie rig.js voor het skelet en de hoeken.
+// Stokfiguren: staande oefeningen. Zie rig.js voor het skelet en de hoeken;
+// de heup-CAR en poort open staan in 3D (rig3d.js).
 import { above, legReach, angleOf, pelvisOn, onLeg, joints, staticTimelines, loopTimelines } from './rig.js';
+import { floorRect, across, unit } from './rig3d.js';
 
 const FLOOR = 86;
 const ANKLE = FLOOR - 2; // enkel net boven de vloer
@@ -301,45 +303,48 @@ STAAND.heup_buiten_overhead = (() => {
   };
 })();
 
-// Een hand tegen de muur links (in vooraanzicht).
-const leftWall = { wall: 50, y1: 6, y2: FLOOR };
-const leftHand = (y) => ({ hand: [51.5, y], bend: 'down' });
+// Heup-CAR en poort open (3D, schuin van voren): op één been (f), de hand
+// aan de muur naast je. De knie (n) gaat naar heuphoogte, draait naar buiten
+// en (bij de CAR) met het onderbeen naar binnen-achter terug omlaag.
+const onOneLeg = (thigh, shin, foot) => ({
+  pelvis: [0, 41, 0], torso: [0, 1, 0], head: [0.15, 1, 0],
+  legs: { n: { thigh, shin, foot }, f: { thigh: [0, -1, 0], foot: [1, 0, 0] } },
+  arms: { n: { upper: [0.1, -1, 0.25], fore: [0.2, -1, 0.2] }, f: { hand: [2, 60, -30], elbow: [0, -1, 0] } },
+});
+const hipWall = [floorRect(-16, 24, -30, 22), { poly: [[-16, 0, -30], [24, 0, -30], [24, 74, -30], [-16, 74, -30]] }];
+const DOWN = [0, -1, 0];
 
-// Heupcirkels staand: op één been (f), hand aan de muur; de knie (n) naar
-// voren, naar buiten, het onderbeen naar binnen-achter en terug omlaag.
 STAAND.heup_car = (() => {
-  const pose = (angle, shin) => ({
-    pelvis: [78, 45], torso: 180, head: 180, place: { joint: 'f.ankle', at: [74, ANKLE] },
-    legs: { n: { angle, shin, foot: shin + 80 }, f: { angle: 0, foot: -80 } },
-    arms: { n: { angle: 20, fore: 10 }, f: leftHand(34) },
-  });
+  const backThigh = unit([-0.35, -0.6, 0.7]);
   return {
-    view: 'front',
-    viewBox: [44, -2, 82, 92],
-    props: [{ floor: FLOOR }, leftWall],
+    view: '3d',
+    camera: { yaw: 40, pitch: 12 },
+    viewBox: [38, 0, 76, 94],
+    props: hipWall,
     active: ['n.thigh'],
-    poses: { down: pose(0, 0), front: pose(32, 6), side: pose(84, 2), back: pose(50, 108) },
+    poses: {
+      down: onOneLeg(DOWN, DOWN, [1, 0, 0]),
+      front: onOneLeg([1, 0, 0], DOWN, [1, 0, 0]),
+      side: onOneLeg([0, 0, 1], DOWN, [0, 0, 1]),
+      back: onOneLeg(backThigh, across([-1, 0.3, 0], backThigh), [0, -0.3, 1]),
+    },
     timelines: loopTimelines(13333, [[0, 'down'], [0.25, 'front'], [0.5, 'side'], [0.75, 'back'], [1, 'down']], 'side'),
   };
 })();
 
-// Poort open: op één been (f), hand aan de muur; de knie (n) omhoog en
-// langzaam naar buiten draaien, 2 s vasthouden, terug en neerzetten.
-STAAND.gate_opener = (() => {
-  const pose = (angle, shin) => ({
-    pelvis: [78, 45], torso: 180, head: 180, place: { joint: 'f.ankle', at: [74, ANKLE] },
-    legs: { n: { angle, shin, foot: shin + 80 }, f: { angle: 0, foot: -80 } },
-    arms: { n: { angle: 20, fore: 10 }, f: leftHand(34) },
-  });
-  return {
-    view: 'front',
-    viewBox: [44, -2, 76, 92],
-    props: [{ floor: FLOOR }, leftWall],
-    active: ['n.thigh'],
-    poses: { down: pose(0, 0), up: pose(14, -46), open: pose(78, 4) },
-    timelines: loopTimelines(4375, [[0, 'down'], [0.2, 'up'], [0.45, 'open'], [0.7, 'open'], [0.85, 'up'], [1, 'down']], 'open'),
-  };
-})();
+STAAND.gate_opener = {
+  view: '3d',
+  camera: { yaw: 40, pitch: 12 },
+  viewBox: [38, 0, 76, 94],
+  props: hipWall,
+  active: ['n.thigh'],
+  poses: {
+    down: onOneLeg(DOWN, DOWN, [1, 0, 0]),
+    up: onOneLeg([1, 0, 0], DOWN, [1, 0, 0]),
+    open: onOneLeg([0, 0, 1], DOWN, [0, 0, 1]),
+  },
+  timelines: loopTimelines(4375, [[0, 'down'], [0.2, 'up'], [0.45, 'open'], [0.7, 'open'], [0.85, 'up'], [1, 'down']], 'open'),
+};
 
 // Borst in een hoek / muurslides gebruiken een muur achter het figuur.
 
@@ -360,26 +365,30 @@ STAAND.muurslide = (() => {
   };
 })();
 
-// Zijwaartse rek aan de deurpost (rechts): de buitenste arm (f) over het hoofd
-// naar de post, de heup naar buiten; rek langs de flank.
+// Zijwaartse rek aan de deurpost (vooraanzicht, de post rechts): de binnenste
+// hand (n) houdt de post laag vast; de buitenste arm (f) gaat in een boog over
+// het hoofd en pakt de post, de heup duwt naar buiten: het lichaam vormt een C.
 STAAND.zijbuiging_deurpost = (() => {
-  const pose = (legAngle, torso, chest, head, nHand, fArm, fFore) => ({
+  const pose = (legAngle, torso, chest, head, nHand, fHand) => ({
     pelvis: [80, 45], torso, chest, head, place: { joint: 'n.ankle', y: ANKLE },
     legs: { n: { angle: legAngle, foot: 80 }, f: { angle: legAngle, foot: -80 } },
-    arms: { n: { hand: nHand, bend: 'down' }, f: { angle: fArm, fore: fFore } },
+    arms: { n: { hand: nHand, bend: 'down' }, f: { hand: fHand, bend: 'up' } },
   });
   return {
     view: 'front',
-    viewBox: [46, -6, 66, 96],
-    props: [{ floor: FLOOR }, { wall: 104, y1: -2, y2: FLOOR }],
+    viewBox: [46, -10, 66, 100],
+    props: [{ floor: FLOOR }, { wall: 104, y1: -6, y2: FLOOR }],
     active: ['f.arm', 'spine.low', 'spine.high'],
     poses: {
-      start: pose(0, 180, 180, 180, [102.5, 40], -8, -4),
-      // Hoeken van de f-arm negatief: hij gaat links langs omhoog, niet voor
-      // het gezicht langs.
-      stretch: pose(7, 186, 160, 160, [102.5, 44], -192, -238),
+      start: pose(0, 180, 180, 180, [102.5, 40], [66, 47]),
+      up: pose(4, 182, 176, 176, [102.5, 41], [70, -5]),
+      stretch: pose(12, 188, 128, 145, [102.5, 44], [103, 9]),
     },
-    timelines: staticTimelines(),
+    timelines: {
+      prep: { keys: [[0, 'start']] },
+      work: { keys: [[0, 'start'], [1000, 'up'], [2000, 'stretch']] },
+      demo: { loop: 8000, keys: [[0, 'start'], [900, 'up'], [1800, 'stretch'], [5600, 'stretch'], [6500, 'up'], [7400, 'start']], still: 'stretch' },
+    },
   };
 })();
 

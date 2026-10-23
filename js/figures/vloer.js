@@ -1,7 +1,8 @@
 // Stokfiguren: oefeningen op de vloer (knielend, zittend). Zie rig.js voor het
 // skelet en de hoeken. Zijaanzicht met het gezicht naar rechts; waar de
-// benen dwars op het beeld liggen (duif, 90/90, kikker) van boven gezien.
-import { staticTimelines } from './rig.js';
+// benen dwars op het beeld liggen (duif, 90/90, kikker) in 3D (zie rig3d.js).
+import { staticTimelines, BONES } from './rig.js';
+import { floorRect, shoulderOf } from './rig3d.js';
 
 const FLOOR = 86;
 const GROUND = FLOOR - 2; // knie of enkel op de vloer
@@ -85,55 +86,107 @@ VLOER.heupbuiger_halfgeknield = (() => {
   };
 })();
 
-// ---------- Van boven (gezicht naar rechts) ----------
+// ---------- In 3D (zie rig3d.js) ----------
 
-// Rig in vooraanzicht met de rug horizontaal: de heupen en schouders liggen
-// dan boven en onder elkaar in beeld.
-const mat = { rect: [22, 14, 116, 84] };
-
-// Kikker (van boven): op handen en knieën, knieën wijd, onderbenen evenwijdig;
-// de billen schuiven iets naar achteren en je zakt op je onderarmen.
+// Kikker (3D, schuin van achteren): op handen en knieën, knieën wijd op de vloer
+// (z ±18), onderbenen evenwijdig naar achteren. De billen schuiven naar
+// achteren tot boven de knieën (verder zou de knie voorbij 90° buigen) en je
+// zakt op je onderarmen.
 VLOER.kikker = (() => {
-  const legs = { n: { ankle: [56, 84], bend: 'down', foot: -90 }, f: { ankle: [56, 28], bend: 'up', foot: -90 } };
+  // hx: hoe ver het bekken vóór de knieën staat; de hoogte volgt uit de dij.
+  const frog = (hx, shoulderY, elbow) => {
+    const hy = 1.5 + Math.sqrt(BONES.thigh ** 2 - 14 ** 2 - hx ** 2);
+    const reach = BONES.low + BONES.shoulderAt;
+    const ty = (shoulderY - hy) / reach;
+    const torso = [Math.sqrt(1 - ty * ty), ty, 0];
+    const bx = hx + reach * torso[0]; // schouders boven x = bx
+    const leg = (s) => ({ thigh: [-hx, 1.5 - hy, 14 * s], shin: [-1, 0, 0], foot: [-0.6, 0, 0.8 * s] });
+    const arm = (s) => (elbow
+      ? { hand: [bx + BONES.fore, 0.5, BONES.shoulderW * s], elbow: [-0.3, -1, 0] }
+      : { hand: [bx + 1, 0.5, BONES.shoulderW * s], elbow: [-1, 0, 0] });
+    return { pelvis: [hx, hy, 0], torso, legs: { n: leg(1), f: leg(-1) }, arms: { n: arm(1), f: arm(-1) } };
+  };
   return {
-    view: 'front',
-    viewBox: [20, 12, 120, 88],
-    props: [mat],
+    view: '3d',
+    camera: { yaw: -40, pitch: 40 },
+    viewBox: [40, 38, 90, 74],
+    props: [floorRect(-28, 40, -26, 26)],
     active: ['n.thigh', 'f.thigh'],
     poses: {
-      start: { pelvis: [80, 56], torso: 90, head: 90, legs, arms: { n: { angle: 70, fore: 90 }, f: { angle: 110, fore: 90 } } },
-      stretch: { pelvis: [78, 56], torso: 90, head: 90, legs, arms: { n: { angle: 80, fore: 90, scale: 0.75 }, f: { angle: 100, fore: 90, scale: 0.75 } } },
+      start: { ...frog(5, 28, false), head: [1, 0.25, 0] },
+      stretch: { ...frog(0, 14.5, true), head: [1, -0.25, 0] },
     },
     timelines: staticTimelines(),
   };
 })();
 
-// Duif (van boven): het voorste been (n) gebogen voor je met het onderbeen
-// dwars, het achterste been gestrekt naar achteren; van rechtop (romp
-// voorverkort) naar voorover op de onderarmen.
-VLOER.duif = {
-  view: 'front',
-  viewBox: [20, 12, 120, 88],
-  props: [mat],
-  active: ['n.thigh'],
-  poses: {
-    start: { pelvis: [72, 56], torso: 90, head: 90, spineScale: 0.3, legs: { n: { angle: 90, shin: 180, foot: 270 }, f: { angle: -90, foot: -90 } }, arms: { n: { angle: 20, fore: 20, scale: 0.5 }, f: { angle: 160, fore: 160, scale: 0.5 } } },
-    stretch: { pelvis: [72, 56], torso: 90, head: 90, spineScale: 0.95, legs: { n: { angle: 90, shin: 180, foot: 270 }, f: { angle: -90, foot: -90 } }, arms: { n: { angle: 80, fore: 90 }, f: { angle: 100, fore: 90 } } },
-  },
-  timelines: staticTimelines(),
-};
+// Duif (3D, schuin van voren): het voorste been (n) gebogen voor je, de dij
+// recht vooruit en het onderbeen dwars (knie 90°, de grens uit de
+// bibliotheek), het achterste been (f) gestrekt naar achteren. Het bekken
+// zakt richting de vloer; van rechtop op de handen naar voorover op de
+// onderarmen.
+VLOER.duif = (() => {
+  const KNEE = [20, 1.5]; // voorste knie, vast op de vloer
+  const pigeon = (hy, torso, head) => {
+    const px = KNEE[0] - Math.sqrt(BONES.thigh ** 2 - (hy - KNEE[1]) ** 2);
+    const back = Math.sqrt((BONES.thigh + BONES.shin) ** 2 - (hy - 1) ** 2);
+    return {
+      pelvis: [px, hy, 0], torso, head,
+      legs: {
+        n: { thigh: [KNEE[0] - px, KNEE[1] - hy, 0], shin: [0, 0, -1], foot: [0.3, 0, -1] },
+        f: { ankle: [px - back, 1, -BONES.hipW], straight: true, foot: [-1, -0.3, 0] },
+      },
+    };
+  };
+  const start = pigeon(7, [0.35, 1, 0], [0.4, 1, 0]);
+  const stretch = pigeon(4, [0.9, 0.43, 0], [1, 0.15, 0]);
+  // Rechtop: handen naast de voorste knie op de vloer; voorover: onderarmen
+  // op de vloer, ellebogen onder de schouders.
+  const hands = (pose, dx, elbow) => Object.fromEntries(['n', 'f'].map((s) => {
+    const sh = shoulderOf(pose, s);
+    return [s, { hand: [sh[0] + dx, 1, sh[2] * 1.2], elbow }];
+  }));
+  return {
+    view: '3d',
+    camera: { yaw: 25, pitch: 30 },
+    viewBox: [33, 42, 90, 62],
+    props: [floorRect(-36, 34, -20, 16)],
+    active: ['n.thigh'],
+    poses: {
+      start: { ...start, arms: hands(start, 1.5, [-1, 0, 0]) },
+      stretch: { ...stretch, arms: hands(stretch, BONES.fore, [-0.2, -1, 0]) },
+    },
+    timelines: staticTimelines(),
+  };
+})();
 
-// 90/90-zit (van boven): het voorste been (n) voor je, het andere (f) naast je,
-// beide knieën 90°; vanuit rechtop (romp voorverkort) met de borst richting de
-// voorste knie.
-VLOER.negentig_negentig = {
-  view: 'front',
-  viewBox: [20, 12, 120, 88],
-  props: [mat],
-  active: ['n.thigh'],
-  poses: {
-    start: { pelvis: [70, 60], torso: 90, head: 90, spineScale: 0.25, legs: { n: { angle: 90, shin: 180, foot: 270 }, f: { angle: 180, shin: -90, foot: -180 } }, arms: { n: { angle: 30, fore: 30, scale: 0.5 }, f: { angle: 150, fore: 150, scale: 0.5 } } },
-    stretch: { pelvis: [70, 60], torso: 98, head: 98, spineScale: 0.8, legs: { n: { angle: 90, shin: 180, foot: 270 }, f: { angle: 180, shin: -90, foot: -180 } }, arms: { n: { angle: 70, fore: 80 }, f: { angle: 110, fore: 100 } } },
-  },
-  timelines: staticTimelines(),
-};
+// 90/90-zit (3D, schuin van voren): het voorste been (n) met de dij recht
+// vooruit en het onderbeen dwars ervoor, het achterste been (f) met de dij
+// opzij en het onderbeen naar achteren; beide knieën 90°. Vanuit rechtop met
+// de borst richting de voorste knie, de handen voor je op de vloer.
+VLOER.negentig_negentig = (() => {
+  const HY = 5; // zitten: bekken net boven de vloer
+  const k = Math.sqrt(BONES.thigh ** 2 - (HY - 1.5) ** 2);
+  const legs = {
+    n: { thigh: [k, 1.5 - HY, 0], shin: [0, 0, -1], foot: [0.3, 0, -1] },
+    f: { thigh: [0, 1.5 - HY, -k], shin: [-1, 0, 0], foot: [-1, 0, -0.3] },
+  };
+  const start = { pelvis: [0, HY, 0], torso: [0, 1, 0], legs };
+  const stretch = { pelvis: [0, HY, 0], torso: [0.6, 0.8, 0], chest: [0.75, 0.66, 0], head: [0.8, 0.5, 0], legs };
+  const hands = (pose, dx, dz, elbow) => Object.fromEntries(['n', 'f'].map((s) => {
+    const sh = shoulderOf(pose, s);
+    return [s, { hand: [sh[0] + dx, 1, sh[2] + Math.sign(sh[2]) * dz], elbow }];
+  }));
+  return {
+    view: '3d',
+    camera: { yaw: 20, pitch: 45 },
+    viewBox: [50, 44, 74, 62],
+    props: [floorRect(-22, 30, -30, 14)],
+    active: ['n.thigh'],
+    poses: {
+      start: { ...start, arms: hands(start, 2, 2, [-1, 0, 0]) },
+      stretch: { ...stretch, arms: hands(stretch, 12, 0, [-0.3, 0, 1]) },
+    },
+    timelines: staticTimelines(),
+  };
+})();

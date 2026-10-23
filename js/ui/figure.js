@@ -3,13 +3,13 @@
 // (performance.now), per animatieframe.
 import { s, h } from './dom.js';
 import { icon } from './graphics.js';
-import { FIGURES, hasFigure, pointsOf, poseAt, dir, at, BONES } from '../figures.js';
+import { FIGURES, hasFigure, pointsOf, propsOf, behindOf, poseAt, dir, at, BONES } from '../figures.js';
 
 export { hasFigure };
 
 const reducedMotion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 
-// Botten per kant, en de romp. Vooraanzicht: ook bekken en schouders.
+// Botten per kant, en de romp. Vooraanzicht en 3D: ook bekken en schouders.
 const LIMBS = (k) => [
   [`${k}.thigh`, `${k}.hip`, `${k}.knee`], [`${k}.shin`, `${k}.knee`, `${k}.ankle`], [`${k}.foot`, `${k}.ankle`, `${k}.toe`],
   [`${k}.arm`, `${k}.shoulder`, `${k}.elbow`], [`${k}.fore`, `${k}.elbow`, `${k}.hand`], [`${k}.palm`, `${k}.hand`, `${k}.fingers`],
@@ -35,6 +35,7 @@ function prop(p, [x, , w]) {
   if (p.line) return s('line', { class: 'prop', x1: p.line[0], y1: p.line[1], x2: p.line[2], y2: p.line[3] });
   if (p.rect) return s('rect', { class: `prop${p.solid ? ' solid' : ''}`, x: p.rect[0], y: p.rect[1], width: p.rect[2], height: p.rect[3], rx: 1.5 });
   if (p.circle) return s('circle', { class: `prop${p.solid ? ' solid' : ''}`, cx: p.circle[0], cy: p.circle[1], r: p.circle[2] });
+  if (p.poly) return s('polygon', { class: `prop${p.solid ? ' solid' : ''}`, points: p.poly.map(([px, py]) => `${f2(px)},${f2(py)}`).join(' ') });
   return null;
 }
 
@@ -43,20 +44,36 @@ export function createFigure(id, className = '') {
   const fig = FIGURES[id];
   const [x, y, w, hgt] = fig.viewBox;
   const front = fig.view === 'front';
+  const wide = front || fig.view === '3d'; // bekken en schouders hebben breedte
   const svg = s('svg', { viewBox: `${x} ${y} ${w} ${hgt}`, class: `figure ${className}`.trim(), 'aria-hidden': 'true', focusable: 'false' });
-  svg.append(...fig.props.map((p) => prop(p, fig.viewBox)).filter(Boolean));
+  svg.append(...propsOf(fig).map((p) => prop(p, fig.viewBox)).filter(Boolean));
   const line = ([name, a, b]) => ({ el: s('line', { class: fig.active.includes(name) ? 'bone active' : 'bone' }), a, b });
   const far = LIMBS('f').map(line);
   const near = LIMBS('n').map(line);
-  const spine = [...SPINE.filter(([name]) => front || (name !== 'hips' && name !== 'shoulders')), ...TRAPS.filter(([name]) => fig.active.includes(name))].map(line);
+  const spine = [...SPINE.filter(([name]) => wide || (name !== 'hips' && name !== 'shoulders')), ...TRAPS.filter(([name]) => fig.active.includes(name))].map(line);
   const head = s('circle', { class: fig.active.includes('head') ? 'head active' : 'head', r: BONES.head });
   const bands = (fig.bands ?? []).map(([a, b]) => ({ el: s('line', { class: 'band' }), a, b }));
   const effort = fig.effort ? [s('line', { class: 'effort' }), s('line', { class: 'effort' })] : [];
   // Volgorde: verre kant (in zijaanzicht als geheel gedimd, zodat overlappende
   // uiteinden niet lichter worden), romp en hoofd, banden, nabije kant,
-  // inspanning.
-  svg.append(front ? s('g', null, ...far.map((l) => l.el)) : s('g', { class: 'far' }, ...far.map((l) => l.el)));
-  svg.append(...spine.map((l) => l.el), head, ...bands.map((b) => b.el), ...near.map((l) => l.el), ...effort);
+  // inspanning. In 3D bepaalt de rekstand welk been of welke arm duidelijk
+  // verder weg ligt; die gaat (de hele beweging door) in de gedimde laag.
+  const behindLayer = s('g', { class: 'far' });
+  const frontLayer = s('g');
+  const limbs = fig.view === '3d'
+    ? Object.fromEntries(['n', 'f'].flatMap((k) => {
+      const ls = k === 'n' ? near : far;
+      return [[`${k}.leg`, s('g', null, ...ls.slice(0, 3).map((l) => l.el))], [`${k}.arm`, s('g', null, ...ls.slice(3).map((l) => l.el))]];
+    }))
+    : null;
+  if (limbs) {
+    const back = behindOf(fig, poseAt(fig, 'demo', 0, { reduced: true }));
+    for (const [k, g] of Object.entries(limbs)) (back[k] ? behindLayer : frontLayer).append(g);
+    svg.append(behindLayer);
+  }
+  else svg.append(front ? s('g', null, ...far.map((l) => l.el)) : s('g', { class: 'far' }, ...far.map((l) => l.el)));
+  svg.append(...spine.map((l) => l.el), head, ...bands.map((b) => b.el));
+  svg.append(...(limbs ? [frontLayer] : near.map((l) => l.el)), ...effort);
 
   function place(l, p, q) {
     if (!p || !q) { l.el.style.display = 'none'; return; }

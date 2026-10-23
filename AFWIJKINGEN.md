@@ -96,20 +96,30 @@ lichaamskaart blijft, het positie-icoon vervalt waar een figuur staat.
   stijl. Handen en voeten staan vast waar de houding dat zegt (muur, vloer,
   stoel, band); knieën en ellebogen rekent de module uit.
 - **Aanzichten:** standaard zijaanzicht met het gezicht naar rechts; de verre
-  arm en het verre been zijn gedimd. Waar een zijaanzicht de oefening niet laat
-  zien, een ander aanzicht: vooraanzicht (o.a. zijwaarts buigen, nek, triceps
-  boven het hoofd, gebedshouding), van boven op een mat (o.a. kikker, duif, 90/90, vlinder,
-  rotaties in ruglig, open boek, sleeper) en Spreidzit tegen de muur gezien
-  vanaf de muur. Ledematen die naar de kijker of van de kijker af wijzen,
-  worden korter getekend (voorverkorting); rotaties om de lengteas (nek
-  draaien, heup-CAR, gate opener) zijn in 2D alleen bij benadering te tonen.
+  arm en het verre been zijn gedimd. Waar een plat zijaanzicht de oefening
+  niet laat zien, een vooraanzicht (o.a. zijwaarts buigen, nek, triceps boven
+  het hoofd, gebedshouding) of een schuin aanzicht in 3D op een mat (kikker,
+  duif, 90/90, piriformis diagonaal, rectus femoris zijlig, zijlig aan de
+  bedrand, open boek, sleeper, spreidzit tegen de muur, vlinder, rugdraai,
+  banaan, been over het lichaam, borst op de handdoekrol, heup-CAR en poort
+  open). Die 3D-houdingen rekent `js/figures/rig3d.js` uit en projecteert een
+  vaste camera per figuur naar het beeld: eigen code, geen bibliotheek. In 3D
+  wordt het been of de arm gedimd die in de rekstand duidelijk verder weg ligt
+  dan zijn tegenhanger, behalve als alleen dat lid rekt. Aanleiding: Oscar
+  vond de kikker van boven gezien niet te lezen; bij een controle tegen
+  beschrijvingen van de standaarduitvoering bleek dat ook voor de andere
+  figuren van boven en voor de draaiende oefeningen te gelden. Draaien van het
+  hoofd (nek: neus naar oksel) blijft lastig te tonen: het hoofd is een cirkel.
 - **Knie:** een test controleert in elke houding en in tussenstanden dat de
   tekening de knie nooit verder buigt dan `kneeFlexionMaxDeg` uit de
   bibliotheek (+0,5° in de houdingen, +4° in tussenstanden door afronding).
-  Voorverkorte benen kan de test niet meten en slaat hij over; waar het niet
-  rekkende been bewust verder buigt (bijv. het onderste been bij zijlig aan de
-  bedrand),
-  noemt de figuur expliciet welk been telt (`kneeCheck`).
+  Bij 3D-figuren meet de test de echte hoek in de ruimte. Een voorverkort been
+  in 2D (alleen nog bij figuur-4 tegen de muur) kan de test niet meten en slaat
+  hij over; waar het niet rekkende been bewust verder buigt (bijv. het
+  onderste been bij zijlig aan de bedrand), noemt de figuur expliciet welk
+  been telt (`kneeCheck`). Waar de bibliotheek de knie op 90° begrenst (kikker,
+  duif, 90/90), volgt de houding die grens: bij de kikker schuiven de billen
+  dus terug tot boven de knieën, niet verder.
 - **Kaart:** een paneel met de demo direct onder de kop. De demo loopt alleen
   als hij in beeld is, en heeft een knop "Animatie pauzeren" / "Animatie
   afspelen" (bewegend beeld langer dan 5 s moet te pauzeren zijn). Die twee

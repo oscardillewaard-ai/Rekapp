@@ -3,6 +3,7 @@
 // punten van het figuur; tekenen doet ui/figure.js. Het skelet staat in
 // figures/rig.js, de houdingen per positie in figures/<positie>.js.
 import { joints, at } from './figures/rig.js';
+import { joints3d, projectAll, projectProp, behind } from './figures/rig3d.js';
 import { STAAND } from './figures/staand.js';
 import { STOEL } from './figures/stoel.js';
 import { VLOER } from './figures/vloer.js';
@@ -10,14 +11,24 @@ import { LIGGEND } from './figures/liggend.js';
 
 export { BONES, dir, dist, twoBone, kneeFlexion, at } from './figures/rig.js';
 
-// Figuur = { view?: 'side' | 'front', viewBox: [x, y, w, h], props, active,
-// bands?, effort?, poses, timelines }.
+// Figuur = { view?: 'side' | 'front' | '3d', camera? (bij 3d: { yaw, pitch }),
+// viewBox: [x, y, w, h], props, active, bands?, effort?, poses, timelines }.
 export const FIGURES = { ...STAAND, ...STOEL, ...VLOER, ...LIGGEND };
 
 export const hasFigure = (id) => Object.hasOwn(FIGURES, id);
 
-// Punten van een houding van dit figuur (zij- of vooraanzicht).
-export const pointsOf = (fig, pose) => joints(pose, fig.view);
+// Punten van een houding van dit figuur in beeld (zij- of vooraanzicht, of in
+// 3D geprojecteerd), en bij 3D ook de punten in de ruimte.
+export const pointsOf = (fig, pose) => (fig.view === '3d' ? projectAll(joints3d(pose), fig.camera) : joints(pose, fig.view));
+export const points3dOf = (fig, pose) => joints3d(pose);
+
+// 3D: welke ledematen achter de romp liggen ('n.leg', 'f.arm', …); anders null.
+const LIMB_OF = { thigh: 'leg', shin: 'leg', foot: 'leg', arm: 'arm', fore: 'arm', palm: 'arm' };
+const activeLimbs = (fig) => Object.fromEntries(fig.active.filter((b) => LIMB_OF[b.slice(2)]).map((b) => [`${b[0]}.${LIMB_OF[b.slice(2)]}`, true]));
+export const behindOf = (fig, pose) => (fig.view === '3d' ? behind(joints3d(pose), fig.camera, activeLimbs(fig)) : null);
+
+// Rekwisieten in beeld.
+export const propsOf = (fig) => (fig.view === '3d' ? fig.props.map((p) => projectProp(p, fig.camera)) : fig.props);
 
 // ---------- Tijd → houding ----------
 
@@ -71,7 +82,7 @@ const fixedCache = new WeakMap();
 function fixed(fig, name) {
   const pose = fig.poses[name];
   if (fixedCache.has(pose)) return fixedCache.get(pose);
-  const pts = pointsOf(fig, pose);
+  const pts = fig.view === '3d' ? joints3d(pose) : pointsOf(fig, pose);
   const chest = pose.chest ?? pose.torso;
   const arms = {};
   const legs = {};

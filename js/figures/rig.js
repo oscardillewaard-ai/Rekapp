@@ -16,7 +16,7 @@ export const BONES = {
 const rad = (d) => (d * Math.PI) / 180;
 export const dir = (a) => [Math.sin(rad(a)), Math.cos(rad(a))];
 export const add = (p, v, k = 1) => [p[0] + v[0] * k, p[1] + v[1] * k];
-export const dist = (p, q) => Math.hypot(q[0] - p[0], q[1] - p[1]);
+export const dist = (p, q) => Math.hypot(...q.map((x, i) => x - p[i])); // ook in 3D
 export const angleOf = (from, to) => (Math.atan2(to[0] - from[0], to[1] - from[1]) * 180) / Math.PI;
 
 // Twee botten (dij en scheen, of boven- en onderarm) van root naar target.
@@ -144,12 +144,12 @@ function solve(pose, P, view) {
 // Een punt uit joints(): 'pelvis', 'neck', 'n.knee', 'f.hand', …
 export const at = (pts, key) => (key[1] === '.' ? pts[key[0]][key.slice(2)] : pts[key]);
 
-// Kniebuiging in graden (0 = gestrekt).
+// Kniebuiging in graden (0 = gestrekt), in 2D of 3D.
 export function kneeFlexion(pts, side) {
   const { hip, knee, ankle } = pts[side];
-  const t = [knee[0] - hip[0], knee[1] - hip[1]];
-  const s = [ankle[0] - knee[0], ankle[1] - knee[1]];
-  const cos = (t[0] * s[0] + t[1] * s[1]) / (Math.hypot(...t) * Math.hypot(...s));
+  const t = knee.map((x, i) => x - hip[i]);
+  const s = ankle.map((x, i) => x - knee[i]);
+  const cos = t.reduce((sum, x, i) => sum + x * s[i], 0) / (Math.hypot(...t) * Math.hypot(...s));
   return (Math.acos(Math.min(1, Math.max(-1, cos))) * 180) / Math.PI;
 }
 
