@@ -3,32 +3,104 @@
 // punten van het figuur; tekenen doet ui/figure.js. Het skelet staat in
 // figures/rig.js, de houdingen per positie in figures/<positie>.js.
 import { joints, at } from './figures/rig.js';
-import { joints3d, projectAll, projectProp, behind } from './figures/rig3d.js';
+import { joints3d, projectAll, projectProp, behind, project } from './figures/rig3d.js';
+import { handDepths, liftSide, liftFront, liftProps } from './figures/lift.js';
 import { STAAND } from './figures/staand.js';
 import { STOEL } from './figures/stoel.js';
 import { VLOER } from './figures/vloer.js';
 import { LIGGEND } from './figures/liggend.js';
 
+import { BONES } from './figures/rig.js';
+
 export { BONES, dir, dist, twoBone, kneeFlexion, at } from './figures/rig.js';
 
 // Figuur = { view?: 'side' | 'front' | '3d', camera? (bij 3d: { yaw, pitch }),
 // viewBox: [x, y, w, h], props, active, bands?, effort?, poses, timelines }.
+// Een opgetild figuur (3D-modus, as3d) heeft view '3d' en lift: 'side' of
+// 'front': de houdingen blijven 2D, de punten gaan via lift.js de ruimte in.
 export const FIGURES = { ...STAAND, ...STOEL, ...VLOER, ...LIGGEND };
 
 export const hasFigure = (id) => Object.hasOwn(FIGURES, id);
 
 // Punten van een houding van dit figuur in beeld (zij- of vooraanzicht, of in
 // 3D geprojecteerd), en bij 3D ook de punten in de ruimte.
-export const pointsOf = (fig, pose) => (fig.view === '3d' ? projectAll(joints3d(pose), fig.camera) : joints(pose, fig.view));
-export const points3dOf = (fig, pose) => joints3d(pose);
+export function points3dOf(fig, pose) {
+  if (!fig.lift) return joints3d(pose);
+  const pts = joints(pose, fig.lift);
+  return fig.lift === 'front' ? liftFront(pts) : liftSide(pts, fig.hands);
+}
+export const pointsOf = (fig, pose) => (fig.view === '3d' ? projectAll(points3dOf(fig, pose), fig.camera) : joints(pose, fig.view));
 
 // 3D: welke ledematen achter de romp liggen ('n.leg', 'f.arm', …); anders null.
 const LIMB_OF = { thigh: 'leg', shin: 'leg', foot: 'leg', arm: 'arm', fore: 'arm', palm: 'arm' };
 const activeLimbs = (fig) => Object.fromEntries(fig.active.filter((b) => LIMB_OF[b.slice(2)]).map((b) => [`${b[0]}.${LIMB_OF[b.slice(2)]}`, true]));
-export const behindOf = (fig, pose) => (fig.view === '3d' ? behind(joints3d(pose), fig.camera, activeLimbs(fig)) : null);
+export const behindOf = (fig, pose) => (fig.view === '3d' ? behind(points3dOf(fig, pose), fig.camera, activeLimbs(fig)) : null);
 
-// Rekwisieten in beeld.
-export const propsOf = (fig) => (fig.view === '3d' ? fig.props.map((p) => projectProp(p, fig.camera)) : fig.props);
+// Rekwisieten in beeld (in 3D zonder de vlakken die van de camera af kijken).
+export const propsOf = (fig) => (fig.view === '3d' ? fig.props.map((p) => projectProp(p, fig.camera)).filter(Boolean) : fig.props);
+
+// ---------- 3D-modus ----------
+
+// Het figuur in 3D: een 3D-figuur zelf, een 2D-figuur opgetild (lift.js) met
+// een standaardcamera schuin van voren (laag of liggend: meer van boven).
+const lifted = new WeakMap();
+export function as3d(fig) {
+  if (fig.view === '3d') return fig;
+  if (lifted.has(fig)) return lifted.get(fig);
+  const lift = fig.view === 'front' ? 'front' : 'side';
+  const out = { ...fig, view: '3d', lift, hands: handDepths(fig), props: liftProps(fig) };
+  const start = points3dOf(out, Object.values(fig.poses)[0]);
+  out.camera = fig.camera3d ?? (lift === 'front' ? { yaw: 115, pitch: 10 } : { yaw: 30, pitch: start.pelvis[1] < 15 ? 30 : 12 });
+  out.viewBox = fitViewBox(out, [out.camera]);
+  lifted.set(fig, out);
+  return out;
+}
+
+// Kleinste beeldkader rond alle frames van alle tijdlijnen, voor deze camera's
+// (bij ronddraaien: rondom). Met een marge, het hoofd als cirkel. De punten
+// in de ruimte worden één keer per figuur bemonsterd (hooguit ~40 frames per
+// tijdlijn); per camera hoeft alleen nog geprojecteerd te worden.
+const samples = new WeakMap();
+function sampled(fig) {
+  if (!samples.has(fig)) {
+    const out = [];
+    for (const [phase, tl] of Object.entries(fig.timelines)) {
+      const end = tl.loop ?? tl.keys[tl.keys.length - 1][0] + 500;
+      const step = Math.max(100, Math.ceil(end / 40));
+      const times = new Set([...tl.keys.map(([t]) => t), ...Array.from({ length: Math.floor(end / step) + 1 }, (_, i) => i * step)]);
+      for (const t of times) {
+        const p = points3dOf(fig, poseAt(fig, phase, t));
+        out.push({ head: p.head, rest: [p.pelvis, p.mid, p.neck, ...['n', 'f'].flatMap((s) => Object.values(p[s]))] });
+      }
+    }
+    samples.set(fig, out);
+  }
+  return samples.get(fig);
+}
+
+export function fitViewBox(fig, cameras, margin = 4) {
+  let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
+  const grow = ([x, y], r = 0) => { x0 = Math.min(x0, x - r); y0 = Math.min(y0, y - r); x1 = Math.max(x1, x + r); y1 = Math.max(y1, y + r); };
+  const frames = sampled(fig);
+  for (const camera of cameras) {
+    for (const { head, rest } of frames) {
+      for (const q of rest) grow(project(q, camera));
+      grow(project(head, camera), BONES.head);
+    }
+  }
+  return [x0 - margin, y0 - margin, x1 - x0 + 2 * margin, y1 - y0 + 2 * margin].map((v) => Math.round(v * 10) / 10);
+}
+
+// Beeldkader voor een figuur dat je rond kunt draaien (de kaart): ruim genoeg
+// voor elke draaiing, zodat het figuur tijdens het draaien niet verspringt.
+const turning = new WeakMap();
+export function turnViewBox(fig3) {
+  if (!turning.has(fig3)) {
+    const cams = Array.from({ length: 8 }, (_, i) => ({ ...fig3.camera, yaw: fig3.camera.yaw + i * 45 }));
+    turning.set(fig3, fitViewBox(fig3, cams));
+  }
+  return turning.get(fig3);
+}
 
 // ---------- Tijd → houding ----------
 
@@ -82,7 +154,9 @@ const fixedCache = new WeakMap();
 function fixed(fig, name) {
   const pose = fig.poses[name];
   if (fixedCache.has(pose)) return fixedCache.get(pose);
-  const pts = fig.view === '3d' ? joints3d(pose) : pointsOf(fig, pose);
+  // Doelen worden opgelost waar de houding zelf in staat: 2D (ook bij een
+  // opgetild figuur) of 3D.
+  const pts = fig.view === '3d' && !fig.lift ? joints3d(pose) : joints(pose, fig.lift ?? fig.view);
   const chest = pose.chest ?? pose.torso;
   const arms = {};
   const legs = {};

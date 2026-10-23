@@ -107,15 +107,20 @@ export function project(p, { yaw = 0, pitch = 0 } = {}) {
   return [80 + x1, 86 - (p[1] * Math.cos(p0) - z1 * Math.sin(p0))];
 }
 
+// Richting van de wereld naar de camera (eenheidsvector).
+export function toCamera({ yaw = 0, pitch = 0 } = {}) {
+  const [y0, p0] = [(yaw * Math.PI) / 180, (pitch * Math.PI) / 180];
+  return [Math.sin(y0) * Math.cos(p0), Math.sin(p0), Math.cos(y0) * Math.cos(p0)];
+}
+
 // Welk been en welke arm liggen (gezien vanaf de camera) duidelijk verder weg
 // dan hun tegenhanger? Die worden gedimd en eerst getekend, zoals de verre
 // kant in het zijaanzicht. Liggen ze ongeveer even ver (benen in een V tegen
 // de muur), dan geen van beide. Een lid dat rekt (active: { 'n.leg': true, … })
 // blijft vol zichtbaar, tenzij zijn tegenhanger ook rekt.
-export function behind(pts, { yaw = 0, pitch = 0 } = {}, active = {}, margin = 4) {
-  const [y0, p0] = [(yaw * Math.PI) / 180, (pitch * Math.PI) / 180];
-  const toCamera = [Math.sin(y0) * Math.cos(p0), Math.sin(p0), Math.cos(y0) * Math.cos(p0)];
-  const depth = (a, b) => dot(half(a, b), toCamera);
+export function behind(pts, camera = {}, active = {}, margin = 4) {
+  const eye = toCamera(camera);
+  const depth = (a, b) => dot(half(a, b), eye);
   const out = {};
   for (const [part, a, b] of [['leg', 'knee', 'ankle'], ['arm', 'elbow', 'hand']]) {
     const dn = depth(pts.n[a], pts.n[b]);
@@ -137,8 +142,10 @@ export function projectAll(pts, camera) {
 }
 
 // Rekwisieten in 3D: een vlak (mat, bed, muur) als veelhoek, of een lijn.
-// { poly: [[x, y, z], …], solid? } en { seg: [[x, y, z], [x, y, z]] }.
+// { poly: [[x, y, z], …], solid?, normal? } en { seg: [[x, y, z], [x, y, z]] }.
+// Een vlak met een normaal dat van de camera af kijkt, valt weg (null).
 export function projectProp(prop, camera) {
+  if (prop.normal && dot(prop.normal, toCamera(camera)) <= 1e-6) return null;
   if (prop.poly) return { ...prop, poly: prop.poly.map((p) => project(p, camera)) };
   if (prop.seg) {
     const [a, b] = prop.seg.map((p) => project(p, camera));

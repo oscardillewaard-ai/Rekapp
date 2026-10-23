@@ -221,3 +221,47 @@ test('PNF: aanspannen toont inspanning, loslaten trekt het been verder; vanaf ro
   assert.deepEqual(poseAt(fig, 'contract', 0, { round: 3 }), poseAt(fig, 'relax', 25000, { round: 2 }));
   assert.equal(ex('hamstring_pnf').kneeFlexionMaxDeg, 0);
 });
+
+// ---------- 3D-modus ----------
+
+test('3D-modus: elk figuur past in zijn beeldkader, ook rondgedraaid', async () => {
+  const { as3d, turnViewBox } = await import('../js/figures.js');
+  const inside = ([x, y, w, h], [px, py], r = 0) => px - r >= x - 1 && px + r <= x + w + 1 && py - r >= y - 1 && py + r <= y + h + 1;
+  for (const [id, fig] of ALL) {
+    const g = as3d(fig);
+    assert.equal(g.view, '3d', id);
+    const turn = turnViewBox(g);
+    for (const [phase, tl] of Object.entries(fig.timelines)) {
+      const end = tl.loop ?? tl.keys[tl.keys.length - 1][0] + 500;
+      for (let t = 0; t <= end; t += Math.max(25, Math.ceil(end / 200))) {
+        const pose = poseAt(g, phase, t);
+        const p = pointsOf(g, pose);
+        for (const q of [p.pelvis, p.mid, p.neck, ...['n', 'f'].flatMap((s) => Object.values(p[s]))]) assert.ok(inside(g.viewBox, q), `${id} ${phase} ${t}: buiten beeld`);
+        assert.ok(inside(g.viewBox, p.head, BONES.head), `${id} ${phase} ${t}: hoofd buiten beeld`);
+        for (const yaw of [g.camera.yaw + 90, g.camera.yaw + 180, g.camera.yaw + 270]) {
+          const r = pointsOf({ ...g, camera: { ...g.camera, yaw } }, pose);
+          assert.ok(inside(turn, r.head, BONES.head) && inside(turn, r.pelvis), `${id} ${phase} ${t} yaw ${yaw}: buiten het draaikader`);
+        }
+      }
+    }
+  }
+});
+
+test('3D-modus: een opgetild zijaanzicht is van opzij gezien precies de 2D-tekening; benen houden hun lengte', async () => {
+  const { as3d } = await import('../js/figures.js');
+  for (const [id, fig] of ALL) {
+    if (fig.view === '3d' || fig.view === 'front') continue;
+    const g = as3d(fig);
+    for (const pose of Object.values(fig.poses)) {
+      const flat = pointsOf(fig, pose);
+      const side = pointsOf({ ...g, camera: { yaw: 0, pitch: 0 } }, pose);
+      for (const k of ['pelvis', 'neck', 'head']) assert.ok(dist(flat[k], side[k]) < 1e-9, `${id}: ${k}`);
+      for (const s of ['n', 'f']) for (const j of Object.keys(flat[s])) assert.ok(dist(flat[s][j], side[s][j]) < 1e-9, `${id}: ${s}.${j}`);
+      const q = points3dOf(g, pose);
+      for (const s of ['n', 'f']) {
+        assert.ok(Math.abs(dist(q[s].hip, q[s].knee) - dist(flat[s].hip, flat[s].knee)) < 1e-9, `${id}: dij ${s}`);
+        assert.ok(Math.abs(dist(q[s].knee, q[s].ankle) - dist(flat[s].knee, flat[s].ankle)) < 1e-9, `${id}: scheen ${s}`);
+      }
+    }
+  }
+});

@@ -11,6 +11,7 @@ test('standaardinstellingen uit §6.11', () => {
   assert.equal(s.sideSwitchSec, 5);
   assert.equal(s.defaultStaticHoldSec, 45);
   assert.equal(s.largeFigure, false); // groot stokfiguur: standaard uit
+  assert.equal(s.figure3d, false); // 3D-figuren: standaard uit
   assert.equal('showLocked' in s, false); // knieslot verwijderd
   assert.deepEqual(s.weights, { B: 25, K: 25, D: 20, R: 15, P: 15 });
   assert.equal(Object.values(s.weights).reduce((a, b) => a + b, 0), 100);

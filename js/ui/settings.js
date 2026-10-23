@@ -206,6 +206,7 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data, p
       h('section', { class: 'section' },
         h('h2', null, 'Weergave'),
         toggle('Nachtmodus', 'nightMode', 'Alleen rood en amber.'),
+        toggle('3D-figuren', 'figure3d', 'Alle stokfiguren schuin in 3D. Op de oefeningkaart draai je een figuur rond door er met je vinger opzij over te vegen.'),
         defaultHold()),
       weights(),
       kneeSection(),

@@ -6,7 +6,7 @@
 // De lijst en de versie worden bijgewerkt met: node tools/update-sw.mjs
 // (tests/sw.test.js controleert dat ze kloppen).
 
-const VERSION = 'v-ab6ed155ec';
+const VERSION = 'v-a59c08e628';
 const FILES = [
   './',
   './index.html',
@@ -19,6 +19,7 @@ const FILES = [
   './js/cues.js',
   './js/dose.js',
   './js/engine.js',
+  './js/figures/lift.js',
   './js/figures/liggend.js',
   './js/figures/rig.js',
   './js/figures/rig3d.js',

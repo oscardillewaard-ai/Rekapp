@@ -247,7 +247,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
       label.textContent = d.label;
       // Stokfiguur (fase 2, proef) in plaats van het positie-icoon; hij
       // beweegt mee met de timer en staat dus ook stil bij pauze.
-      figure = ex && hasFigure(ex.id) ? createFigure(ex.id, 'fig-lg') : null;
+      figure = ex && hasFigure(ex.id) ? createFigure(ex.id, 'fig-lg', { mode3d: getSettings().figure3d }) : null;
       fill(visual,
         ex ? bodyMap(ex.targets, { crop: 'mini', aspect: 72 / 104, className: 'mini-lg' }) : null,
         figure ? figure.el : ex ? positionIcon(ex.position, 'pos-lg') : null);

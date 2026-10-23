@@ -133,6 +133,20 @@ lichaamskaart blijft, het positie-icoon vervalt waar een figuur staat.
   keuze Oscar): het figuur in de speler wordt groter en de timerring kleiner;
   de cijfers blijven even groot. Eigen tekst; de spec kent deze instelling
   niet.
+- **Instelling "3D-figuren"** (Instellingen → Weergave, standaard uit, keuze
+  Oscar): alle stokfiguren schuin in 3D. Figuren uit zijaanzicht worden
+  automatisch opgetild (`js/figures/lift.js`): de nabije kant komt naar
+  voren, de verre naar achteren, en een hand die een punt aan de andere kant
+  vastpakt gaat mee naar die diepte. Vloer, muren, bedden en treden worden
+  vlakken en blokken. Figuren uit vooraanzicht kennen geen diepte en blijven
+  in 3D plat; van opzij gezien is dat te zien. Het beeldkader rekent de app
+  per figuur uit.
+- **Ronddraaien** (oefeningkaart, alleen bij een 3D-figuur): opzij vegen over
+  het figuur draait de camera rond; omhoog en omlaag vegen blijft scrollen. Een
+  klein draai-icoon rechtsonder wijst erop. Het beeldkader is dan ruim genoeg
+  voor elke draaiing, zodat het figuur niet verspringt. In de speler draait
+  niets. De teksten bij de instelling zijn eigen teksten; de spec geeft ze
+  niet.
 - **Minder beweging** (instelling van het toestel): geen animatie, alleen de
   eindhouding, en geen pauzeknop.
 - **Kleuren:** themakleuren, dus ook in de nachtmodus alleen rood en amber; de

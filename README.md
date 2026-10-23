@@ -120,6 +120,9 @@ Handig om ook even te proberen:
 - [ ] Stokfiguren: op een paar kaarten loopt de demo vloeiend en stopt hij met
       de pauzeknop; in de speler volgt het figuur de fasen, ook met "Groot
       stokfiguur" aan en in de nachtmodus.
+- [ ] Met "3D-figuren" aan: op een oefeningkaart draait het figuur rond als
+      je er opzij over veegt, en omhoog of omlaag vegen scrolt de pagina nog
+      gewoon.
 
 ## Ontwikkelen
 

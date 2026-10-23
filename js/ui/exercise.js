@@ -84,7 +84,7 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) 
         h('span', { class: 'chip' }, positionIcon(ex.position), cap(ex.position)),
         h('span', { class: 'chip' }, cap(SIDED_LABELS[ex.sided])),
         ...(ex.equipment.length ? ex.equipment.map((e) => h('span', { class: 'chip' }, cap(e))) : [h('span', { class: 'chip' }, 'Geen materiaal')]))));
-    if (figure) root.append(figureDemo(ex.id));
+    if (figure) root.append(figureDemo(ex.id, { mode3d: getContext().settings.figure3d }));
 
     // 2. Vijf deelscores; tik toont de rubriek uit §3.1.
     root.append(section('Deelscores',

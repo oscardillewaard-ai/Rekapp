@@ -1,9 +1,9 @@
 // Stokfiguur tekenen (§6.2, fase 2). De houding komt uit figures.js; hier
 // alleen de SVG en de animatie. Tijd altijd uit tijdstempels
 // (performance.now), per animatieframe.
-import { s, h } from './dom.js';
+import { s, h, fill } from './dom.js';
 import { icon } from './graphics.js';
-import { FIGURES, hasFigure, pointsOf, propsOf, behindOf, poseAt, dir, at, BONES } from '../figures.js';
+import { FIGURES, hasFigure, pointsOf, propsOf, behindOf, poseAt, as3d, turnViewBox, dir, at, BONES } from '../figures.js';
 
 export { hasFigure };
 
@@ -39,14 +39,23 @@ function prop(p, [x, , w]) {
   return null;
 }
 
-// Eén SVG met een update(fase, ms, { round }) die de punten verzet.
-export function createFigure(id, className = '') {
-  const fig = FIGURES[id];
-  const [x, y, w, hgt] = fig.viewBox;
+// Eén SVG met een update(fase, ms, { round }) die de punten verzet. mode3d:
+// het figuur in 3D (een 2D-figuur wordt opgetild, zie lift.js); turnable: een
+// beeldkader dat ruim genoeg is om rond te draaien, met setYaw(graden).
+export function createFigure(id, className = '', { mode3d = false, turnable = false } = {}) {
+  const base = FIGURES[id];
+  const fig3 = mode3d || base.view === '3d' ? as3d(base) : null;
+  // Een eigen camera per tekening: draaien op de kaart verandert de speler niet.
+  const fig = fig3 ? { ...fig3, camera: { ...fig3.camera } } : base;
+  const viewBox = fig3 && turnable ? turnViewBox(fig3) : fig.viewBox;
+  const [x, y, w, hgt] = viewBox;
   const front = fig.view === 'front';
   const wide = front || fig.view === '3d'; // bekken en schouders hebben breedte
   const svg = s('svg', { viewBox: `${x} ${y} ${w} ${hgt}`, class: `figure ${className}`.trim(), 'aria-hidden': 'true', focusable: 'false' });
-  svg.append(...propsOf(fig).map((p) => prop(p, fig.viewBox)).filter(Boolean));
+  const propsLayer = s('g');
+  const drawProps = () => fill(propsLayer, ...propsOf(fig).map((p) => prop(p, viewBox)).filter(Boolean));
+  svg.append(propsLayer);
+  drawProps();
   const line = ([name, a, b]) => ({ el: s('line', { class: fig.active.includes(name) ? 'bone active' : 'bone' }), a, b });
   const far = LIMBS('f').map(line);
   const near = LIMBS('n').map(line);
@@ -57,20 +66,24 @@ export function createFigure(id, className = '') {
   // Volgorde: verre kant (in zijaanzicht als geheel gedimd, zodat overlappende
   // uiteinden niet lichter worden), romp en hoofd, banden, nabije kant,
   // inspanning. In 3D bepaalt de rekstand welk been of welke arm duidelijk
-  // verder weg ligt; die gaat (de hele beweging door) in de gedimde laag.
+  // verder weg ligt; die gaat (de hele beweging door) in de gedimde laag, tot
+  // je het figuur ronddraait.
   const behindLayer = s('g', { class: 'far' });
   const frontLayer = s('g');
-  const limbs = fig.view === '3d'
+  const limbs = fig3
     ? Object.fromEntries(['n', 'f'].flatMap((k) => {
       const ls = k === 'n' ? near : far;
       return [[`${k}.leg`, s('g', null, ...ls.slice(0, 3).map((l) => l.el))], [`${k}.arm`, s('g', null, ...ls.slice(3).map((l) => l.el))]];
     }))
     : null;
-  if (limbs) {
-    const back = behindOf(fig, poseAt(fig, 'demo', 0, { reduced: true }));
+  const still = poseAt(fig, 'demo', 0, { reduced: true });
+  function layer() {
+    if (!limbs) return;
+    const back = behindOf(fig, still);
     for (const [k, g] of Object.entries(limbs)) (back[k] ? behindLayer : frontLayer).append(g);
-    svg.append(behindLayer);
   }
+  layer();
+  if (limbs) svg.append(behindLayer);
   else svg.append(front ? s('g', null, ...far.map((l) => l.el)) : s('g', { class: 'far' }, ...far.map((l) => l.el)));
   svg.append(...spine.map((l) => l.el), head, ...bands.map((b) => b.el));
   svg.append(...(limbs ? [frontLayer] : near.map((l) => l.el)), ...effort);
@@ -82,7 +95,9 @@ export function createFigure(id, className = '') {
     l.el.setAttribute('x2', f2(q[0])); l.el.setAttribute('y2', f2(q[1]));
   }
 
+  let last = null; // laatst getekende houding, om na een draai opnieuw te tekenen
   function draw(pose, ms) {
+    last = [pose, ms];
     const pts = pointsOf(fig, pose);
     for (const l of [...far, ...spine, ...near]) place(l, at(pts, l.a), at(pts, l.b));
     head.setAttribute('cx', f2(pts.head[0]));
@@ -92,7 +107,8 @@ export function createFigure(id, className = '') {
     if (!effort.length) return;
     const k = fig.effort;
     const { point: p, along } = sole(pts, k);
-    const across = dir(pose.legs[k].foot ?? 90);
+    // In 3D dwars op het scheenbeen in beeld; in 2D langs de voet.
+    const across = fig3 ? [-along[1], along[0]] : dir(pose.legs[k].foot ?? 90);
     const e = pose.effort ?? 0;
     const pulse = reducedMotion.matches ? 1 : 0.65 + 0.35 * Math.sin((ms / 700) * 2 * Math.PI);
     effort.forEach((el, i) => {
@@ -108,15 +124,44 @@ export function createFigure(id, className = '') {
     draw(poseAt(fig, phase, ms, { round, reduced: reducedMotion.matches }), ms);
   }
   update('demo', 0);
-  return { el: svg, update };
+  if (!fig3) return { el: svg, update };
+  function setYaw(yaw) {
+    fig.camera.yaw = ((yaw % 360) + 360) % 360;
+    drawProps();
+    layer();
+    if (last) draw(...last);
+  }
+  return { el: svg, update, setYaw, yaw: () => fig.camera.yaw };
+}
+
+// Ronddraaien met je vinger (3D): horizontaal slepen draait de camera om het
+// figuur; verticaal slepen blijft gewoon scrollen (touch-action: pan-y).
+function turnable(panel, figure) {
+  panel.classList.add('turnable');
+  let drag = null;
+  panel.addEventListener('pointerdown', (e) => {
+    if (e.button > 0 || e.target.closest('button')) return;
+    drag = { id: e.pointerId, x: e.clientX, yaw: figure.yaw() };
+    panel.setPointerCapture?.(e.pointerId);
+  });
+  panel.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    // Naar rechts slepen schuift de voorkant mee naar rechts.
+    figure.setYaw(drag.yaw - (e.clientX - drag.x) * 0.75);
+  });
+  const end = (e) => { if (drag?.id === e.pointerId) drag = null; };
+  panel.addEventListener('pointerup', end);
+  panel.addEventListener('pointercancel', end);
+  panel.append(h('span', { class: 'turn-hint', 'aria-hidden': 'true' }, icon('turn')));
 }
 
 // Kaart (§6.2): de demo herhaalt zich zolang hij in beeld is, met een knop om
 // hem stil te zetten (bewegend beeld langer dan 5 s moet te pauzeren zijn).
 // Met "minder beweging" staat de eindhouding stil en is er geen knop.
-export function figureDemo(id) {
-  const figure = createFigure(id);
+export function figureDemo(id, { mode3d = false } = {}) {
+  const figure = createFigure(id, '', { mode3d, turnable: true });
   const panel = h('div', { class: 'figure-panel' }, figure.el);
+  if (figure.setYaw) turnable(panel, figure);
   if (reducedMotion.matches) {
     figure.update('demo', 0);
     return panel;
