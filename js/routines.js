@@ -58,11 +58,30 @@ export function clampSec(v) {
   return Math.min(DOSE_MAX, Math.max(DOSE_MIN, Number.isFinite(n) ? n : DOSE_MIN));
 }
 
+// PNF: rondes × (aanspannen + rekken) hoogstens 180 s per kant, net als de
+// 180 s van de andere oefeningen (§6.3; keuze Oscar, zie AFWIJKINGEN.md).
+export const PNF_MAX_SEC = DOSE_MAX;
+export const pnfSec = (p) => p.rounds * (p.contractSec + p.stretchSec);
+const PNF_LIMITS = { rounds: [1, 1], contractSec: [3, 1], stretchSec: [10, 5] }; // [minimum, stap]
+
+// Te lang? Dan eerst het veld dat net veranderde terug, daarna de rondes, het
+// rekken en het aanspannen, tot de dosis past. Met 1 ronde past het altijd
+// (hoogstens 10 + 60 s).
+function fitPnf(p, first = null) {
+  const q = { ...p };
+  for (const k of [first, 'rounds', 'stretchSec', 'contractSec']) {
+    if (!k) continue;
+    const [min, step] = PNF_LIMITS[k];
+    while (pnfSec(q) > PNF_MAX_SEC && q[k] - step >= min) q[k] -= step;
+  }
+  return q;
+}
+
 // Dosis aanpassen met + en − (in stappen van 5 s). Bij PNF verandert de
 // rektijd; rondes en aanspantijd hebben een eigen knop.
 export function adjustDose(step, delta) {
   const s = clone(step);
-  if (s.pnf) s.pnf.stretchSec = Math.min(60, Math.max(10, s.pnf.stretchSec + delta));
+  if (s.pnf) s.pnf = fitPnf({ ...s.pnf, stretchSec: Math.min(60, Math.max(10, s.pnf.stretchSec + delta)) }, 'stretchSec');
   else if (s.perSideSec !== undefined) s.perSideSec = clampSec(s.perSideSec + delta);
   else s.durationSec = clampSec(s.durationSec + delta);
   return s;
@@ -74,8 +93,23 @@ export function setPnf(step, patch) {
   p.rounds = Math.min(5, Math.max(1, Math.round(p.rounds)));
   p.contractSec = Math.min(10, Math.max(3, Math.round(p.contractSec)));
   p.stretchSec = Math.min(60, Math.max(10, Math.round(p.stretchSec)));
-  s.pnf = p;
+  s.pnf = fitPnf(p, Object.keys(patch)[0] ?? null);
   return s;
+}
+
+// Een opgeslagen of geïmporteerde routine van vóór de grens van 180 s: de
+// PNF-stappen inkorten (rondes eerst), zodat de routine geldig blijft.
+// Geeft { routine, changed }.
+export function capPnf(r) {
+  if (!Array.isArray(r?.steps)) return { routine: r, changed: false };
+  let changed = false;
+  const steps = r.steps.map((st) => {
+    const p = st?.pnf;
+    if (!p || ![p.rounds, p.contractSec, p.stretchSec].every(Number.isInteger) || pnfSec(p) <= PNF_MAX_SEC) return st;
+    changed = true;
+    return { ...st, pnf: fitPnf(p) };
+  });
+  return changed ? { routine: { ...r, steps }, changed } : { routine: r, changed };
 }
 
 // Extra set zwakke kant (§6.3): L, R of uit; alleen bij unilaterale stappen.
@@ -138,6 +172,8 @@ export function validateUserRoutine(r, exercises) {
       const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
       if (!int(rounds, 1, 5) || !int(contractSec, 3, 10) || !int(stretchSec, 10, 60)) {
         err(`steps[${i}].pnf`, 'rondes 1–5, aanspannen 3–10 s, rekken 10–60 s, hele getallen');
+      } else if (pnfSec(s.pnf) > PNF_MAX_SEC) {
+        err(`steps[${i}].pnf`, `hoogstens ${PNF_MAX_SEC} s per kant (rondes × (aanspannen + rekken))`);
       }
     }
     // Tijdlijn en dosis lezen extraWeakSide allebei; iets anders dan L/R

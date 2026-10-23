@@ -1,15 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDump, sessionsCsv, kneeChecksCsv, weekDoseCsv, weekStart, parseDump as parse, checkUnlock, exportReminderDue, DUMP_SCHEMA_VERSION } from '../js/backup.js';
+import { buildDump, sessionsCsv, kneeChecksCsv, weekDoseCsv, weekStart, parseDump as parse, exportReminderDue, DUMP_SCHEMA_VERSION } from '../js/backup.js';
 import { DEFAULT_SETTINGS } from '../js/settings.js';
 import { copyTemplate } from '../js/routines.js';
-import { emptyKneeState, startTest, recordExposure, recordKneeCheck } from '../js/knee.js';
+import { emptyKneeState, recordKneeCheck, activateFlare } from '../js/knee.js';
 import { isoWithOffset } from '../js/session.js';
 import { lib, at, HOUR, DAY } from './helpers.js';
 
 const K = lib.meta.knee;
 const parseDump = (d, l, o) => parse(d, l, { defaults: DEFAULT_SETTINGS, ...o });
-const ALL = { pain7d: true, noLegTrainingToday: true, noHeavyNext48h: true };
 
 const session = (startMs, extra = {}) => ({
   id: `s${startMs}`, routineId: 'A5', routineName: 'Avond 5 min', slot: 'avond',
@@ -19,22 +18,19 @@ const session = (startMs, extra = {}) => ({
   stretchIntensity: 5, kneePainDuring: 1, notes: '', ...extra,
 });
 
-// Volledige, geldige ontgrendelgeschiedenis: proef + 1/1/1/1 → voorlopig.
-function voorlopig() {
-  let s = startTest(lib.exercises.get('couch_stretch'), emptyKneeState(), at(0), ALL);
-  s = recordExposure('couch_stretch', s, { at: at(0), painBefore: 1, painDuring: 1 }, K).state;
-  s = recordKneeCheck(s, { id: 'a', at: at(0) + 24 * HOUR, pain: 1, context: '24u', exerciseId: 'couch_stretch' }, K).state;
-  s = recordKneeCheck(s, { id: 'b', at: at(0) + 48 * HOUR, pain: 1, context: '48u', exerciseId: 'couch_stretch' }, K).state;
+// Twee dagelijkse kniechecks; de tweede (3/10) zet de opvlammingsmodus aan.
+function kneeState() {
+  let s = recordKneeCheck(emptyKneeState(), { id: 'a', at: at(0, 8), pain: 1, context: 'dagelijks' }, K).state;
+  s = recordKneeCheck(s, { id: 'b', at: at(1, 8), pain: 3, context: 'dagelijks' }, K).state;
   return s;
 }
 
 function dump(extra = {}) {
-  const knee = voorlopig();
+  const knee = kneeState();
   return buildDump({
     routines: [copyTemplate(lib.templates.get('A5'), { id: 'r1', now: at(0) })],
     sessions: [session(at(0))],
     kneeChecks: knee.checks,
-    unlocks: knee.unlocks,
     tests: [{ id: 't1', date: isoWithOffset(at(0)), testId: 'aslr', side: 'L', trials: [70, 72, 71], mean: 71, unit: 'graden' }],
     flare: knee.flare,
     settings: { voiceOn: true },
@@ -49,13 +45,16 @@ test('JSON-dump met schemaVersion; heen en terug zonder verlies', () => {
   assert.equal(r.ok, true, r.errors.join('\n'));
   assert.deepEqual(r.warnings, []);
   assert.deepEqual(r.data.routines, d.data.routines);
-  assert.deepEqual(r.data.unlocks, d.data.unlocks);
   assert.deepEqual(r.data.sessions, d.data.sessions);
   assert.deepEqual(r.data.kneeChecks, d.data.kneeChecks);
   assert.deepEqual(r.data.tests, d.data.tests);
+  assert.deepEqual(r.data.flare, { active: true, since: at(1, 8), exitProposedAt: null });
   assert.deepEqual(r.data.settings, { voiceOn: true, lastExportAt: at(5) });
-  assert.equal(r.data.unlocks.couch_stretch.state, 'voorlopig');
-  assert.deepEqual(r.counts, { routines: 1, sessions: 1, kneeChecks: 2, tests: 1, unlocks: 1 });
+  assert.deepEqual(r.counts, { routines: 1, sessions: 1, kneeChecks: 2, tests: 1 });
+  // "unlocks" staat leeg in de export (knieslot verwijderd; een oudere
+  // versie van de app kan het bestand zo nog lezen) en gaat niet mee terug.
+  assert.deepEqual(d.data.unlocks, {});
+  assert.equal('unlocks' in r.data, false);
 });
 
 test('sessies.csv: kolommen uit §6.9, puntkomma, UTF-8 met BOM, decimale komma, aanhalingstekens waar nodig', () => {
@@ -97,7 +96,7 @@ test('import: losse kapotte records worden overgeslagen met een melding, de rest
   d.data.kneeChecks.push({ id: 'k', at: 'gisteren', pain: 1, context: 'dagelijks' });
   const r = parseDump(d, lib, { now: at(5) });
   assert.equal(r.ok, true, r.errors.join());
-  assert.deepEqual(r.counts, { routines: 1, sessions: 1, kneeChecks: 2, tests: 1, unlocks: 1 });
+  assert.deepEqual(r.counts, { routines: 1, sessions: 1, kneeChecks: 2, tests: 1 });
   assert.ok(r.warnings.some((w) => /Routine 2 \(Oud\) overgeslagen/.test(w)));
   assert.ok(r.warnings.some((w) => /2 sessies overgeslagen/.test(w)));
   assert.ok(r.warnings.some((w) => /2 metingen overgeslagen/.test(w)));
@@ -127,94 +126,37 @@ test('import: "laatste export" is minstens het moment van de export zelf', () =>
   assert.equal(parseDump(d, lib, { now: at(6) }).data.settings.lastExportAt, at(5));
 });
 
-// De knieregels zijn hard: een import kan geen oefening vrijgeven zonder de
-// cycli die daarbij horen.
-test('import: "vrij" zonder drie schone cycli → terug naar vergrendeld', () => {
+// Een export uit de tijd van het knieslot: de ontgrendelingen gaan niet mee
+// (met een melding), de rest wel; oude kniechecks (24u/48u) blijven.
+test('import van een oudere export met ontgrendelingen en 24/48-uurschecks', () => {
   const d = dump();
-  d.data.unlocks.couch_stretch = { ...d.data.unlocks.couch_stretch, state: 'vrij', cleanCount: 3 };
+  d.data.unlocks = { couch_stretch: { state: 'vrij', cleanCount: 3, cooldownUntil: null, cycles: [] } };
+  d.data.kneeChecks.push({ id: 'c', at: at(2, 9), pain: 1, context: '24u', exerciseId: 'couch_stretch' }, { id: 'd', at: at(3, 9), pain: 0, context: 'test', exerciseId: 'couch_stretch' });
   const r = parseDump(d, lib, { now: at(5) });
-  assert.equal(r.ok, true);
-  assert.equal(r.data.unlocks.couch_stretch.state, 'vergrendeld');
-  assert.equal(r.data.unlocks.couch_stretch.cleanCount, 0);
-  assert.ok(r.warnings.some((w) => /Couch stretch/.test(w)));
+  assert.equal(r.ok, true, r.errors.join());
+  assert.equal('unlocks' in r.data, false);
+  assert.equal(r.data.kneeChecks.length, 4);
+  assert.ok(r.warnings.some((w) => /Ontgrendelingen uit het bestand gaan niet mee/.test(w)), r.warnings.join());
+  // Zonder "unlocks" (nieuwe export) is ook goed, zonder melding.
+  const n = dump();
+  delete n.data.unlocks;
+  const rn = parseDump(n, lib, { now: at(5) });
+  assert.equal(rn.ok, true);
+  assert.deepEqual(rn.warnings, []);
 });
 
-test('import: cycli als "schoon" gemarkeerd terwijl de waarden dat niet zijn → vergrendeld', () => {
+test('import: een PNF-stap van meer dan 180 s per kant wordt ingekort, niet overgeslagen', () => {
   const d = dump();
-  d.data.unlocks.couch_stretch.cycles[0].p48 = 3;
-  assert.equal(parseDump(d, lib, { now: at(5) }).data.unlocks.couch_stretch.state, 'vergrendeld');
-});
-
-test('import: tijdens een opvlamming mag niets ontgrendeld zijn; niet-vergrendelde oefeningen tellen niet', () => {
-  const d = dump();
-  d.data.flare = { active: true, since: at(4), exitProposedAt: null };
-  d.data.unlocks.gastroc_muur = { state: 'vrij', cleanCount: 3, cooldownUntil: null, cycles: [] };
-  d.data.flare.since = at(4);
+  d.data.routines[0].steps.push({ exerciseId: 'hamstring_pnf', pnf: { rounds: 5, contractSec: 10, stretchSec: 60 } });
   const r = parseDump(d, lib, { now: at(5) });
-  assert.equal(r.data.unlocks.couch_stretch.state, 'vergrendeld');
-  assert.equal(r.data.unlocks.gastroc_muur, undefined);
+  assert.equal(r.data.routines.length, 1);
+  assert.deepEqual(r.data.routines[0].steps.find((st) => st.pnf).pnf, { rounds: 2, contractSec: 10, stretchSec: 60 });
+  assert.ok(r.warnings.some((w) => /PNF ingekort/.test(w)), r.warnings.join());
 });
 
-test('checkUnlock: geldige geschiedenis klopt; blootstelling in de toekomst ongeldig', () => {
-  const rec = voorlopig().unlocks.couch_stretch;
-  assert.deepEqual(checkUnlock(rec, { kneeMeta: K, now: at(5) }), []);
-  assert.ok(checkUnlock(rec, { kneeMeta: K, now: at(-1) }).length > 0);
-});
-
-// M6-review: aanvallen op de import die het protocol zouden overslaan.
-const vr = (unlocks, extra = {}) => { const d = dump(); d.data.unlocks = unlocks; Object.assign(d.data, extra); return parseDump(d, lib, { now: at(20) }); };
-const state = (r, id) => r.data.unlocks[id]?.state;
-const T = (state, cleanCount = 0, cycles = [], extra = {}) => ({ state, cleanCount, cooldownUntil: null, cycles, ...extra });
-const clean = (t) => ({ exposureAt: t, painBefore: 1, painDuring: 1, p24: 1, p48: 1, result: 'schoon' });
-
-test('import: meer dan één oefening in test of voorlopig → allemaal terug naar vergrendeld', () => {
-  const r = vr({ kikker: T('test'), duif: T('test') });
-  assert.equal(state(r, 'kikker'), 'vergrendeld');
-  assert.equal(state(r, 'duif'), 'vergrendeld');
-  assert.equal(state(vr({ kikker: T('test') }), 'kikker'), 'test'); // één mag
-});
-
-test('import: geen proefperiode tijdens een afkoelperiode (ook niet van een andere oefening); afkoeling blijft', () => {
-  const r = vr({ kikker: T('test'), duif: T('vergrendeld', 0, [], { cooldownUntil: at(25) }) });
-  assert.equal(state(r, 'kikker'), 'vergrendeld');
-  assert.equal(r.data.unlocks.duif.cooldownUntil, at(25));
-  const own = vr({ kikker: T('test', 0, [], { cooldownUntil: at(25) }) });
-  assert.equal(state(own, 'kikker'), 'vergrendeld');
-  assert.equal(own.data.unlocks.kikker.cooldownUntil, at(25));
-});
-
-test('import: vergrendeld met een teller of een lopende cyclus → opgeschoond (lopende cyclus vervalt)', () => {
-  const r = vr({ kikker: T('vergrendeld', 2, [clean(at(1)), clean(at(4)), { exposureAt: at(19), painBefore: 1, painDuring: 1, p24: null, p48: null, result: null }]) });
-  assert.equal(state(r, 'kikker'), 'vergrendeld');
-  assert.equal(r.data.unlocks.kikker.cleanCount, 0);
-  assert.equal(r.data.unlocks.kikker.cycles.at(-1).result, 'vervallen');
-});
-
-test('import: schone cycli moeten tijd hebben gehad (48-uurscheck vóór nu en vóór de volgende blootstelling)', () => {
-  const now = at(20);
-  // Drie "schone" cycli van een minuut geleden.
-  const fast = [clean(now - 3 * 60000), clean(now - 2 * 60000), clean(now - 60000)];
-  assert.equal(state(vr({ kikker: T('vrij', 3, fast) }), 'kikker'), 'vergrendeld');
-  // Elke 24 uur een "schone" cyclus: de 48-uurscheck kon niet vóór de volgende.
-  const daily = [clean(at(10)), clean(at(11)), clean(at(12))];
-  assert.equal(state(vr({ kikker: T('vrij', 3, daily) }), 'kikker'), 'vergrendeld');
-  // Echt: om de twee dagen.
-  const ok = [clean(at(10)), clean(at(12)), clean(at(14))];
-  assert.equal(state(vr({ kikker: T('vrij', 3, ok) }), 'kikker'), 'vrij');
-});
-
-test('import: de teller telt vanaf de laatste reset (niet-schone cyclus of opvlamming)', () => {
-  const broken = { ...clean(at(12)), p48: 3, result: 'niet schoon' };
-  assert.equal(state(vr({ kikker: T('vrij', 3, [clean(at(8)), clean(at(10)), broken, clean(at(14))]) }), 'kikker'), 'vergrendeld');
-  assert.equal(state(vr({ kikker: T('voorlopig', 1, [clean(at(8)), clean(at(10)), broken, clean(at(14))]) }), 'kikker'), 'voorlopig');
-  // Na een opvlamming (resetAt) begint het opnieuw.
-  assert.equal(state(vr({ kikker: T('voorlopig', 2, [clean(at(8)), clean(at(10)), clean(at(14))], { resetAt: at(12) }) }), 'kikker'), 'vergrendeld');
-  assert.equal(state(vr({ kikker: T('voorlopig', 1, [clean(at(8)), clean(at(10)), clean(at(14))], { resetAt: at(12) }) }), 'kikker'), 'voorlopig');
-});
-
-test('import: een 24-uurscheck vóór zijn venster kan niet', () => {
-  const open = { exposureAt: at(20) - 2 * 3600000, painBefore: 1, painDuring: 1, p24: 1, p48: null, result: null };
-  assert.equal(state(vr({ kikker: T('test', 0, [open]) }), 'kikker'), 'vergrendeld');
+test('import: een opvlamming in het bestand blijft aan (de knieregels zijn hard)', () => {
+  const d = dump({ flare: activateFlare(emptyKneeState(), at(4)).state.flare });
+  assert.deepEqual(parseDump(d, lib, { now: at(5) }).data.flare, { active: true, since: at(4), exitProposedAt: null });
 });
 
 test('exportherinnering elke 14 dagen; "Later" wacht een dag', () => {
@@ -247,7 +189,7 @@ test('opslag: readAll en replaceAll heen en terug (geheugenopslag, zoals zonder 
   assert.deepEqual(back.sessions, d.sessions);
   assert.deepEqual(back.kneeChecks, d.kneeChecks);
   assert.deepEqual(back.tests, d.tests);
-  assert.deepEqual(back.unlocks, d.unlocks);
+  assert.equal('unlocks' in back, false);
   assert.deepEqual(back.flare, d.flare);
   assert.deepEqual(back.settings, d.settings);
   // Een import vervangt alles, ook het concept uit de bouwer.

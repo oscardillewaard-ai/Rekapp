@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   newRoutine, copyTemplate, duplicateRoutine, newStep, clampSec, adjustDose, setPnf, setExtraWeakSide, setTransition,
-  moveStep, removeStep, totalSec, validateUserRoutine,
+  moveStep, removeStep, totalSec, validateUserRoutine, capPnf, pnfSec, PNF_MAX_SEC,
 } from '../js/routines.js';
 import { routineWarnings } from '../js/warnings.js';
 import { emptyKneeState } from '../js/knee.js';
@@ -142,6 +142,40 @@ test('PNF-grenzen: rekken 10–60 s in stappen van 5, aanspannen 3–10 s, ronde
   assert.equal(setPnf(s, { contractSec: 1 }).pnf.contractSec, 3);
   assert.equal(setPnf(s, { rounds: 9 }).pnf.rounds, 5);
   assert.equal(setPnf(s, { rounds: 0 }).pnf.rounds, 1);
+});
+
+// Keuze Oscar (AFWIJKINGEN.md): PNF hoogstens 180 s per kant.
+test('PNF: rondes × (aanspannen + rekken) hoogstens 180 s per kant', () => {
+  assert.equal(PNF_MAX_SEC, 180);
+  const s = { exerciseId: 'hamstring_pnf', pnf: { rounds: 3, contractSec: 5, stretchSec: 55 } }; // 180 s
+  assert.equal(pnfSec(s.pnf), 180);
+  // Op de grens: + doet niets meer, − wel.
+  assert.deepEqual(adjustDose(s, 5).pnf, s.pnf);
+  assert.deepEqual(setPnf(s, { rounds: 4 }).pnf, s.pnf);
+  assert.deepEqual(setPnf(s, { contractSec: 6 }).pnf, s.pnf);
+  assert.equal(adjustDose(s, -5).pnf.stretchSec, 50);
+  // Wat er nog past, komt erbij: 2 × (5 + 60) = 130; 3 × (5 + 60) = 195 → 2 rondes.
+  const two = { exerciseId: 'hamstring_pnf', pnf: { rounds: 2, contractSec: 5, stretchSec: 60 } };
+  assert.deepEqual(setPnf(two, { rounds: 3 }).pnf, { rounds: 2, contractSec: 5, stretchSec: 60 });
+  // Elke combinatie via de knoppen blijft binnen de grens.
+  let x = { exerciseId: 'hamstring_pnf', pnf: { rounds: 1, contractSec: 3, stretchSec: 10 } };
+  for (let i = 0; i < 30; i++) {
+    x = setPnf(adjustDose(setPnf(x, { rounds: x.pnf.rounds + 1 }), 5), { contractSec: x.pnf.contractSec + 1 });
+    assert.ok(pnfSec(x.pnf) <= 180, JSON.stringify(x.pnf));
+  }
+  // De validator weigert meer dan 180 s.
+  const r = { id: 'r', name: 'r', slot: 'avond', preRun: false, timesPerWeek: 1, active: true, steps: [{ exerciseId: 'hamstring_pnf', pnf: { rounds: 5, contractSec: 10, stretchSec: 60 } }] };
+  assert.ok(validateUserRoutine(r, lib.exercises).some((e) => e.field === 'steps[0].pnf' && /180/.test(e.message)));
+  // Een oude routine wordt ingekort (rondes eerst) in plaats van geweigerd.
+  const c = capPnf(r);
+  assert.equal(c.changed, true);
+  assert.deepEqual(c.routine.steps[0].pnf, { rounds: 2, contractSec: 10, stretchSec: 60 });
+  assert.deepEqual(validateUserRoutine(c.routine, lib.exercises), []);
+  assert.equal(r.steps[0].pnf.rounds, 5); // origineel onaangeroerd
+  // Past al, of geen geldige getallen: niets veranderd (de validator meldt dat laatste).
+  assert.equal(capPnf(c.routine).changed, false);
+  assert.equal(capPnf({ steps: [{ exerciseId: 'hamstring_pnf', pnf: { rounds: 'x', contractSec: 5, stretchSec: 25 } }] }).changed, false);
+  assert.equal(capPnf(null).changed, false);
 });
 
 test('nieuwe stap blijft binnen 10–180 s, ook met een vreemde standaardhoudtijd', () => {

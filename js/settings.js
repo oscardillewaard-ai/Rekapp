@@ -10,7 +10,6 @@ export const DEFAULT_SETTINGS = {
   nightMode: false,
   sideSwitchSec: 5,
   defaultStaticHoldSec: 45,
-  showLocked: true,
   weights: { B: 25, K: 25, D: 20, R: 15, P: 15 }, // procenten, som 100
   reminders: { morning: null, evening: null },
   lastExportAt: null, // ms; de laatste JSON-export

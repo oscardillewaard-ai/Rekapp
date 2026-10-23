@@ -5,14 +5,13 @@ import { icon } from './graphics.js';
 import { DEFAULT_SETTINGS } from '../settings.js';
 import { KNEE } from '../texts.js';
 import { formatDay } from '../format.js';
+import { canUndoFlare } from '../knee.js';
 
 const LETTER_NAMES = { B: 'Bewijs', K: 'Knieveiligheid', D: 'Doelgerichtheid', R: 'Relevantie', P: 'Praktisch' };
 
 export function createSettingsScreen({ audio, getSettings, update, knee, data, pwa }) {
   const root = h('section', { class: 'screen', 'aria-labelledby': 'settings-title' });
   const extra = h('div'); // secties van latere mijlpalen
-  const confirmSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'reset-title' });
-  confirmSheet.addEventListener('click', (e) => { if (e.target === confirmSheet) confirmSheet.close(); });
   let offVoices = null;
 
   function toggle(label, key, hint) {
@@ -73,7 +72,7 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data, p
   }
 
   // Weging aanpassen (§6.11): som altijd 100 %; herberekent alleen de getoonde
-  // sterren, de knie-poort blijft gelden.
+  // sterren.
   let draft = null;
   function weights() {
     draft ??= { ...getSettings().weights };
@@ -88,7 +87,7 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data, p
       };
       fill(wrap, 
         h('h2', null, 'Weging aanpassen'),
-        h('p', { class: 'note' }, 'Verandert alleen de sterren die je ziet. De knie-poort blijft altijd gelden.'),
+        h('p', { class: 'note' }, 'Verandert alleen de sterren die je ziet.'),
         ...Object.keys(LETTER_NAMES).map((k) => h('div', { class: 'stepper', role: 'group', 'aria-label': `${k} ${LETTER_NAMES[k]}` },
           h('span', { class: 'stepper-label' }, `${k} · ${LETTER_NAMES[k]}`),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': `${LETTER_NAMES[k]} lager`, onclick: () => set(k, -5) }, '−'),
@@ -105,7 +104,8 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data, p
     return wrap;
   }
 
-  // Knie (§6.11): opvlammingsmodus handmatig en ontgrendelingen resetten.
+  // Knie (§6.11): opvlammingsmodus handmatig aan, en binnen 24 uur terug
+  // (per ongeluk aangezet). Ontgrendelingen resetten vervalt met het knieslot.
   function kneeSection() {
     const state = knee.get();
     const flare = state.unknown
@@ -113,22 +113,10 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data, p
       : state.flare.active
         ? h('p', null, `Opvlammingsmodus staat aan sinds ${formatDay(state.flare.since)}. Hij gaat uit na 7 dagen op rij een dagelijkse kniecheck van ≤2/10; de app vraagt het je dan.`)
         : h('button', { class: 'btn', type: 'button', onclick: () => knee.askFlare() }, KNEE.flareButton);
-    const askReset = () => {
-      fill(confirmSheet,
-        h('div', { class: 'sheet-body' },
-          h('h2', { id: 'reset-title' }, 'Ontgrendelingen resetten?'),
-          h('p', null, 'Alle vergrendelde oefeningen gaan terug naar vergrendeld, met de teller op 0. Een lopende afkoelperiode blijft staan. Je kniechecks en logboek blijven bewaard.')),
-        h('div', { class: 'sheet-foot' },
-          h('button', { class: 'btn', type: 'button', onclick: () => confirmSheet.close() }, 'Annuleren'),
-          h('button', { class: 'btn danger', type: 'button', onclick: async () => { confirmSheet.close(); await knee.reset(); } }, 'Resetten')));
-      confirmSheet.showModal();
-    };
-    const hasUnlocks = Object.values(state.unlocks).some((r) => r.state !== 'vergrendeld' || r.cleanCount > 0 || r.cycles.length > 0);
-    return h('section', { class: 'section' },
-      h('h2', null, 'Knie'),
-      flare,
-      h('button', { class: 'btn', type: 'button', disabled: state.unknown || !hasUnlocks, onclick: askReset }, 'Ontgrendelingen resetten'),
-      hasUnlocks ? null : h('p', { class: 'note' }, 'Er loopt geen ontgrendeling.'));
+    const undo = !state.unknown && canUndoFlare(state, Date.now())
+      ? h('button', { class: 'btn', type: 'button', onclick: () => knee.undoFlare() }, 'Per ongeluk aangezet: terugdraaien')
+      : null;
+    return h('section', { class: 'section' }, h('h2', null, 'Knie'), flare, undo);
   }
 
   // Herinneringen (§7): geen push zonder server; een .ics met dagelijkse
@@ -217,15 +205,13 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data, p
       h('section', { class: 'section' },
         h('h2', null, 'Weergave'),
         toggle('Nachtmodus', 'nightMode', 'Alleen rood en amber.'),
-        toggle('Vergrendelde oefeningen tonen', 'showLocked'),
         defaultHold()),
       weights(),
       kneeSection(),
       reminders(),
       dataSection(),
       storage(),
-      extra,
-      confirmSheet);
+      extra);
   }
   render();
   return { root, extra, render };

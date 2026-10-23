@@ -36,14 +36,16 @@ export function mustBeLocked(ex, meta) {
   return ex.scores.K <= meta.scoring.kneeGate.maxK || ex.kneeFlexionMaxDeg > meta.knee.maxDegUnlocked;
 }
 
-// Alles wat §3.2 voor één oefening oplevert, met de standaardweging uit de
-// bibliotheek of een eigen weging (alleen voor de weergave; de knie-poort
-// blijft gelden).
+// Score en sterren voor de weergave, met de standaardweging uit de
+// bibliotheek of een eigen weging. Zonder kniecap (keuze Oscar, zie
+// AFWIJKINGEN.md): het knieslot is verwijderd, dus de sterren tonen de score
+// zelf. De validator hieronder controleert de bibliotheek nog wel volgens
+// §3.2 en §9.2, met de knie-poort.
+const NO_CAP = { maxK: -Infinity, maxStars: Infinity };
 export function rate(ex, meta, weightsPct = weightsToPercent(meta.scoring.weights)) {
   return {
     score: computeScore(ex.scores, weightsPct),
-    stars: computeStars(ex.scores, weightsPct, meta.scoring.kneeGate),
-    locked: mustBeLocked(ex, meta),
+    stars: computeStars(ex.scores, weightsPct, NO_CAP),
   };
 }
 

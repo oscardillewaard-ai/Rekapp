@@ -1,4 +1,4 @@
-// Startscherm: kniekaarten (opvlamming, kniechecks, proefperiode), je actieve
+// Startscherm: kniekaarten (opvlamming, dagelijkse kniecheck), je actieve
 // routines, een samenvatting van "Mijn week" en de sjablonen Ochtend en Avond
 // (5 · 10 · 15 min).
 import { h, fill } from './dom.js';
@@ -13,8 +13,8 @@ const SLOT_TEXT = { ochtend: 'Ochtend', avond: 'Avond', vrij: 'Vrij' };
 export function createHomeScreen({ lib, getData, topCards = () => [], bottom = () => null }) {
   const root = h('section', { class: 'screen', 'aria-labelledby': 'home-title' });
 
-  // Tijden zoals ze echt worden afgespeeld: zonder stappen die de knie-poort
-  // blokkeert (W1/W8).
+  // Tijden zoals ze echt worden afgespeeld: zonder stappen die de
+  // opvlammingsmodus blokkeert (W8).
   const seconds = (r, { settings, knee }) => totalSec(playableRoutine(r, { lib, knee }).routine, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
 
   function slotCard(slot, title, data) {

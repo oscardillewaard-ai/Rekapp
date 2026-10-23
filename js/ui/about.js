@@ -25,7 +25,7 @@ export function createAboutScreen({ lib }) {
       h('section', { class: 'section' }, h('ul', { class: 'about-list' }, ABOUT.map((t) => h('li', null, t)))),
       h('section', { class: 'section' },
         h('h2', null, 'De sterren'),
-        h('p', null, 'Elke oefening krijgt vijf deelscores van 1 tot 5. De score is een gewogen gemiddelde; de knie-poort gaat altijd voor.'),
+        h('p', null, 'Elke oefening krijgt vijf deelscores van 1 tot 5. De score is een gewogen gemiddelde. Deze app toont de sterren zonder knie-poort: het knieslot is op jouw verzoek verwijderd. Kies je liever knievriendelijk, zet dan het filter "alleen K ≥ 4" aan of geef K meer gewicht bij "Weging aanpassen" in de instellingen.'),
         h('pre', { class: 'formula' }, STARS_FORMULA.join('\n')),
         ...LETTERS.map((l) => {
           const r = RUBRICS[l];

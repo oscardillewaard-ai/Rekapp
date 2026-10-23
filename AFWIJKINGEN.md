@@ -3,6 +3,81 @@
 Elke bewuste afwijking van `rekapp-spec-v2.md`, met reden, plus de keuzes
 waar de spec geen of een tegenstrijdig antwoord gaf.
 
+## Besluiten Oscar (23-10-2026)
+
+Deze besluiten gaan vóór de spec en vóór oudere punten in dit bestand. Waar
+een ouder punt hieronder over het knieslot gaat, staat het als vervallen
+gemarkeerd.
+
+### Knieslot met 48-uurstest verwijderd (wijkt af van §3.2, §6.6, §6.5, §6.11)
+Oscar vroeg het knieslot eruit te halen. De 10 oefeningen met K ≤ 2 (of meer
+dan 90° kniebuiging) zijn gewoon toe te voegen en af te spelen.
+- Weg: W1 en W9, het ontgrendelscherm (`#/ontgrendelen/…`), de proefperiode,
+  de 24- en 48-uurschecks, de afkoelperiode, "Ontgrendelingen resetten" en
+  de instelling "Vergrendelde oefeningen tonen" met het filter "toon
+  vergrendelde" (§6.1). Ook "Kniepijn nu" vóór een routine (dat was de
+  beginwaarde van de cyclus) en de verplichte pijnkiezer op het
+  afrondscherm vervallen; daar staat weer gewoon de schuif "Kniepijn
+  tijdens".
+- Blijft hard: de **opvlammingsmodus** (§6.7). Tijdens een opvlamming staat
+  alles boven 45° uit (W8), dus ook alle tien oefeningen met K ≤ 2, via
+  dezelfde ene poort (`access` in `knee.js`) voor bibliotheek, kiezer,
+  bouwer, kaart, "Probeer nu" en speler. Aan bij een dagelijkse kniecheck
+  boven 2/10 of handmatig; uit na 7 dagen op rij ≤ 2/10.
+- Blijft: de **dagelijkse kniecheck**.
+- Op de kaart van een oefening met K ≤ 2 staat een gewone notitie (geen
+  blokkade): "Lage kniescore (K…). Let zelf op je knie: pijn tijdens en na
+  hooguit 2/10."
+- `data/library.json` is niet veranderd: het veld `locked` en de kniecap
+  in de sterren staan er nog in, en de validator (§9.2) controleert ze nog.
+  De app gebruikt `locked` alleen niet meer om te blokkeren.
+- Opslag en import: de store `unlocks` blijft bestaan (geen nieuwe
+  databaseversie) maar wordt bij elke opslag van de kniestatus leeggemaakt.
+  Een export bevat `unlocks: {}`, zodat een oudere versie van de app het
+  bestand nog kan lezen. Een oudere export met ontgrendelingen is gewoon te
+  importeren; de ontgrendelingen gaan niet mee (met een melding). Oude
+  kniechecks (context test, 24u, 48u) blijven in het logboek.
+- Tests: de vectoren U1–U4 (§11.1 F) en de protocoltests zijn vervallen. G
+  (F1, F2) staat er nog, zonder het deel "vrij → vergrendeld" van F1, dat
+  over het knieslot ging. De verwachte uitkomsten van F1 (rf_zijlig W8, O5
+  volledig, A5 190 s) zijn ongewijzigd.
+
+**Reden:** keuze van Oscar. De afweging (de K-scores zijn voorzorg, geen
+bewezen schade, §6.12) ligt bij hem; de opvlammingsmodus vangt een
+opspelende knie nog steeds af.
+
+### Sterren zonder kniecap in beeld (wijkt af van §3.2)
+De app toont de sterren zoals de score ze geeft, ook bij K ≤ 2 (bv. kikker
+3,05 → 3 sterren in plaats van 2). Alleen de weergave verandert: `rate()` in
+`library.js`. De bibliotheek houdt de gecapte sterren en de validator
+controleert die nog volgens §3.2; de testvectoren A staan letterlijk in de
+tests, nu tegen de validatorberekening. Het scherm "Over" noemt de regel
+"knie-poort: als K ≤ 2 …" niet meer en legt uit dat de app zonder knie-poort
+toont. **Reden:** keuze van Oscar; met het knieslot weg zou een cap van 2
+sterren een slot suggereren dat er niet meer is.
+
+### PNF hoogstens 180 s per kant (beslist open punt uit M4)
+Rondes × (aanspannen + rekken) is per kant hoogstens 180 s, net als de 180 s
+van de andere oefeningen (§6.3). De grenzen per veld uit §9.1 blijven (rondes
+1–5, aanspannen 3–10 s, rekken 10–60 s). In de bouwer doet "+" niets meer als
+de som anders boven 180 s komt; de notitie toont de huidige som. De validator
+weigert meer dan 180 s. Een opgeslagen of geïmporteerde routine van daarvoor
+wordt bij het laden ingekort (eerst rondes, dan rekken, dan aanspannen) en
+niet weggegooid, met een melding. **Reden:** keuze van Oscar, op basis van
+het onderzoek: ACSM (Garber 2011, gelezen via een secundaire bron) noemt 3–6 s aanspannen gevolgd door 10–30 s rekken, 2–4
+herhalingen en ~60 s per spiergroep per sessie; de grootste winst zit in de
+eerste herhaling (Sharman 2006).
+
+### Opvlammingsmodus terugdraaien binnen 24 uur (aanvulling op §6.7)
+Per ongeluk aangezet (een verkeerde tik op "Aanzetten", of een kniecheck van
+3/10 die 1/10 had moeten zijn): tot 24 uur na het aanzetten staat er een
+knop "Terugdraaien" in de opvlammingsbanner en in Instellingen → Knie. Eerst
+een bevestiging ("Doe dit alleen als je hem per ongeluk hebt aangezet"),
+daarna is de modus uit. De kniechecks blijven in het logboek. Na 24 uur geldt
+weer alleen de weg van §6.7 (7 dagen op rij ≤ 2/10). De klok-terug-controle
+geldt ook hier: ligt "nu" vóór het aanzetten, dan kan het niet. **Reden:**
+keuze van Oscar; zonder deze knop zat je na een vergissing 7 dagen vast.
+
 ## Aanvullingen (geen gedragsverschil)
 
 ### `data/library.schema.json`
@@ -25,6 +100,8 @@ deze velden; een mismatch zou een verkeerde weergave of tijd geven. De huidige
 bibliotheek voldoet aan alle drie.
 
 ### Ontgrendeling: veld `resetAt` (M6)
+> **Vervallen (23-10-2026):** het knieslot is verwijderd, zie "Besluiten Oscar (23-10-2026)" bovenaan.
+
 Naast de velden uit §8.2 bewaart een ontgrendeling `resetAt`: het moment
 waarop de teller op 0 ging (een niet-schone cyclus of een opvlamming).
 **Reden:** bij een import moet de app kunnen nagaan of status en teller
@@ -63,7 +140,8 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
 - **Knoppen die later komen:** "Toevoegen aan routine" (M4), "Probeer nu" (M3)
   en "Ontgrendelen via 48-uurstest" (M5) staan al op de kaart en werken vanaf
   hun mijlpaal. Bij een vergrendelde oefening blijven
-  toevoegen en afspelen altijd uit (W1).
+  toevoegen en afspelen altijd uit (W1). *(Vervallen 23-10-2026: geen
+  knieslot meer; alleen W8 tijdens een opvlamming blokkeert.)*
 
 ## Invulling van open punten in §6.8 (M3, speler)
 
@@ -161,7 +239,7 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
 - **Totale tijd in beeld:** de balk met de totale tijd blijft bovenaan staan
   tijdens het bewerken (§6.3 zet hem in de kop), zodat je ziet wanneer je
   over 15:00 gaat.
-- **PNF-dosis (voorlopig, ter beslissing aan Oscar):** §6.3 zegt "stappen van
+- **PNF-dosis (beslist 23-10-2026: hoogstens 180 s per kant, zie bovenaan):** §6.3 zegt "stappen van
   5 s, minimaal 10 s, maximaal 180 s"; het schema in §9.1 geeft voor PNF
   rondes 1–5, aanspannen 3–10 s en rekken 10–60 s. De bouwer volgt nu het
   schema: rekken in stappen van 5 s (10–60 s), aanspannen per seconde (3–10
@@ -194,6 +272,11 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   weekkaart (tik → "Mijn week").
 
 ## Invulling van open punten in §6.6–6.7 (M5, knie)
+
+> **Grotendeels vervallen (23-10-2026):** alles over het knieslot, de
+> proefperiode, de 24/48-uurschecks en het ontgrendelscherm geldt niet meer.
+> Wat over de opvlammingsmodus, de dagelijkse kniecheck, twee vensters en de
+> klok gaat, geldt nog. Zie "Besluiten Oscar (23-10-2026)" bovenaan.
 
 - **Kaarten op het startscherm:** bovenaan, in deze volgorde: de
   opvlammingsbanner, het voorstel om de opvlamming te beëindigen, de
@@ -302,7 +385,7 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
   van het downloaden van het JSON-bestand.
 - **Formaat van de dump:** `{ schemaVersion: 1, app: "Rekapp", exportedAt,
   librarySchemaVersion, data: { routines, sessions, kneeChecks, unlocks,
-  tests, flare, settings } }`. `schemaVersion` is de versie van de dump, niet
+  tests, flare, settings } }` (`unlocks` sinds 23-10-2026 altijd leeg). `schemaVersion` is de versie van de dump, niet
   van de bibliotheek (die staat in `librarySchemaVersion`). Het concept uit
   de bouwer zit er niet in.
 - **CSV:** puntkomma, UTF-8 met BOM, regeleinden CRLF, getallen met een
@@ -323,7 +406,8 @@ Deze punten laat de spec open. De keuze is klein en makkelijk om te zetten.
     de standaard); een weging die niet samen 100 % is, valt weg. Zit er geen
     instellingen in het bestand, dan blijven de huidige staan. "Laatste
     export" is minstens het moment van die export.
-  - De knieregels zijn hard. Een ontgrendeling gaat terug naar vergrendeld
+  - *(Vervallen 23-10-2026, knieslot weg: ontgrendelingen gaan niet meer
+    mee.)* De knieregels zijn hard. Een ontgrendeling gaat terug naar vergrendeld
     (met een melding, met behoud van een lopende afkoelperiode) als:
     status en teller niet kloppen met de schone cycli sinds de laatste reset
     (test 0, voorlopig 1–2, vrij precies 3; vergrendeld 0 zonder lopende
@@ -400,12 +484,16 @@ blok (kantwissel + rondes aan de zwakke kant) toe, zodat tijd en dosis met
 elkaar kloppen.
 
 ### Nieuwe blootstelling tijdens een lopende 24/48-uurscyclus
+> **Vervallen (23-10-2026):** het knieslot is verwijderd, zie "Besluiten Oscar (23-10-2026)" bovenaan.
+
 W9 is oranje (informeert alleen). Wat er met de lopende cyclus gebeurt als je
 toch binnen 48 uur opnieuw rekt, staat niet in §6.6. **Keuze:** de lopende
 cyclus vervalt (telt niet als schoon, teller blijft staan) en de nieuwe cyclus
 loopt vanaf de laatste blootstelling.
 
 ### Afkoelperiode
+> **Vervallen (23-10-2026):** het knieslot is verwijderd, zie "Besluiten Oscar (23-10-2026)" bovenaan.
+
 "Geen afkoelperiode actief" (§6.6) kan per oefening of voor alle oefeningen
 gelden. **Keuze:** voor alle oefeningen (strengste lezing).
 
@@ -424,6 +512,8 @@ daardoor W6 (157,5 s via rectus femoris zijlig) en geen W7.
   groep primair doel is.
 
 ### Beginwaarde bij een blootstelling in een routine
+> **Vervallen (23-10-2026):** het knieslot is verwijderd, zie "Besluiten Oscar (23-10-2026)" bovenaan.
+
 §6.6 noemt de beginwaarde ("kniepijn nu") alleen bij de begeleide proef.
 **Keuze:** start je een routine met een oefening in `test` of `voorlopig`, dan
 vraagt de app eerst "Kniepijn nu (0–10)". Die waarde is de beginwaarde van de

@@ -71,20 +71,14 @@ export const BREATHING = {
 
 // §6.2 kaart.
 export const CARD = {
-  lockedBar: 'Vergrendeld door de knie-poort',
-  unlockButton: 'Ontgrendelen via 48-uurstest',
   addButton: 'Toevoegen aan routine',
   tryButton: 'Probeer nu',
 };
 
-// §6.6–6.7 knieslot, 48-uurstest en opvlammingsmodus.
+// §6.7 kniecheck en opvlammingsmodus. Het knieslot met de 48-uurstest (§6.6)
+// is verwijderd (AFWIJKINGEN.md).
 export const KNEE = {
   painNow: 'Kniepijn nu (0–10)',
-  intro: 'Het protocol volgt je eigen regels: pijn ≤2/10 tijdens en na, niet hoger dan je beginwaarde na 24 en 48 uur, en drie schone 48-uurscontroles op rij voordat de oefening echt vrij is. Je knie reageert pas na 24–48 uur, dus het gevoel tijdens de sessie telt niet als groen licht.',
-  pain7d: 'kniepijn de afgelopen 7 dagen steeds ≤2/10',
-  noLegTrainingToday: 'vandaag geen loop- of beentraining',
-  noHeavyNext48h: 'de komende 48 uur geen afdaalsessie of zware beentraining gepland',
-  trial: 'Begeleide proef: 1 × 30 s per kant op intensiteit 3–4/10, op een dik kussen als je knielt.',
   flareButton: 'Ik heb een opvlamming',
 };
 
@@ -105,7 +99,6 @@ export const ABOUT = [
 export const STARS_FORMULA = [
   'score   = 0,25·B + 0,25·K + 0,20·D + 0,15·R + 0,15·P        (bereik 1–5, twee decimalen)',
   'sterren = score afgerond op 0,5; een halve stap rondt naar boven af',
-  'knie-poort: als K ≤ 2 → sterren = min(sterren, 2) en locked = true',
 ];
 export const STARS_MEANING = [
   ['Ze zijn persoonlijk.', 'Ze gelden voor jou: PFPS, trail en klimmen. Voor iemand zonder knieklachten scoort een hiel-naar-bil hoger.'],
@@ -121,9 +114,8 @@ export const INSTALL = {
   first: 'Eerst installeren, dan gebruiken.',
 };
 
-// §6.1 filters: "alleen K ≥ 4" en "toon vergrendelde".
+// §6.1 filters: "alleen K ≥ 4". "Toon vergrendelde" vervalt met het knieslot.
 export const FILTERS = {
   onlyK4: 'alleen K ≥ 4',
-  showLocked: 'toon vergrendelde',
   noEquipment: 'geen materiaal',
 };

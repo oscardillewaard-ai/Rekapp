@@ -8,7 +8,7 @@ import { routineDose } from '../dose.js';
 import { routineWarnings, playableRoutine } from '../warnings.js';
 import { access } from '../knee.js';
 import {
-  newStep, adjustDose, setPnf, setExtraWeakSide, setTransition, moveStep, removeStep, totalSec, MAX_TOTAL_SEC,
+  newStep, adjustDose, setPnf, setExtraWeakSide, setTransition, moveStep, removeStep, totalSec, MAX_TOTAL_SEC, PNF_MAX_SEC, pnfSec,
 } from '../routines.js';
 
 const SLOTS = [['ochtend', 'Ochtend'], ['avond', 'Avond'], ['vrij', 'Vrij']];
@@ -111,7 +111,7 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
           h('h2', { id: 'step-title' }, ex.name),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Sluiten', onclick: () => stepSheet.close() }, icon('cross'))),
         h('p', { class: 'note' }, step.pnf
-          ? `Standaard: ${formatDose(ex.defaultDose, ex)}. Rekken in stappen van 5 s (10–60 s), aanspannen 3–10 s, 1–5 rondes.`
+          ? `Standaard: ${formatDose(ex.defaultDose, ex)}. Rekken in stappen van 5 s (10–60 s), aanspannen 3–10 s, 1–5 rondes; samen hoogstens ${PNF_MAX_SEC} s per kant. Nu ${pnfSec(step.pnf)} s.`
           : `Standaard: ${formatDose(ex.defaultDose, ex)}. Stappen van 5 s, minimaal 10 s, maximaal 180 s.`),
         ...dose, extra, transition,
         h('div', { class: 'actions' },
@@ -183,8 +183,8 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
 
   function renderScreen() {
     const { settings, knee, routines } = ctx();
-    // Tijd en dosis van wat echt wordt afgespeeld: stappen die de knie-poort
-    // blokkeert (W1/W8), slaat de speler over.
+    // Tijd en dosis van wat echt wordt afgespeeld: stappen die de
+    // opvlammingsmodus blokkeert (W8), slaat de speler over.
     const { routine: playable, removed } = playableRoutine(r, { lib, knee });
     const total = totalSec(playable, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
     const over = total > MAX_TOTAL_SEC;
@@ -247,7 +247,7 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
         h('span', { class: 'time-max', 'aria-hidden': 'true' }, '15:00'),
         removed.length && !blocked ? h('small', { class: 'time-note' }, `Zonder ${removed.length === 1 ? 'de geblokkeerde oefening' : `de ${removed.length} geblokkeerde oefeningen`}; die worden overgeslagen.`) : null),
       r.steps.length ? steps : h('p', { class: 'note' }, 'Nog geen oefeningen. Voeg er een toe.'),
-      blocked ? h('p', { class: 'locked-bar' }, 'Alle oefeningen in deze routine zijn nu geblokkeerd door de knie-poort. Er valt niets af te spelen.') : null,
+      blocked ? h('p', { class: 'locked-bar' }, 'Alle oefeningen in deze routine staan nu uit door de opvlammingsmodus. Er valt niets af te spelen.') : null,
       h('button', { class: 'btn add-step', type: 'button', onclick: addExercise }, '+ Oefening'),
       warnings.length ? h('section', { class: 'section' }, h('h2', null, 'Waarschuwingen'),
         h('ul', { class: 'plain warnings' }, warnings.map((w) => h('li', { class: SEVERITY_CLASS[w.severity] },
@@ -274,8 +274,8 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
   async function addExercise() {
     const ex = await pickExercise();
     if (!ex) return;
-    // Een vergrendelde oefening (W1) of tijdens een opvlamming alles boven 45°
-    // (W8) kan niet worden toegevoegd; de kiezer laat ze ook niet kiezen.
+    // Tijdens een opvlamming kan alles boven 45° (W8) niet worden toegevoegd;
+    // de kiezer laat ze ook niet kiezen.
     if (!access(ex, ctx().knee, lib.meta.knee).allowed) return;
     change({ ...r, steps: [...r.steps, newStep(ex, ctx().settings)] });
     root.querySelector('.steps li:last-child')?.scrollIntoView({ block: 'nearest' });

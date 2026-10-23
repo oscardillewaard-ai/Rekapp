@@ -39,7 +39,7 @@ test('knieteksten uit §6.6–6.7 staan letterlijk in de spec', () => {
   for (const [k, text] of Object.entries(KNEE)) inSpec(text, k);
 });
 
-test('waarschuwingen W1–W9 uit §6.5 staan letterlijk in de spec', () => {
+test('waarschuwingen uit §6.5 staan letterlijk in de spec', () => {
   for (const [code, w] of Object.entries(WARNINGS)) {
     inSpec(`| ${code} | ${w.severity} |`, `${code} ernst`);
     inSpec(`"${w.text}"`, `${code} tekst`);

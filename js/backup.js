@@ -2,18 +2,19 @@
 // en controleert een dump vóór het importeren. Lezen en schrijven in
 // IndexedDB doet store.js.
 import { actualWeekDose } from './dose.js';
-import { validateUserRoutine } from './routines.js';
+import { validateUserRoutine, capPnf } from './routines.js';
 
 export const DUMP_SCHEMA_VERSION = 1;
 const DAY = 24 * 3600 * 1000;
-const STATES = ['vergrendeld', 'test', 'voorlopig', 'vrij'];
+// test/24u/48u: kniechecks uit de tijd van het knieslot; die blijven geldig
+// in het logboek.
 const CONTEXTS = ['dagelijks', 'test', '24u', '48u'];
-const RESULTS = [null, 'schoon', 'niet schoon', 'vervallen', 'opvlamming'];
 
 // ---------- JSON ----------
 
-// data: { routines, sessions, kneeChecks, unlocks: {exerciseId: rec}, tests,
-// flare, settings }. exportedAt: ISO-tijd met tijdzone.
+// data: { routines, sessions, kneeChecks, tests, flare, settings }.
+// exportedAt: ISO-tijd met tijdzone. "unlocks" (knieslot, vervallen) staat er
+// leeg in, zodat een oudere versie van de app het bestand nog kan lezen.
 export function buildDump(data, { exportedAt, librarySchemaVersion }) {
   return {
     schemaVersion: DUMP_SCHEMA_VERSION,
@@ -24,7 +25,7 @@ export function buildDump(data, { exportedAt, librarySchemaVersion }) {
       routines: data.routines ?? [],
       sessions: data.sessions ?? [],
       kneeChecks: data.kneeChecks ?? [],
-      unlocks: data.unlocks ?? {},
+      unlocks: {},
       tests: data.tests ?? [],
       flare: data.flare ?? { active: false, since: null, exitProposedAt: null },
       settings: data.settings ?? null,
@@ -101,108 +102,15 @@ export function weekDoseCsv(sessions, lib) {
 
 // ---------- Import ----------
 
-const HOUR = 3600 * 1000;
 const isPain = (v) => Number.isInteger(v) && v >= 0 && v <= 10;
 const isPainOrNull = (v) => v === null || isPain(v);
 const isTime = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
-const isTimeOrNull = (v) => v === null || v === undefined || isTime(v);
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 // ISO-tijd met tijdzone zoals session.js die maakt (2026-11-02T08:15:00+01:00).
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 const isIso = (v) => typeof v === 'string' && ISO.test(v) && !Number.isNaN(Date.parse(v));
 const SESSION_STATUS = ['voltooid', 'gedeeltelijk', 'afgebroken'];
 const SEGMENT_KINDS = ['prep', 'work', 'contract', 'relax', 'switch', 'transition'];
-
-// Schone cyclus volgens §6.6, nagerekend uit de waarden.
-function reallyClean(c, kneeMeta) {
-  const max = kneeMeta.painMax;
-  return [c.painBefore, c.painDuring, c.p24, c.p48].every(isPain)
-    && c.painDuring <= max && c.p24 <= max && c.p24 <= c.painBefore && c.p48 <= max && c.p48 <= c.painBefore;
-}
-
-// Klopt één ontgrendeling met haar eigen geschiedenis? De knieregels zijn
-// hard: een import mag een oefening niet verder brengen dan de cycli dragen.
-// - Een schone cyclus heeft alle waarden binnen de grenzen, en de 24- en
-//   48-uurscheck konden toen al (blootstelling ≥ 44 uur vóór nu en vóór de
-//   volgende blootstelling).
-// - De teller is precies het aantal schone cycli sinds de laatste keer dat
-//   hij op 0 ging (een niet-schone cyclus of een opvlamming, `resetAt`).
-// - De status past bij die teller: test 0, voorlopig 1–2, vrij 3;
-//   vergrendeld 0 en geen lopende cyclus.
-export function checkUnlock(rec, { kneeMeta, now }) {
-  const problems = [];
-  if (!rec || typeof rec !== 'object' || Array.isArray(rec)) return ['geen geldige gegevens'];
-  if (!STATES.includes(rec.state)) problems.push(`onbekende status "${rec.state}"`);
-  if (!Number.isInteger(rec.cleanCount) || rec.cleanCount < 0) problems.push('teller ongeldig');
-  if (!isTimeOrNull(rec.cooldownUntil)) problems.push('afkoelperiode ongeldig');
-  if (!isTimeOrNull(rec.resetAt) || rec.resetAt > now) problems.push('resetmoment ongeldig');
-  if (!Array.isArray(rec.cycles)) return [...problems, 'cycli ontbreken'];
-  const w = kneeMeta.checkWindowsHours;
-  const cycles = rec.cycles;
-  cycles.forEach((c, i) => {
-    const where = `cyclus ${i + 1}`;
-    if (!c || typeof c !== 'object' || !isTime(c.exposureAt) || c.exposureAt > now) { problems.push(`${where}: tijdstip ongeldig`); return; }
-    const next = cycles[i + 1];
-    if (next && isTime(next.exposureAt) && next.exposureAt < c.exposureAt) problems.push(`${where}: niet op volgorde`);
-    if (!RESULTS.includes(c.result)) problems.push(`${where}: onbekende uitslag`);
-    if (![c.painBefore, c.painDuring, c.p24, c.p48].every(isPainOrNull)) problems.push(`${where}: pijnwaarde ongeldig`);
-    if (c.p24 !== null && c.p24 !== undefined && now < c.exposureAt + w.h24[0] * HOUR) problems.push(`${where}: 24-uurscheck vóór het venster`);
-    if (c.p48 !== null && c.p48 !== undefined && now < c.exposureAt + w.h48[0] * HOUR) problems.push(`${where}: 48-uurscheck vóór het venster`);
-    if (c.result === null) {
-      if (i !== cycles.length - 1) problems.push(`${where}: loopt nog maar is niet de laatste`);
-      if (c.p48 !== null && c.p48 !== undefined) problems.push(`${where}: loopt nog maar heeft een 48-uurscheck`);
-    }
-    if (c.result === 'schoon') {
-      if (!reallyClean(c, kneeMeta)) problems.push(`${where}: staat als schoon maar de waarden zijn dat niet`);
-      if (next && isTime(next.exposureAt) && next.exposureAt < c.exposureAt + w.h48[0] * HOUR) problems.push(`${where}: schoon, maar de volgende blootstelling kwam vóór de 48-uurscheck`);
-    }
-  });
-  if (problems.length) return problems;
-
-  // Tellen vanaf de laatste reset.
-  const lastBreak = [...cycles].reverse().find((c) => c.result === 'niet schoon' || c.result === 'opvlamming');
-  const from = Math.max(rec.resetAt ?? 0, lastBreak?.exposureAt ?? 0);
-  const tail = cycles.filter((c) => c.exposureAt > from);
-  const clean = tail.filter((c) => c.result === 'schoon').length;
-  const open = cycles.length && cycles[cycles.length - 1].result === null;
-  const need = kneeMeta.cleanCyclesToUnlock;
-  if (rec.cleanCount !== (rec.state === 'vergrendeld' ? 0 : clean)) problems.push(`teller ${rec.cleanCount} past niet bij ${clean} schone cycli`);
-  if (rec.state === 'vergrendeld' && open) problems.push('vergrendeld met een lopende cyclus');
-  if (rec.state === 'test' && clean !== 0) problems.push('test na een schone cyclus');
-  if (rec.state === 'voorlopig' && (clean < 1 || clean >= need)) problems.push(`voorlopig met ${clean} schone cycli`);
-  if (rec.state === 'vrij' && (clean !== need || open)) problems.push(`vrij zonder ${need} schone cycli op rij`);
-  return problems;
-}
-
-// Regels over alle oefeningen samen (§6.6): hooguit één in de proefperiode,
-// geen proefperiode tijdens een afkoelperiode of een opvlamming.
-function globalProblems(unlocks, { now, flareActive }) {
-  const trial = Object.entries(unlocks).filter(([, r]) => r.state === 'test' || r.state === 'voorlopig');
-  const freed = Object.entries(unlocks).filter(([, r]) => r.state !== 'vergrendeld');
-  const cooling = Object.values(unlocks).some((r) => r.cooldownUntil && r.cooldownUntil > now);
-  const out = new Map();
-  if (flareActive) for (const [id] of freed) out.set(id, 'niet vergrendeld tijdens een opvlamming');
-  if (cooling) for (const [id] of trial) if (!out.has(id)) out.set(id, 'proefperiode tijdens een afkoelperiode');
-  if (trial.length > 1) for (const [id] of trial) if (!out.has(id)) out.set(id, 'meer dan één oefening in de proefperiode');
-  return out;
-}
-
-// Terug naar vergrendeld, met de geschiedenis (een lopende cyclus vervalt)
-// en de strengste geldige afkoelperiode.
-function relock(rec, now) {
-  const cycles = (Array.isArray(rec?.cycles) ? rec.cycles : [])
-    .filter((c) => c && typeof c === 'object' && isTime(c.exposureAt) && c.exposureAt <= now && RESULTS.includes(c.result))
-    .map((c) => ({
-      exposureAt: c.exposureAt,
-      painBefore: isPainOrNull(c.painBefore) ? c.painBefore : null,
-      painDuring: isPainOrNull(c.painDuring) ? c.painDuring : null,
-      p24: isPainOrNull(c.p24) ? c.p24 : null,
-      p48: isPainOrNull(c.p48) ? c.p48 : null,
-      result: c.result === null ? 'vervallen' : c.result,
-    }))
-    .sort((a, b) => a.exposureAt - b.exposureAt);
-  return { state: 'vergrendeld', cleanCount: 0, cooldownUntil: isTime(rec?.cooldownUntil) ? rec.cooldownUntil : null, cycles, resetAt: now };
-}
 
 // Een record controleren en opschonen; null = overslaan.
 function cleanSession(s) {
@@ -276,9 +184,9 @@ const byId = (list, warn, what) => {
 
 // Controleert een dump. Geeft { ok, errors[], warnings[], data, counts }
 // terug; data is wat er geïmporteerd wordt: ongeldige records zijn
-// overgeslagen (met een melding) en ontgrendelingen die hun eigen
-// geschiedenis niet dragen, staan weer op vergrendeld.
-export function parseDump(json, lib, { now, defaults }) {
+// overgeslagen (met een melding). Ontgrendelingen uit een oudere export
+// (knieslot, vervallen) gaan niet mee.
+export function parseDump(json, lib, { defaults } = {}) {
   const errors = [];
   const warnings = [];
   const warn = (t) => warnings.push(t);
@@ -298,7 +206,6 @@ export function parseDump(json, lib, { now, defaults }) {
   }
   const d = dump.data;
   for (const name of ['routines', 'sessions', 'kneeChecks', 'tests']) if (!Array.isArray(d[name])) errors.push(`${name} ontbreekt of is geen lijst.`);
-  if (!d.unlocks || typeof d.unlocks !== 'object' || Array.isArray(d.unlocks)) errors.push('unlocks ontbreekt.');
   const flare = cleanFlare(d.flare ?? { active: false });
   if (!flare) errors.push('De opvlammingsmodus in het bestand is ongeldig.');
   if (errors.length) return { ok: false, errors, warnings, data: null };
@@ -311,7 +218,12 @@ export function parseDump(json, lib, { now, defaults }) {
     if (skipped) warn(`${skipped} ${what} overgeslagen: onvolledig of ongeldig.`);
     return out;
   };
-  const routines = byId(d.routines.filter((r, i) => {
+  // PNF van vóór de grens van 180 s per kant: inkorten, niet overslaan.
+  const routines = byId(d.routines.map((r) => {
+    const c = capPnf(r);
+    if (c.changed) warn(`${typeof r?.name === 'string' ? r.name : 'Routine'}: PNF ingekort tot hoogstens 180 s per kant.`);
+    return c.routine;
+  }).filter((r, i) => {
     const errs = validateUserRoutine(r, lib.exercises);
     if (errs.length) warn(`Routine ${i + 1} (${typeof r?.name === 'string' ? r.name : '?'}) overgeslagen: ${errs[0].field} ${errs[0].message}.`);
     return errs.length === 0;
@@ -320,22 +232,9 @@ export function parseDump(json, lib, { now, defaults }) {
   const kneeChecks = byId(keep(d.kneeChecks, (c) => cleanCheck(c, lib), 'kniechecks'), warn, 'kniechecks');
   const tests = byId(keep(d.tests, (t) => cleanTest(t, lib), 'metingen'), warn, 'metingen');
 
-  // Ontgrendelingen: eerst elk record op zichzelf, dan de regels samen.
-  const unlocks = {};
-  for (const [id, rec] of Object.entries(d.unlocks)) {
-    const ex = lib.exercises.get(id);
-    if (!ex || !ex.locked) { warn(`Ontgrendeling voor "${id}" overgeslagen: geen vergrendelde oefening.`); continue; }
-    const problems = checkUnlock(rec, { kneeMeta: lib.meta.knee, now });
-    if (problems.length) {
-      warn(`${ex.name}: terug naar vergrendeld (${problems.join('; ')}).`);
-      unlocks[id] = relock(rec, now);
-    } else {
-      unlocks[id] = structuredClone(rec);
-    }
-  }
-  for (const [id, why] of globalProblems(unlocks, { now, flareActive: flare.active })) {
-    warn(`${lib.exercises.get(id).name}: terug naar vergrendeld (${why}).`);
-    unlocks[id] = relock(unlocks[id], now);
+  // Het knieslot bestaat niet meer: ontgrendelingen gaan niet mee.
+  if (d.unlocks && typeof d.unlocks === 'object' && Object.keys(d.unlocks).length) {
+    warn('Ontgrendelingen uit het bestand gaan niet mee: het knieslot is uit de app gehaald.');
   }
 
   // Instellingen: alleen bekende waarden; "laatste export" is minstens het
@@ -348,8 +247,8 @@ export function parseDump(json, lib, { now, defaults }) {
     ok: true,
     errors,
     warnings,
-    data: { routines, sessions, kneeChecks, unlocks, tests, flare, settings },
-    counts: { routines: routines.length, sessions: sessions.length, kneeChecks: kneeChecks.length, tests: tests.length, unlocks: Object.keys(unlocks).length },
+    data: { routines, sessions, kneeChecks, tests, flare, settings },
+    counts: { routines: routines.length, sessions: sessions.length, kneeChecks: kneeChecks.length, tests: tests.length },
   };
 }
 
@@ -362,31 +261,13 @@ export function exportReminderDue({ lastExportAt, snoozedAt, sessions, now }) {
   return now - since >= 14 * DAY;
 }
 
-// De opgeslagen kniestatus bij het starten nalopen (dezelfde regels als bij
-// een import). null = niet te lezen (dan geldt de opvlammingsmodus, zie
-// main.js). Een ontgrendeling die haar eigen geschiedenis niet draagt, gaat
-// terug naar vergrendeld.
-export function checkKneeState(raw, lib, now) {
-  if (!raw || typeof raw !== 'object' || !raw.unlocks || typeof raw.unlocks !== 'object' || Array.isArray(raw.unlocks) || !Array.isArray(raw.checks)) return null;
+// De opgeslagen kniestatus bij het starten nalopen. null = niet te lezen
+// (dan geldt de opvlammingsmodus, zie main.js). Kniechecks die niet kloppen,
+// vallen weg.
+export function checkKneeState(raw, lib) {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.checks)) return null;
   const flare = cleanFlare(raw.flare);
   if (!flare) return null;
-  const warnings = [];
-  const unlocks = {};
-  for (const [id, rec] of Object.entries(raw.unlocks)) {
-    const ex = lib.exercises.get(id);
-    if (!ex || !ex.locked) continue;
-    const problems = checkUnlock(rec, { kneeMeta: lib.meta.knee, now });
-    if (problems.length) {
-      warnings.push(`${ex.name}: terug naar vergrendeld (${problems.join('; ')}).`);
-      unlocks[id] = relock(rec, now);
-    } else {
-      unlocks[id] = rec;
-    }
-  }
-  for (const [id, why] of globalProblems(unlocks, { now, flareActive: flare.active })) {
-    warnings.push(`${lib.exercises.get(id).name}: terug naar vergrendeld (${why}).`);
-    unlocks[id] = relock(unlocks[id], now);
-  }
   const checks = raw.checks.filter((c) => cleanCheck(c, lib));
-  return { knee: { unlocks, flare: { ...raw.flare, ...flare }, checks, rev: Number.isFinite(raw.rev) ? raw.rev : 0 }, warnings, changed: warnings.length > 0 || checks.length !== raw.checks.length };
+  return { knee: { flare: { ...raw.flare, ...flare }, checks, rev: Number.isFinite(raw.rev) ? raw.rev : 0 }, warnings: [], changed: checks.length !== raw.checks.length };
 }

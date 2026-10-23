@@ -19,23 +19,20 @@ const plural = (n) => `${n} ${n === 1 ? 'oefening' : 'oefeningen'}`;
 
 // Twee standen: de gewone bibliotheek (rij = link naar de kaart) en de kiezer
 // van de routinebouwer (rij = knop; onPick krijgt de oefening). blockedCodes(ex)
-// geeft bij de kiezer de blokkerende waarschuwingen (W1/W8), of [].
+// geeft de blokkerende waarschuwingen (W8 tijdens een opvlamming), of [].
 let instances = 0;
 
 // Zoeken, filters en sortering. De bibliotheek en de kiezer van de bouwer
 // delen één toestand: "+ Oefening" opent de bibliotheek met de filters die
 // daar staan (§6.3), en andersom.
-export const libraryState = (showLocked) => ({ filters: { ...defaultFilters(), showLocked }, sort: 'score', grouped: true });
+export const libraryState = () => ({ filters: defaultFilters(), sort: 'score', grouped: true });
 
 export function createLibraryScreen({
-  lib, equipmentOrder, showLocked = true, weights, title = 'Bibliotheek', onPick = null,
-  blockedCodes = (ex) => (ex.locked ? ['W1'] : []), scrollTop = () => window.scrollTo(0, 0), headerExtra = null,
-  state = libraryState(showLocked), attention = () => new Map(),
+  lib, equipmentOrder, weights, title = 'Bibliotheek', onPick = null,
+  blockedCodes = () => [], scrollTop = () => window.scrollTo(0, 0), headerExtra = null,
+  state = libraryState(), attention = () => new Map(),
 }) {
   const uid = ++instances;
-  // "Vergrendelde oefeningen tonen" (§6.11) is de standaard van het filter.
-  let lockedDefault = showLocked;
-  const baseFilters = () => ({ ...defaultFilters(), showLocked: lockedDefault });
   let items = catalogItems(lib, weights);
   const equipment = equipmentOptions(lib, equipmentOrder);
   const rows = new Map(); // oefening-id → <li>, eenmalig gebouwd
@@ -66,7 +63,7 @@ export function createLibraryScreen({
     const { ex, rating } = it;
     const groupLabels = primaryGroups(ex).map((g) => lib.groups.get(g).label).join(', ');
     const mini = bodyMap(ex.targets, { crop: 'mini', className: 'mini' }) ?? positionIcon(ex.position, 'mini') ?? h('span', { class: 'mini' });
-    // Slot = de knie-poort blokkeert nu (W1, of W8 tijdens een opvlamming).
+    // Slot = de opvlammingsmodus blokkeert nu (W8).
     const blocked = blockedCodes(ex);
     const locked = blocked.length > 0;
     const cls = `row${locked ? ' locked' : ''}`;
@@ -82,7 +79,7 @@ export function createLibraryScreen({
             primaryGroups(ex).some((g) => attention().has(g)) ? h('span', { class: 'chip attention-chip' }, 'aandacht') : null)),
         h('div', { class: 'side' },
           h('span', { class: 'knee-badge', title: 'Maximale kniebuiging' }, h('span', { class: 'sr-only' }, 'Knie maximaal '), `${ex.kneeFlexionMaxDeg}°`),
-          locked ? h('span', { title: 'Vergrendeld' }, icon('lock', 'lock'), h('span', { class: 'sr-only' }, 'Vergrendeld')) : null));
+          locked ? h('span', { title: 'Tijdelijk uit tijdens een opvlamming' }, icon('lock', 'lock'), h('span', { class: 'sr-only' }, 'Tijdelijk uit tijdens een opvlamming')) : null));
     rows.set(ex.id, li);
     return li;
   }
@@ -94,7 +91,7 @@ export function createLibraryScreen({
   function renderList() {
     const shown = visible();
     count.textContent = plural(shown.length);
-    const n = activeFilterCount(state.filters, baseFilters());
+    const n = activeFilterCount(state.filters);
     filterBadge.hidden = n === 0;
     filterBadge.textContent = String(n);
     filterButton.setAttribute('aria-label', n ? `Filters, ${n} actief` : 'Filters');
@@ -164,10 +161,9 @@ export function createLibraryScreen({
       chipset('Minimum aantal sterren', STAR_OPTIONS, (v) => f().minStars === v, (v) => { f().minStars = v; }),
       chipset('Type', TYPE_OPTIONS, (v) => f().type === v, (v) => { f().type = v; }),
       h('fieldset', null, h('legend', null, 'Knie'),
-        switchRow(cap(FILTERS.onlyK4), () => f().onlyK4, (on) => { f().onlyK4 = on; }),
-        switchRow(cap(FILTERS.showLocked), () => f().showLocked, (on) => { f().showLocked = on; }))),
+        switchRow(cap(FILTERS.onlyK4), () => f().onlyK4, (on) => { f().onlyK4 = on; }))),
     h('div', { class: 'sheet-foot' },
-      h('button', { class: 'btn', type: 'button', onclick: () => { state.filters = { ...baseFilters(), query: state.filters.query }; update(); } }, 'Wis filters'),
+      h('button', { class: 'btn', type: 'button', onclick: () => { state.filters = { ...defaultFilters(), query: state.filters.query }; update(); } }, 'Wis filters'),
       showButton,
       status));
 
@@ -198,14 +194,7 @@ export function createLibraryScreen({
     if (changed) scrollTop();
   });
 
-  function setShowLocked(on) {
-    lockedDefault = on;
-    state.filters.showLocked = on;
-    update({ silent: true });
-  }
-
-  // Eigen weging (§6.11): sterren opnieuw voor de weergave; de knie-poort
-  // blijft gelden (rate() zet locked los van de weging).
+  // Eigen weging (§6.11): sterren opnieuw voor de weergave.
   function setWeights(pct) {
     items = catalogItems(lib, pct);
     rows.clear();
@@ -219,5 +208,5 @@ export function createLibraryScreen({
   }
 
   renderList();
-  return { root, toolbar, sheet, setShowLocked, setWeights, refresh, sync: () => update({ silent: true }), focusSearch: () => search.focus() };
+  return { root, toolbar, sheet, setWeights, refresh, sync: () => update({ silent: true }), focusSearch: () => search.focus() };
 }

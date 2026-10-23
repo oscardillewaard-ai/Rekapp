@@ -9,7 +9,7 @@ const STORES = {
   routines: { keyPath: 'id' },
   sessions: { keyPath: 'id' },
   kneeChecks: { keyPath: 'id' },
-  unlocks: {}, // sleutel: exerciseId
+  unlocks: {}, // knieslot (vervallen); blijft bestaan, maar leeg
   tests: { keyPath: 'id' },
   flare: {}, // sleutel: 'state'
   settings: {}, // sleutel: 'settings'
@@ -55,11 +55,6 @@ function idbBackend(db) {
   return {
     get: (store, key) => request(tx(store, 'readonly').get(key)),
     getAll: (store) => request(tx(store, 'readonly').getAll()),
-    getAllKeyed: async (store) => {
-      const os = tx(store, 'readonly');
-      const [keys, values] = await Promise.all([request(os.getAllKeys()), request(os.getAll())]);
-      return keys.map((k, i) => [k, values[i]]);
-    },
     put: (store, value, key) => write(store, (os) => (STORES[store].keyPath ? os.put(value) : os.put(value, key))),
     delete: (store, key) => write(store, (os) => os.delete(key)),
     clear: (store) => write(store, (os) => os.clear()),
@@ -79,7 +74,6 @@ function memoryBackend() {
   return {
     get: async (store, key) => clone(data[store].get(key)),
     getAll: async (store) => [...data[store].values()].map(clone),
-    getAllKeyed: async (store) => [...data[store].entries()].map(([k, v]) => [k, clone(v)]),
     put: async (store, value, key) => { data[store].set(keyOf(store, value, key), clone(value)); },
     delete: async (store, key) => { data[store].delete(key); },
     clear: async (store) => { data[store].clear(); },
@@ -114,15 +108,14 @@ export function saveSettings(store, settings) {
   return store.put('settings', settings, 'settings');
 }
 
-// Kniestatus zoals knee.js die gebruikt: { unlocks, flare, checks, rev }.
+// Kniestatus zoals knee.js die gebruikt: { flare, checks, rev }.
 // rev telt elke opgeslagen wijziging; zo merkt een tweede venster (of de
 // geïnstalleerde app naast een browsertab) dat zijn kopie verouderd is.
 export async function loadKneeState(store) {
-  const [unlocks, flare, checks, rev] = await Promise.all([
-    store.getAllKeyed('unlocks'), store.get('flare', 'state'), store.getAll('kneeChecks'), store.get('flare', 'rev'),
+  const [flare, checks, rev] = await Promise.all([
+    store.get('flare', 'state'), store.getAll('kneeChecks'), store.get('flare', 'rev'),
   ]);
   return {
-    unlocks: Object.fromEntries(unlocks),
     flare: flare ?? { active: false, since: null, exitProposedAt: null },
     checks: checks.sort((a, b) => a.at - b.at),
     rev: rev ?? 0,
@@ -133,10 +126,11 @@ export async function loadKneeRev(store) {
   return (await store.get('flare', 'rev')) ?? 0;
 }
 
+// De oude store met ontgrendelingen (knieslot, vervallen) wordt meteen
+// leeggemaakt.
 export function saveKneeState(store, knee) {
   return store.batch(['unlocks', 'flare', 'kneeChecks'], (os) => {
     os('unlocks').clear();
-    for (const [id, rec] of Object.entries(knee.unlocks)) os('unlocks').put(rec, id);
     os('flare').put(knee.flare, 'state');
     os('flare').put(knee.rev ?? 0, 'rev');
     for (const c of knee.checks) os('kneeChecks').put(c);
@@ -159,12 +153,12 @@ const DATA_STORES = ['routines', 'sessions', 'kneeChecks', 'unlocks', 'tests', '
 
 // Alles wat in de export hoort (het concept uit de bouwer niet).
 export async function readAll(store) {
-  const [routines, sessions, kneeChecks, unlocks, tests, flare, settings] = await Promise.all([
-    store.getAll('routines'), store.getAll('sessions'), store.getAll('kneeChecks'), store.getAllKeyed('unlocks'),
+  const [routines, sessions, kneeChecks, tests, flare, settings] = await Promise.all([
+    store.getAll('routines'), store.getAll('sessions'), store.getAll('kneeChecks'),
     store.getAll('tests'), store.get('flare', 'state'), store.get('settings', 'settings'),
   ]);
   return {
-    routines, sessions, kneeChecks, unlocks: Object.fromEntries(unlocks), tests,
+    routines, sessions, kneeChecks, tests,
     flare: flare ?? { active: false, since: null, exitProposedAt: null }, settings: settings ?? null,
   };
 }
@@ -177,7 +171,6 @@ export function replaceAll(store, data) {
     for (const s of data.sessions) os('sessions').put(s);
     for (const c of data.kneeChecks) os('kneeChecks').put(c);
     for (const t of data.tests) os('tests').put(t);
-    for (const [id, rec] of Object.entries(data.unlocks)) os('unlocks').put(rec, id);
     os('flare').put(data.flare, 'state');
     os('flare').put(Date.now(), 'rev'); // andere vensters laden opnieuw
     if (data.settings) os('settings').put(data.settings, 'settings');

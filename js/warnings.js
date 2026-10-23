@@ -1,11 +1,11 @@
-// Waarschuwingen W1–W9 (§6.5). Puur: geen DOM, geen opslag.
+// Waarschuwingen (§6.5). Puur: geen DOM, geen opslag. W1 (knieslot) en W9
+// (proefperiode) vervallen: het knieslot is verwijderd (AFWIJKINGEN.md).
 import { compileRoutine } from './timeline.js';
 import { plannedWeekDose, routineDose, secondsPerSide, meterValue } from './dose.js';
-import { access, unlockState, lastExposureAt } from './knee.js';
+import { access } from './knee.js';
 
 // Teksten letterlijk uit §6.5.
 export const WARNINGS = {
-  W1: { severity: 'blokkeert', text: 'Vergrendeld door de knie-poort. Ontgrendelen kan via de 48-uurstest.' },
   W2: { severity: 'oranje', text: 'Bevat rugbuiging. Vlak na het opstaan zijn je tussenwervelschijven het gevoeligst voor buigen. Zet hem in je avondroutine of houd de beweging klein.' },
   W3: { severity: 'oranje', text: '60 s of meer statisch rekken per spiergroep vlak voor een run kan je prestatie direct daarna met ~4–5% verlagen. Houd het korter of verplaats het naar de avond.' },
   W4: { severity: 'info', text: 'Langer dan je eigen grens van 15 minuten.' },
@@ -13,7 +13,6 @@ export const WARNINGS = {
   W6: { severity: 'info', text: "Onder de drempel van 5 minuten per week. Zie de suggestie bij 'Mijn week'." },
   W7: { severity: 'info', text: 'Dynamisch telt niet mee voor de drempel; voor blijvende winst is statisch of PNF effectiever.' },
   W8: { severity: 'blokkeert', text: 'Tijdelijk uit tijdens een opvlamming.' },
-  W9: { severity: 'oranje', text: 'Deze oefening is nog in de proefperiode: maximaal één keer per 48 uur.' },
 };
 
 const COUNTED = new Set(['static', 'pnf']);
@@ -29,13 +28,12 @@ function warning(code, extra = {}) {
 //   lib:            geïndexeerde bibliotheek (indexLibrary),
 //   knee:           kniestatus (knee.js),
 //   otherRoutines:  de andere routines van de gebruiker (alleen actieve tellen),
-//   now:            tijdstip in ms (voor W9),
 //   sideSwitchSec:  uit de instellingen,
 // }
-// Volgorde in het resultaat: per stap (W1, W8, W2, W9), daarna de routine (W3,
+// Volgorde in het resultaat: per stap (W8, W2), daarna de routine (W3,
 // W4) en de spiergroepen (W5, W6, W7).
 export function routineWarnings(routine, ctx) {
-  const { lib, knee, now } = ctx;
+  const { lib, knee } = ctx;
   const { exercises, meta } = lib;
   const out = [];
 
@@ -44,17 +42,10 @@ export function routineWarnings(routine, ctx) {
     const gate = access(ex, knee, meta.knee);
     for (const code of gate.codes) out.push(warning(code, { exerciseId: ex.id, stepIndex }));
     if (routine.slot === 'ochtend' && ex.morningLumbarFlexion) out.push(warning('W2', { exerciseId: ex.id, stepIndex }));
-    const st = unlockState(ex, knee);
-    if (st === 'test' || st === 'voorlopig') {
-      const last = lastExposureAt(knee.unlocks[ex.id]);
-      if (last !== null && now - last < meta.knee.exposureSpacingHours * 3600 * 1000) {
-        out.push(warning('W9', { exerciseId: ex.id, stepIndex }));
-      }
-    }
   });
 
-  // W3–W7 gaan over wat echt wordt afgespeeld: stappen die de knie-poort
-  // blokkeert (W1/W8), slaat de speler over; ze tellen niet mee in tijd of
+  // W3–W7 gaan over wat echt wordt afgespeeld: stappen die de
+  // opvlammingsmodus blokkeert (W8), slaat de speler over; ze tellen niet mee in tijd of
   // dosis. Dat geldt ook voor de andere routines in de weekdosis.
   const playable = (r) => playableRoutine(r, ctx).routine;
   const own = playable(routine);
@@ -122,8 +113,8 @@ export function routineWarnings(routine, ctx) {
   return out;
 }
 
-// Wat er van een routine overblijft om af te spelen: stappen die W1 of W8
-// geven, gaan eruit (§6.7: "A5 zonder rf_zijlig"). De overgangstijd van de
+// Wat er van een routine overblijft om af te spelen: stappen die W8 geven,
+// gaan eruit (§6.7: "A5 zonder rf_zijlig"). De overgangstijd van de
 // stap ervoor blijft staan; is de verwijderde stap de laatste, dan vervalt de
 // overgang vanzelf.
 export function playableRoutine(routine, ctx) {

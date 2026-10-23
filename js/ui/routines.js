@@ -14,7 +14,7 @@ export function createRoutinesScreen({ lib, getData, onNew }) {
   function card(r, { template }) {
     const { settings, knee } = getData();
     // Zoals de preview: met de ingestelde kantwisselduur en zonder stappen die
-    // de knie-poort blokkeert (W1/W8).
+    // de opvlammingsmodus blokkeert (W8).
     const sec = totalSec(playableRoutine(r, { lib, knee }).routine, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
     const meta = [
       SLOT_TEXT[r.slot],

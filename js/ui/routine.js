@@ -1,6 +1,6 @@
 // Routinepreview: oefeningen met dosis en knie, totale tijd, grote Start-knop.
-// Wat de knie-poort of de opvlammingsmodus blokkeert (W1, W8) gaat er vóór
-// het afspelen uit; dat staat er duidelijk bij.
+// Wat de opvlammingsmodus blokkeert (W8) gaat er vóór het afspelen uit; dat
+// staat er duidelijk bij.
 import { h, clear, fill } from './dom.js';
 import { icon, bodyMap, positionIcon, starsWithScore } from './graphics.js';
 import { compileRoutine } from '../timeline.js';

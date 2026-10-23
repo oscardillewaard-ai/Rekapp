@@ -24,7 +24,9 @@ test('teksten en ernst komen letterlijk uit §6.5', () => {
   const w2 = ws.find((w) => w.code === 'W2');
   assert.equal(w2.severity, 'oranje');
   assert.equal(w2.text, 'Bevat rugbuiging. Vlak na het opstaan zijn je tussenwervelschijven het gevoeligst voor buigen. Zet hem in je avondroutine of houd de beweging klein.');
-  assert.equal(WARNINGS.W1.severity, 'blokkeert');
+  // W1 (knieslot) en W9 (proefperiode) vervallen met het knieslot (AFWIJKINGEN.md).
+  assert.equal('W1' in WARNINGS, false);
+  assert.equal('W9' in WARNINGS, false);
   assert.equal(WARNINGS.W8.severity, 'blokkeert');
   assert.equal(WARNINGS.W8.text, 'Tijdelijk uit tijdens een opvlamming.');
 });
@@ -80,15 +82,18 @@ test('W6/W7 alleen in een actieve routine', () => {
   assert.ok(!c.some((x) => x.startsWith('W6') || x.startsWith('W7') || x.startsWith('W5')));
 });
 
-test('W1: een vergrendelde oefening blokkeert en speelt nooit af', () => {
-  const locked = [...lib.exercises.values()].filter((x) => x.locked);
-  assert.equal(locked.length, 10);
-  for (const x of locked) {
+test('knieslot verwijderd: de 10 oefeningen met K ≤ 2 spelen af, behalve tijdens een opvlamming (W8)', () => {
+  const low = [...lib.exercises.values()].filter((x) => x.locked);
+  assert.equal(low.length, 10);
+  const flare = activateFlare(emptyKneeState(), at(0)).state;
+  for (const x of low) {
     const dose = x.sided === 'unilateral' ? { perSideSec: 30 } : { durationSec: 30 };
     const r = { id: 'x', slot: 'avond', preRun: false, timesPerWeek: 1, steps: [{ exerciseId: 'gastroc_muur', perSideSec: 30 }, { exerciseId: x.id, ...dose }] };
-    const ws = routineWarnings(r, ctx());
-    assert.ok(ws.some((w) => w.code === 'W1' && w.exerciseId === x.id), x.id);
-    const play = playableRoutine(r, ctx());
+    assert.ok(!routineWarnings(r, ctx()).some((w) => w.severity === 'blokkeert'), x.id);
+    assert.equal(playableRoutine(r, ctx()).routine.steps.length, 2, x.id);
+    // Opvlamming: alle tien gaan boven 45°.
+    assert.ok(routineWarnings(r, ctx({ knee: flare })).some((w) => w.code === 'W8' && w.exerciseId === x.id), x.id);
+    const play = playableRoutine(r, ctx({ knee: flare }));
     assert.deepEqual(play.routine.steps.map((s) => s.exerciseId), ['gastroc_muur'], x.id);
     assert.deepEqual(play.removed.map((s) => s.exerciseId), [x.id]);
   }
@@ -107,7 +112,7 @@ test('sjablonen zonder opvlamming geven geen blokkerende waarschuwing', () => {
   }
 });
 
-test('W3–W7 en de tijd rekenen alleen met stappen die echt worden afgespeeld (zonder W1/W8)', () => {
+test('W3–W7 en de tijd rekenen alleen met stappen die echt worden afgespeeld (zonder W8)', () => {
   // Opvlamming: rf_zijlig (90°) wordt overgeslagen, dus telt niet voor W3.
   const flare = activateFlare(emptyKneeState(), at(0)).state;
   const r = { id: 'x', name: 'x', slot: 'avond', preRun: true, timesPerWeek: 7, active: true, steps: [{ exerciseId: 'rf_zijlig', perSideSec: 90 }] };
@@ -115,9 +120,10 @@ test('W3–W7 en de tijd rekenen alleen met stappen die echt worden afgespeeld (
   const c = codes(routineWarnings(r, ctx({ knee: flare })));
   assert.ok(c.includes('W8:rf_zijlig'));
   assert.ok(!c.some((x) => x.startsWith('W3') || x.startsWith('W5') || x.startsWith('W6')), c.join(','));
-  // Een vergrendelde oefening (W1) telt ook niet mee voor W4.
+  // Een geblokkeerde oefening (W8) telt ook niet mee voor W4.
   const long = { ...r, preRun: false, steps: [{ exerciseId: 'couch_stretch', perSideSec: 180 }, { exerciseId: 'couch_stretch', perSideSec: 180 }, { exerciseId: 'couch_stretch', perSideSec: 180 }] };
-  const cl = codes(routineWarnings(long, ctx()));
-  assert.ok(cl.includes('W1:couch_stretch'));
+  assert.ok(codes(routineWarnings(long, ctx())).includes('W4'));
+  const cl = codes(routineWarnings(long, ctx({ knee: flare })));
+  assert.ok(cl.includes('W8:couch_stretch'));
   assert.ok(!cl.includes('W4'));
 });

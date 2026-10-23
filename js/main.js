@@ -13,7 +13,7 @@ import { createRoutinesScreen } from './ui/routines.js';
 import { createBuilderScreen } from './ui/builder.js';
 import { createWeekScreen } from './ui/week.js';
 import { createMoreScreen } from './ui/more.js';
-import { createUnlockScreen, kneeCards, painPicker } from './ui/knee.js';
+import { kneeCards } from './ui/knee.js';
 import { createLogScreen } from './ui/log.js';
 import { createTestsScreen, createTestScreen } from './ui/tests.js';
 import { createInstallScreen } from './ui/install.js';
@@ -24,20 +24,17 @@ import {
   openStore, loadSettings, saveSettings, loadKneeState, loadKneeRev, saveKneeState, requestPersistence, newId, readAll, replaceAll,
 } from './store.js';
 import { buildDump, sessionsCsv, kneeChecksCsv, weekDoseCsv, parseDump, exportReminderDue, checkKneeState } from './backup.js';
-import { compileRoutine } from './timeline.js';
 import { newMeasurement, analyse, attentionGroups } from './selftests.js';
 import { isoWithOffset } from './session.js';
 import { withDefaults, DEFAULT_SETTINGS } from './settings.js';
 import { createAudio } from './audio.js';
 import {
-  access, unlockState, startTest, cancelTest, recordExposure, setPainDuring, recordKneeCheck, expireChecks, activateFlare,
-  endFlare, postponeFlareExit, resetUnlocks, trialStep, trialExerciseIds, lastExposureAt, abandonCycle, latestKneeTime,
-  pendingChecks, flareExitDue, needsReconfirm, reconfirm,
+  access, recordKneeCheck, activateFlare, endFlare, postponeFlareExit, latestKneeTime, flareExitDue, canUndoFlare,
 } from './knee.js';
 import { KNEE } from './texts.js';
 import { formatDay } from './format.js';
 import { playableRoutine, WARNINGS } from './warnings.js';
-import { newRoutine, copyTemplate, duplicateRoutine, newStep, validateUserRoutine } from './routines.js';
+import { newRoutine, copyTemplate, duplicateRoutine, newStep, validateUserRoutine, capPnf } from './routines.js';
 
 const app = document.getElementById('app');
 
@@ -74,7 +71,7 @@ function applyTheme(settings) {
 
 // Kniestatus die niet gelezen kon worden: de knieregels zijn hard, dus dan
 // geldt de opvlammingsmodus (alles boven 45° uit) tot de opslag weer werkt.
-const UNKNOWN_KNEE = () => ({ unlocks: {}, flare: { active: true, since: null, exitProposedAt: null }, checks: [], unknown: true });
+const UNKNOWN_KNEE = () => ({ flare: { active: true, since: null, exitProposedAt: null }, checks: [], unknown: true });
 
 async function boot() {
   // Eerst de instellingen, zodat ook "Laden…" en foutschermen al in het goede
@@ -97,20 +94,26 @@ async function boot() {
   // opvlammingsmodus (fail-closed).
   const readKnee = async () => {
     const raw = await loadKneeState(store).catch(() => null);
-    return raw ? checkKneeState(raw, lib, Date.now()) : null;
+    return raw ? checkKneeState(raw, lib) : null;
   };
   const bootKnee = store.persistent ? await readKnee() : null;
   let knee = bootKnee ? bootKnee.knee : UNKNOWN_KNEE();
   // Eigen routines: alleen geldige (een kapotte routine zou de speler of de
   // dosis verstoren); sessies voor "Mijn week".
-  const storedRoutines = await store.getAll('routines').catch(() => []);
+  // PNF-stappen van vóór de grens van 180 s per kant worden eerst ingekort
+  // (en zo opgeslagen).
+  const capped = (await store.getAll('routines').catch(() => [])).map(capPnf);
+  const storedRoutines = capped.map((c) => c.routine);
   let routines = storedRoutines.filter((r) => validateUserRoutine(r, lib.exercises).length === 0);
   const skippedRoutines = storedRoutines.length - routines.length;
+  const shortened = capped.filter((c) => c.changed && routines.includes(c.routine)).map((c) => c.routine);
+  for (const r of shortened) store.put('routines', r).catch(() => {});
   let sessions = await store.getAll('sessions').catch(() => []);
   let tests = await store.getAll('tests').catch(() => []);
   // Niet-opgeslagen werk uit de bouwer van de vorige keer (de app werd op de
   // achtergrond afgesloten, wat iOS vaak doet).
   let builderDraft = await store.get('settings', 'builderDraft').catch(() => null);
+  if (builderDraft) builderDraft = { ...builderDraft, routine: capPnf(builderDraft.routine).routine };
   if (builderDraft && validateUserRoutine(builderDraft.routine, lib.exercises).length) builderDraft = null;
   await loadGraphics([...new Set([...lib.exercises.values()].map((x) => x.position))]);
 
@@ -132,8 +135,9 @@ async function boot() {
   if (knee.unknown) notice('Je kniestatus kon niet worden gelezen. Voor de zekerheid staan oefeningen boven 45° uit, zoals bij een opvlamming.');
   for (const w of bootKnee?.warnings ?? []) notice(w);
   if (bootKnee?.changed) saveKneeState(store, knee).catch(() => {});
+  if (shortened.length) notice(`PNF ingekort tot hoogstens 180 s per kant in: ${shortened.map((r) => r.name).join(', ')}.`);
   if (skippedRoutines) notice(`${skippedRoutines} opgeslagen ${skippedRoutines === 1 ? 'routine is' : 'routines zijn'} beschadigd en worden niet getoond.`);
-  // Kort bericht (bv. "schone cyclus"), vast bovenin zodat het ook zichtbaar
+  // Kort bericht (bv. "opvlammingsmodus aan"), vast bovenin zodat het ook zichtbaar
   // is als je gescrold bent, en zonder de knoppen in de duimzone te bedekken.
   // Verdwijnt na 10 s of met OK; de stand zelf staat ook op de schermen.
   const toasts = h('div', { class: 'toasts', role: 'status' });
@@ -147,27 +151,16 @@ async function boot() {
     setTimeout(() => p.remove(), 10000);
   };
 
-  // ---------- Kniestatus (§6.6–6.7) ----------
+  // ---------- Kniestatus (§6.7) ----------
   // Elke wijziging gaat via de pure functies in knee.js en wordt meteen
   // bewaard. Een kniestatus die niet gelezen kon worden, wordt nooit
   // weggeschreven: dat zou de echte status in de opslag overschrijven.
 
   const exName = (id) => lib.exercises.get(id)?.name ?? id;
   function eventTexts(events) {
-    const cooled = new Set(events.filter((e) => e.type === 'afkoeling').map((e) => e.exerciseId));
-    return events.map((e) => {
-      switch (e.type) {
-        case 'opvlamming_aan': return `Opvlammingsmodus staat aan (${e.reason}). Alles boven ${K.flareMaxDeg}° kniebuiging staat uit.`;
-        case 'afkoeling': return `${exName(e.exerciseId)}: cyclus niet schoon. Weer vergrendeld; afkoelperiode tot ${formatDay(e.until)}.`;
-        case 'cyclus_vervallen': return `${exName(e.exerciseId)}: cyclus vervallen (${e.reason}). De teller blijft staan.`;
-        case 'status':
-          if (e.to === 'voorlopig') return `${exName(e.exerciseId)}: schone cyclus. Status: voorlopig.`;
-          if (e.to === 'vrij') return `${exName(e.exerciseId)}: ${K.cleanCyclesToUnlock} schone cycli op rij. De oefening is vrij.`;
-          if (e.to === 'vergrendeld' && !cooled.has(e.exerciseId)) return `${exName(e.exerciseId)}: weer vergrendeld.`;
-          return null;
-        default: return null;
-      }
-    }).filter(Boolean);
+    return events.map((e) => (e.type === 'opvlamming_aan'
+      ? `Opvlammingsmodus staat aan (${e.reason}). Alles boven ${K.flareMaxDeg}° kniebuiging staat uit.`
+      : null)).filter(Boolean);
   }
 
   // Opslaan gebeurt op volgorde, en alleen als de opgeslagen stand nog de
@@ -215,12 +208,6 @@ async function boot() {
     library.refresh();
     picker.refresh();
     for (const t of eventTexts(events)) flash(t);
-    // Het voorstel komt na het afrondscherm van de speler, op het volgende
-    // scherm (een wissel van scherm sluit open bladen).
-    if (events.some((e) => e.type === 'opvlamming_voorstel') && !knee.flare.active) {
-      if (current === 'speler' || player.isActive() || player.isFinishing()) flareProposalPending = true;
-      else proposeFlare();
-    }
     refreshView();
   }
 
@@ -229,52 +216,20 @@ async function boot() {
   // inhalen of een venster verschuiven).
   function clockBack() {
     if (knee.unknown || Date.now() >= latestKneeTime(knee) - 60000) return false;
-    flash('De klok van je toestel staat vóór je laatste kniecheck. Zet de datum en tijd goed; tot dan legt de app geen kniechecks of proeven vast.');
+    flash('De klok van je toestel staat vóór je laatste kniecheck. Zet de datum en tijd goed; tot dan legt de app geen kniechecks vast.');
     return true;
-  }
-  let flareProposalPending = false;
-
-  // Checks die niet op tijd zijn ingevuld, laten hun cyclus vervallen (§6.6).
-  function expireNow() {
-    if (knee.unknown) return;
-    const r = expireChecks(knee, Date.now(), K);
-    if (r.events.length) commitKnee(r.state, r.events);
   }
 
   const kneeActions = {
-    async check(context, pain, exerciseId) {
+    async check(context, pain) {
       if (clockBack()) return;
       try {
-        const r = recordKneeCheck(knee, { id: newId(), at: Date.now(), pain, context, ...(exerciseId ? { exerciseId } : {}) }, K);
+        const r = recordKneeCheck(knee, { id: newId(), at: Date.now(), pain, context }, K);
         await commitKnee(r.state, r.events);
       } catch (e) {
         flash(String(e?.message ?? e));
         refreshView();
       }
-    },
-    async startTest(ex, confirmations) {
-      if (clockBack()) return;
-      try {
-        await commitKnee(startTest(ex, knee, Date.now(), confirmations));
-      } catch (e) {
-        flash(String(e?.message ?? e));
-      }
-    },
-    async cancelTest(ex) { await commitKnee(cancelTest(ex.id, knee)); },
-    // Begeleide proef: 1 × 30 s per kant. De beginwaarde is al gevraagd; op
-    // een andere dag dan de bevestiging opnieuw bevestigen (§6.6).
-    startTrial(ex, painBefore, confirmations = null) {
-      if (unlockState(ex, knee) !== 'test' || knee.flare.active || painBefore === null || painBefore > K.painMax) return;
-      if (clockBack()) return;
-      if (needsReconfirm(knee.unlocks[ex.id], Date.now())) {
-        try {
-          commitKnee(reconfirm(ex.id, knee, Date.now(), confirmations ?? {}));
-        } catch (e) {
-          flash(String(e?.message ?? e));
-          return;
-        }
-      }
-      beginRun({ steps: [trialStep(ex)] }, { id: `proef:${ex.id}`, name: `Proef: ${ex.name}`, slot: 'vrij', note: KNEE.trial }, { ids: [ex.id], painBefore, trial: true });
     },
     // Alleen als de reeks van 7 dagen nog klopt (een oude kaart kan nog open
     // staan).
@@ -283,6 +238,7 @@ async function boot() {
       await commitKnee(endFlare(knee));
     },
     async postponeFlareExit() { await commitKnee(postponeFlareExit(knee, Date.now())); },
+    undoFlare: () => askUndoFlare(),
   };
 
   // Opvlamming handmatig aan ("Ik heb een opvlamming"), of na een voorstel.
@@ -293,7 +249,7 @@ async function boot() {
       h('div', { class: 'sheet-body' },
         h('h2', { id: 'flare-sheet-title' }, title),
         h('p', null, text),
-        h('p', null, `Alles boven ${K.flareMaxDeg}° kniebuiging gaat uit. Oefeningen in de proefperiode of vrijgegeven gaan terug naar vergrendeld. De modus gaat uit na ${K.flareExitDays} dagen op rij een dagelijkse kniecheck van ≤${K.painMax}/10.`)),
+        h('p', null, `Alles boven ${K.flareMaxDeg}° kniebuiging gaat uit. De modus gaat uit na ${K.flareExitDays} dagen op rij een dagelijkse kniecheck van ≤${K.painMax}/10. Per ongeluk aangezet? Dan kun je hem binnen 24 uur terugdraaien.`)),
       h('div', { class: 'sheet-foot' },
         h('button', { class: 'btn', type: 'button', onclick: () => flareSheet.close() }, 'Niet nu'),
         h('button', {
@@ -307,148 +263,37 @@ async function boot() {
     flareSheet.showModal();
   }
   const askFlare = () => openFlareSheet('Opvlammingsmodus aanzetten?', 'Zet hem aan als je knie opspeelt.');
-  const proposeFlare = () => openFlareSheet('Opvlammingsmodus aanzetten?', `Een waarde lag boven ${K.painMax}/10. Het is verstandig de opvlammingsmodus aan te zetten.`);
 
-  // "Kniepijn nu" vóór een routine met een oefening uit de proefperiode (zie
-  // AFWIJKINGEN.md): de beginwaarde van de nieuwe cyclus. Boven 2/10 wordt
-  // die oefening overgeslagen.
-  const painSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'pain-sheet-title' });
-  painSheet.addEventListener('click', (e) => { if (e.target === painSheet) painSheet.close(); });
-  function askPainNow(playable, meta, ids) {
-    const names = ids.map(exName).join(', ');
-    const recent = ids.filter((id) => {
-      const last = lastExposureAt(knee.unlocks[id]);
-      return last !== null && Date.now() - last < K.exposureSpacingHours * 3600 * 1000;
-    });
-    // Staat er voor zo'n oefening een 24- of 48-uurscheck open, dan geldt
-    // dit antwoord ook als die check: het is dezelfde vraag op hetzelfde
-    // moment, en een nieuwe blootstelling zou de cyclus anders laten vervallen.
-    const open = pendingChecks(knee, Date.now(), K).filter((c) => ids.includes(c.exerciseId));
-    const rest = playable.steps.filter((st) => !ids.includes(st.exerciseId));
-    const start = h('button', { class: 'btn primary', type: 'button', disabled: true }, icon('play'), 'Start');
-    const high = h('p', { class: 'warn-bar', role: 'alert', hidden: true },
-      rest.length ? `Boven ${K.painMax}/10: ${names} wordt overgeslagen.` : `Boven ${K.painMax}/10: ${names} wordt overgeslagen en er blijft niets over om af te spelen.`);
-    const picker2 = painPicker(KNEE.painNow, {
-      onChange: (v) => {
-        high.hidden = v <= K.painMax;
-        start.disabled = v > K.painMax && !rest.length && !open.length;
-        start.lastChild.textContent = v > K.painMax && !rest.length ? 'Opslaan' : 'Start';
-      },
-    });
-    start.addEventListener('click', () => {
-      painSheet.close();
-      const v = picker2.value();
-      const at = Date.now();
-      // Eerst de open checks en (boven 2/10) de waarde zelf vastleggen.
-      let next = knee;
-      const events = [];
-      for (const c of open) {
-        try {
-          const r = recordKneeCheck(next, { id: newId(), at, pain: v, context: c.context, exerciseId: c.exerciseId }, K);
-          next = r.state;
-          events.push(...r.events);
-        } catch (e) {
-          flash(String(e?.message ?? e));
-        }
-      }
-      if (v > K.painMax) {
-        for (const id of ids.filter((x) => !open.some((c) => c.exerciseId === x))) {
-          next = recordKneeCheck(next, { id: newId(), at, pain: v, context: 'test', exerciseId: id }, K).state;
-        }
-      }
-      const proposal = v > K.painMax && !next.flare.active;
-      if (next !== knee) commitKnee(next, events);
-      // Wat nu nog in de proefperiode zit (een check kan de status hebben
-      // veranderd), krijgt v als beginwaarde; boven 2/10 alleen de rest.
-      const started = v > K.painMax
-        ? beginRun({ ...playable, steps: rest }, meta, null)
-        : (() => {
-          const ids2 = trialExerciseIds(playable.steps, lib.exercises, knee);
-          return beginRun(playable, meta, ids2.length ? { ids: ids2, painBefore: v } : null);
-        })();
-      // §6.6: een waarde boven 2/10 → voorstel om de opvlammingsmodus aan te zetten.
-      if (proposal) {
-        if (started) flareProposalPending = true;
-        else proposeFlare();
-      }
-    });
-    fill(painSheet,
+  // Per ongeluk aangezet (keuze Oscar, AFWIJKINGEN.md): binnen 24 uur direct
+  // terugdraaien, na een bevestiging. Bij een echte opvlamming laat je hem aan.
+  const undoSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'undo-sheet-title' });
+  undoSheet.addEventListener('click', (e) => { if (e.target === undoSheet) undoSheet.close(); });
+  function askUndoFlare() {
+    if (!canUndoFlare(knee, Date.now())) { flash('Terugdraaien kan alleen binnen 24 uur na het aanzetten.'); refreshView(); return; }
+    fill(undoSheet,
       h('div', { class: 'sheet-body' },
-        h('h2', { id: 'pain-sheet-title' }, 'Eerst je knie'),
-        h('p', null, `${names} zit in de proefperiode. Je antwoord is de beginwaarde voor de 24- en 48-uurscheck.`),
-        open.length ? h('p', { class: 'info-bar' }, `Je antwoord geldt ook als ${open.map((c) => `${c.context === '24u' ? '24' : '48'}-uurscheck voor ${exName(c.exerciseId)}`).join(' en ')}.`) : null,
-        recent.length ? h('p', { class: 'warn-bar' }, WARNINGS.W9.text) : null,
-        picker2.el, high),
+        h('h2', { id: 'undo-sheet-title' }, 'Opvlammingsmodus terugdraaien?'),
+        h('p', null, 'Doe dit alleen als je hem per ongeluk hebt aangezet. Speelt je knie echt op, laat hem dan aan.'),
+        h('p', { class: 'note' }, 'Je kniechecks blijven in het logboek staan.')),
       h('div', { class: 'sheet-foot' },
-        h('button', { class: 'btn', type: 'button', onclick: () => painSheet.close() }, 'Annuleren'),
-        start));
-    painSheet.showModal();
-  }
-
-  // Blootstellingen (§6.6). Vastgelegd zodra het eerste werkblok van die
-  // oefening begint (ook als de app daarna wordt afgesloten), met de
-  // beginwaarde. Bij het afronden: niet afgemaakt → de cyclus vervalt;
-  // "kniepijn tijdens" komt bij Opslaan op het afrondscherm.
-  // runExposure = { ids, painBefore, trial, planned: Map(id → s), recorded: Map(id → at) }
-  let runExposure = null;
-  const exposuresBySession = new Map();
-  const WORK = ['work', 'contract', 'relax'];
-  function onRunSegment(seg) {
-    const run = runExposure;
-    if (!run || !WORK.includes(seg.kind) || !run.ids.includes(seg.exerciseId) || run.recorded.has(seg.exerciseId)) return;
-    const id = seg.exerciseId;
-    const at = Date.now();
-    run.recorded.set(id, at);
-    try {
-      let next = recordKneeCheck(knee, { id: newId(), at, pain: run.painBefore, context: 'test', exerciseId: id }, K).state;
-      const r = recordExposure(id, next, { at, painBefore: run.painBefore }, K);
-      next = r.state;
-      commitKnee(next, r.events);
-    } catch (e) {
-      flash(`Blootstelling niet vastgelegd: ${e?.message ?? e}`);
-    }
-  }
-  async function trackExposures(session) {
-    let next = knee;
-    const events = [];
-    if (runExposure && !exposuresBySession.has(session.id)) {
-      const run = runExposure;
-      runExposure = null;
-      const pending = [];
-      const abandoned = [];
-      for (const [id, at] of run.recorded) {
-        // Afgemaakt = alle geplande werktijd van die oefening gedaan (op 1 s na).
-        const done = session.segmentsDone.filter((x) => x.exerciseId === id && WORK.includes(x.kind)).reduce((a, x) => a + x.sec, 0);
-        if (done < (run.planned.get(id) ?? 0) - 1) {
-          const r = abandonCycle(id, next, at, run.trial ? 'proef niet afgemaakt' : 'oefening niet afgemaakt');
-          next = r.state;
-          events.push(...r.events);
-          abandoned.push(id);
-        } else {
-          pending.push({ id, at });
-        }
-      }
-      exposuresBySession.set(session.id, { pending, abandoned });
-    }
-    const { pending = [], abandoned = [] } = exposuresBySession.get(session.id) ?? {};
-    if (session.kneePainDuring !== null && (pending.length || abandoned.length)) {
-      for (const { id, at } of pending) {
-        const r = setPainDuring(id, next, { exposureAt: at, pain: session.kneePainDuring, at: Date.now() }, K);
-        next = r.state;
-        events.push(...r.events);
-      }
-      // Ook bij een niet afgemaakte oefening: boven 2/10 het voorstel (§6.6).
-      if (abandoned.length && session.kneePainDuring > K.painMax) events.push({ type: 'opvlamming_voorstel', exerciseId: abandoned[0] });
-      exposuresBySession.set(session.id, { pending: [], abandoned: [] });
-    }
-    if (next !== knee || events.length) await commitKnee(next, events);
+        h('button', { class: 'btn', type: 'button', onclick: () => undoSheet.close() }, 'Aan laten'),
+        h('button', {
+          class: 'btn danger', type: 'button',
+          onclick: async () => {
+            undoSheet.close();
+            // Opnieuw controleren: het blad kan lang hebben opengestaan.
+            if (!canUndoFlare(knee, Date.now())) { flash('Terugdraaien kan alleen binnen 24 uur na het aanzetten.'); return; }
+            await commitKnee(endFlare(knee));
+            flash('Opvlammingsmodus teruggedraaid.');
+          },
+        }, 'Terugdraaien')));
+    undoSheet.showModal();
   }
 
   async function updateSettings(patch) {
     settings = withDefaults({ ...settings, ...patch });
     applyTheme(settings);
     audio.configure(settings);
-    if ('showLocked' in patch) { library.setShowLocked(settings.showLocked); picker.setShowLocked(settings.showLocked); }
     if ('weights' in patch) { library.setWeights(settings.weights); picker.setWeights(settings.weights); }
     try {
       await saveSettings(store, settings);
@@ -470,33 +315,30 @@ async function boot() {
   const goBack = (fallback) => () => { if ((history.state?.depth ?? 0) > 0) history.back(); else location.hash = fallback; };
   const home = createHomeScreen({
     lib, getData,
-    // Kniekaarten bovenaan (§6.6–6.7) en "Ik heb een opvlamming" onderaan.
+    // Kniekaarten bovenaan (§6.7) en "Ik heb een opvlamming" onderaan.
     topCards: () => [...kneeCards({ lib, knee, now: Date.now(), actions: kneeActions }), ...dataCards()],
     bottom: () => (knee.flare.active || knee.unknown ? null
       : h('button', { class: 'btn flare-button', type: 'button', onclick: askFlare }, KNEE.flareButton)),
   });
-  const libState = libraryState(settings.showLocked);
+  const libState = libraryState();
   const library = createLibraryScreen({
-    lib, equipmentOrder, showLocked: settings.showLocked, weights: settings.weights, blockedCodes, state: libState,
+    lib, equipmentOrder, weights: settings.weights, blockedCodes, state: libState,
     attention: () => attention,
   });
   const exercise = createExerciseScreen({
     lib, getContext, onBack: goBack('#/bibliotheek'), onTry: tryExercise, onAdd: openAddSheet,
-    onUnlock: (ex) => { location.hash = `#/ontgrendelen/${ex.id}`; },
   });
-  const unlock = createUnlockScreen({ lib, getKnee: () => knee, actions: kneeActions, onBack: goBack('#/start') });
   const routine = createRoutineScreen({
-    lib, getContext, onBack: goBack('#/start'), onStart: startRoutine,
+    lib, getContext, onBack: goBack('#/start'), onStart: beginRun,
     onCopy: (tpl) => openBuilder(withoutBlocked(copyTemplate(tpl, { id: newId(), now: Date.now() })), { fresh: true }),
     onEdit: (r) => { location.hash = `#/bouwer/${encodeURIComponent(r.id)}`; },
   });
   const player = createPlayerScreen({
-    lib, audio, getSettings, onSegment: (seg) => onRunSegment(seg),
+    lib, audio, getSettings,
     onSave: async (session) => {
       await store.put('sessions', session);
       sessions = [...sessions.filter((x) => x.id !== session.id), session];
       requestPersistence();
-      await trackExposures(session);
     },
     onFinished: () => { replaceRoute('#/start'); },
   });
@@ -505,7 +347,7 @@ async function boot() {
     knee: {
       get: () => knee,
       askFlare,
-      reset: async () => commitKnee(resetUnlocks(knee)),
+      undoFlare: () => askUndoFlare(),
     },
     data: { openExport, importFile, canImport: () => store.persistent },
     pwa: { storageStatus, requestPersistence, isStandalone, downloadReminder },
@@ -629,7 +471,7 @@ async function boot() {
   async function importFile(file) {
     let r;
     try {
-      r = parseDump(await file.text(), lib, { now: Date.now(), defaults: DEFAULT_SETTINGS });
+      r = parseDump(await file.text(), lib, { defaults: DEFAULT_SETTINGS });
       // Zonder instellingen in het bestand blijven de huidige staan.
       if (r.ok && !r.data.settings) r.data.settings = settings;
     } catch (e) {
@@ -639,7 +481,7 @@ async function boot() {
     fill(importSheet,
       h('div', { class: 'sheet-body' },
         h('h2', { id: 'import-title' }, r.ok ? 'Alles vervangen door deze import?' : 'Import niet mogelijk'),
-        r.ok ? h('p', null, `${n(c.routines, 'routine', 'routines')}, ${n(c.sessions, 'sessie', 'sessies')}, ${n(c.kneeChecks, 'kniecheck', 'kniechecks')}, ${n(c.tests, 'meting', 'metingen')} en ${n(c.unlocks, 'ontgrendeling', 'ontgrendelingen')}. Wat nu in de app staat, wordt vervangen.`) : null,
+        r.ok ? h('p', null, `${n(c.routines, 'routine', 'routines')}, ${n(c.sessions, 'sessie', 'sessies')}, ${n(c.kneeChecks, 'kniecheck', 'kniechecks')}, en ${n(c.tests, 'meting', 'metingen')}. Wat nu in de app staat, wordt vervangen.`) : null,
         r.errors.length ? h('ul', { class: 'plain' }, r.errors.slice(0, 12).map((e) => h('li', { class: 'locked-bar' }, e))) : null,
         r.warnings.length ? h('ul', { class: 'plain' }, r.warnings.map((w) => h('li', { class: 'warn-bar' }, w))) : null),
       h('div', { class: 'sheet-foot' },
@@ -697,22 +539,18 @@ async function boot() {
   }
 
   // Kiesblad voor de bouwer: de bibliotheek met dezelfde filters, maar een tik
-  // kiest de oefening. Geblokkeerd (W1/W8) kan niet; dan staat de reden erbij.
+  // kiest de oefening. Geblokkeerd (W8) kan niet; dan staat de reden erbij.
   const pickerNotice = h('div', { class: 'picker-notice', role: 'alert' });
   let pickResolve = null;
   const pickerClose = h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Sluiten', onclick: () => pickerDialog.close() }, icon('cross'));
   const picker = createLibraryScreen({
-    lib, equipmentOrder, showLocked: settings.showLocked, weights: settings.weights, blockedCodes, state: libState,
+    lib, equipmentOrder, weights: settings.weights, blockedCodes, state: libState,
     title: 'Kies een oefening', headerExtra: pickerClose,
     scrollTop: () => { pickerList().scrollTop = 0; },
     onPick: (ex, codes) => {
       if (codes.length) {
-        // §6.3: een tik op een vergrendelde oefening opent het
-        // ontgrendelprotocol (§6.6); tijdens een opvlamming alleen de reden.
-        const toUnlock = codes.includes('W1') && !codes.includes('W8')
-          ? h('button', { class: 'btn', type: 'button', onclick: () => { pickerDialog.close(); location.hash = `#/ontgrendelen/${ex.id}`; } }, 'Naar de 48-uurstest')
-          : null;
-        fill(pickerNotice, h('div', { class: 'locked-bar' }, h('p', null, h('strong', null, `${ex.name}: `), codes.map((c) => WARNINGS[c].text).join(' ')), toUnlock));
+        // Tijdens een opvlamming: alleen de reden.
+        fill(pickerNotice, h('div', { class: 'locked-bar' }, h('p', null, h('strong', null, `${ex.name}: `), codes.map((c) => WARNINGS[c].text).join(' '))));
         return;
       }
       pickerDialog.close(ex.id);
@@ -758,7 +596,7 @@ async function boot() {
     onStart: (r) => {
       if (builderDraft?.routine.id === r.id) dropDraft();
       const { routine: playable } = playableRoutine(r, { lib, knee });
-      if (playable.steps.length) startRoutine(playable, r);
+      if (playable.steps.length) beginRun(playable, r);
     },
     onBack: goBack('#/routines'),
     onForget: () => dropDraft(),
@@ -774,11 +612,10 @@ async function boot() {
     store.delete('settings', 'builderDraft').catch(() => {});
   }
   // Terug in beeld (de app bleef open op de achtergrond): de nieuwste
-  // kniestatus laden, verlopen checks laten vervallen en de kaarten
-  // bijwerken (dagelijkse check na 04:00, 24/48-uursvensters).
+  // kniestatus laden en de kaarten bijwerken (dagelijkse check na 04:00,
+  // terugdraaien alleen binnen 24 uur).
   const onVisible = async () => {
     await reloadKnee();
-    expireNow();
     if (!player.isActive()) refreshView();
   };
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') onVisible(); });
@@ -822,7 +659,7 @@ async function boot() {
   }
 
   // "Toevoegen aan routine" op de kaart: kies een eigen routine of maak een
-  // nieuwe. De knie-poort wordt hier opnieuw gecontroleerd.
+  // nieuwe. De opvlammingsmodus wordt hier opnieuw gecontroleerd.
   const addSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'add-title' });
   addSheet.addEventListener('click', (e) => { if (e.target === addSheet) addSheet.close(); });
   function openAddSheet(ex) {
@@ -853,61 +690,37 @@ async function boot() {
     addSheet.showModal();
   }
 
-  // Elke start komt hier langs. Zit er een oefening uit de proefperiode in,
-  // dan eerst "Kniepijn nu" (die vraag is dan het gebruikersgebaar).
-  // Kopiëren en dupliceren maken een nieuwe routine: wat de knie-poort nu
-  // blokkeert (W1/W8), komt er niet in (§6.5 "voorkomen toevoegen"). Zeg wat
+  // Kopiëren en dupliceren maken een nieuwe routine: wat de opvlammingsmodus
+  // nu blokkeert (W8), komt er niet in (§6.5 "voorkomen toevoegen"). Zeg wat
   // er is weggelaten.
   function withoutBlocked(r) {
     const { routine: kept, removed } = playableRoutine(r, { lib, knee });
     if (removed.length) {
       const names = [...new Set(removed.map((x) => exName(x.exerciseId)))].join(', ');
-      flash(`Niet overgenomen (knie-poort): ${names}.`);
+      flash(`Niet overgenomen (opvlammingsmodus): ${names}.`);
     }
     return kept;
   }
 
-  function startRoutine(playable, meta) {
-    const ids = trialExerciseIds(playable.steps, lib.exercises, knee);
-    if (!ids.length) { beginRun(playable, meta, null); return; }
-    // Klok teruggezet: geen blootstelling vastleggen, dus die oefening ook
-    // niet afspelen.
-    if (clockBack()) { beginRun({ ...playable, steps: playable.steps.filter((st) => !ids.includes(st.exerciseId)) }, meta, null); return; }
-    askPainNow(playable, meta, ids);
-  }
-
-  // Start vanuit een gebruikersgebaar: audio ontgrendelen, dan de speler. De
-  // knie-poort wordt hier voor elke stap nog eens toegepast: wat vergrendeld
-  // is (W1) of tijdens een opvlamming boven 45° (W8), speelt nooit af.
-  // De begeleide proef mag alleen haar eigen oefening in de status test
-  // afspelen (exposure.trial). Geeft true als de speler start.
-  function beginRun(playable, meta, exposure) {
-    const trialIds = exposure?.trial ? exposure.ids : [];
-    const steps = playable.steps.filter((st) => access(lib.exercises.get(st.exerciseId), knee, K, { trial: trialIds.includes(st.exerciseId) }).allowed);
+  // Elke start komt hier langs, vanuit een gebruikersgebaar: audio
+  // ontgrendelen, dan de speler. De opvlammingsmodus wordt hier voor elke
+  // stap nog eens toegepast: wat boven 45° gaat (W8), speelt nooit af. Geeft
+  // true als de speler start.
+  function beginRun(playable, meta) {
+    const steps = playable.steps.filter((st) => access(lib.exercises.get(st.exerciseId), knee, K).allowed);
     if (!steps.length) return false;
     audio.unlock();
-    if (exposure) {
-      const planned = new Map();
-      for (const seg of compileRoutine({ ...playable, steps }, lib.exercises, { timing: lib.meta.timing, sideSwitchSec: settings.sideSwitchSec }).segments) {
-        if (WORK.includes(seg.kind) && exposure.ids.includes(seg.exerciseId)) planned.set(seg.exerciseId, (planned.get(seg.exerciseId) ?? 0) + seg.durationSec);
-      }
-      runExposure = { ...exposure, planned, recorded: new Map() };
-    } else {
-      runExposure = null;
-    }
-    player.begin({ ...playable, steps }, { id: meta.id, name: meta.name, slot: meta.slot, exposure, note: meta.note ?? null });
+    player.begin({ ...playable, steps }, { id: meta.id, name: meta.name, slot: meta.slot });
     location.hash = '#/speler';
     return true;
   }
 
   // "Probeer nu" (§6.2): alleen deze oefening met de standaarddosis. De
-  // knie-poort wordt hier opnieuw gecontroleerd.
+  // opvlammingsmodus wordt hier opnieuw gecontroleerd.
   function tryExercise(ex) {
     if (!access(ex, knee, lib.meta.knee).allowed) return;
-    // In de status test is de eerste blootstelling de begeleide proef.
-    if (unlockState(ex, knee) === 'test') { location.hash = `#/ontgrendelen/${ex.id}`; return; }
     const step = { exerciseId: ex.id, ...ex.defaultDose };
-    startRoutine({ steps: [step] }, { id: `probeer:${ex.id}`, name: `Probeer nu: ${ex.name}`, slot: 'vrij' });
+    beginRun({ steps: [step] }, { id: `probeer:${ex.id}`, name: `Probeer nu: ${ex.name}`, slot: 'vrij' });
   }
 
   const TABS = [['start', 'Start', 'home'], ['routines', 'Routines', 'play'], ['bibliotheek', 'Bibliotheek', 'list'], ['week', 'Week', 'sliders'], ['meer', 'Meer', 'gear']];
@@ -934,12 +747,11 @@ async function boot() {
     oefening: h('div', null, exercise.root, exercise.toolbar),
     routine: h('div', null, routine.root, routine.toolbar),
     bouwer: h('div', null, builder.root, builder.toolbar),
-    ontgrendelen: h('div', null, unlock.root, unlock.toolbar),
     speler: h('div', null, player.root),
   };
   for (const v of Object.values(views)) v.hidden = true;
   fill(app, notices, ...Object.values(views), tabbar,
-    library.sheet, exercise.sheet, picker.sheet, pickerDialog, addSheet, ...builder.sheets, flareSheet, painSheet, exportSheet, importSheet, toasts);
+    library.sheet, exercise.sheet, picker.sheet, pickerDialog, addSheet, ...builder.sheets, flareSheet, undoSheet, exportSheet, importSheet, toasts);
   watchBars();
 
   // Service worker (§8.1) en "Update beschikbaar → herladen" (§11.3). Een
@@ -993,10 +805,6 @@ async function boot() {
     current = name;
     document.title = `${title} · Rekapp`;
     views[name].querySelector(focusSel)?.focus({ preventScroll: true });
-    if (flareProposalPending && name !== 'speler') {
-      flareProposalPending = false;
-      if (!knee.flare.active) proposeFlare();
-    }
   }
 
   const SIMPLE = {
@@ -1041,13 +849,6 @@ async function boot() {
       window.scrollTo(0, 0);
       return;
     }
-    if ((m = /^#\/ontgrendelen\/([a-z0-9_]+)$/.exec(hash))) {
-      expireNow();
-      unlock.render(m[1]);
-      show('ontgrendelen', `48-uurstest: ${lib.exercises.get(m[1])?.name ?? m[1]}`);
-      window.scrollTo(0, 0);
-      return;
-    }
     if ((m = /^#\/routine\/(.+)$/.exec(hash))) {
       const id = safeDecode(m[1]);
       const r = lib.templates.get(id) ?? routines.find((x) => x.id === id) ?? null;
@@ -1063,12 +864,12 @@ async function boot() {
       // binnen de bouwer (terugvraag bij niet-opgeslagen wijzigingen) blijft
       // de werkkopie staan.
       if (pendingDraft?.routine.id === id) {
-        // Wat de knie-poort nu blokkeert en niet al in de opgeslagen routine
-        // stond, komt er niet bij (net als bij kopiëren).
+        // Wat de opvlammingsmodus nu blokkeert en niet al in de opgeslagen
+        // routine stond, komt er niet bij (net als bij kopiëren).
         const base = routines.find((x) => x.id === id) ?? null;
         const had = new Set((base?.steps ?? []).map((st) => st.exerciseId));
         const steps = pendingDraft.routine.steps.filter((st) => had.has(st.exerciseId) || access(lib.exercises.get(st.exerciseId), knee, K).allowed);
-        if (steps.length < pendingDraft.routine.steps.length) flash('Niet overgenomen uit het concept (knie-poort): geblokkeerde oefeningen.');
+        if (steps.length < pendingDraft.routine.steps.length) flash('Niet overgenomen uit het concept (opvlammingsmodus): geblokkeerde oefeningen.');
         builder.restore({ ...pendingDraft, routine: { ...pendingDraft.routine, steps } }, base);
         pendingDraft = null;
       } else if (current !== 'bouwer' || builder.currentId() !== id) {
@@ -1102,7 +903,6 @@ async function boot() {
     }
     if (SIMPLE[hash]) { SIMPLE[hash](); return; }
     if (hash !== '#/start') history.replaceState({ depth }, '', '#/start');
-    expireNow();
     home.render();
     show('start', 'Start');
     window.scrollTo(0, scrollOf.start ?? 0);
@@ -1116,7 +916,6 @@ async function boot() {
     preserveFocus(view, () => {
       if (current === 'start') home.render();
       else if (current === 'oefening') exercise.render(lastExerciseId);
-      else if (current === 'ontgrendelen') unlock.render(unlock.currentId());
       else if (current === 'instellingen') settingsScreen.render({ keepDraft: true });
     });
   }

@@ -17,14 +17,13 @@ export function defaultFilters() {
     minStars: 0,
     type: null, // 'static' | 'pnf' | 'dynamic' | 'active' | null
     onlyK4: false,
-    showLocked: true,
   };
 }
 
 // Aantal filters dat afwijkt van de standaard (voor de knop "Filters (n)").
 export function activeFilterCount(f, d = defaultFilters()) {
   return ['groups', 'equipment'].filter((k) => f[k].length).length
-    + ['slot', 'position', 'type', 'minStars', 'onlyK4', 'showLocked'].filter((k) => f[k] !== d[k]).length;
+    + ['slot', 'position', 'type', 'minStars', 'onlyK4'].filter((k) => f[k] !== d[k]).length;
 }
 
 // Kleine letters, zonder accenten: "Spreidzit" vindt ook "spreidzít".
@@ -59,7 +58,6 @@ export function matches(ex, rating, f) {
   if (rating.stars < f.minStars) return false;
   if (f.type && ex.type !== f.type) return false;
   if (f.onlyK4 && ex.scores.K < 4) return false;
-  if (!f.showLocked && rating.locked) return false;
   return true;
 }
 

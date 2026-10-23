@@ -12,7 +12,7 @@ export function suggestionFrequency(activeRoutines) {
 }
 
 // Alle 24 spiergroepen in de volgorde van §4. Met een kniestatus telt de
-// geplande dosis alleen de stappen die echt worden afgespeeld (zonder W1/W8).
+// geplande dosis alleen de stappen die echt worden afgespeeld (zonder W8).
 export function weekRows(lib, { routines, sessions, now, knee = null }) {
   const active = routines.filter((r) => r.active !== false).map((r) => (knee ? playableRoutine(r, { lib, knee }).routine : r));
   const planned = plannedWeekDose(active, lib.exercises);

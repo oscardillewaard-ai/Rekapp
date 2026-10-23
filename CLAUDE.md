@@ -17,9 +17,12 @@ stellen en begeleid af te spelen. De volledige specificatie staat in
   thema standaard (§8.3).
 - Gebruikersdata in IndexedDB (§8.2), niet in localStorage.
 - Tijd altijd uit tijdstempels, nooit tellen met `setInterval` (§6.8.2).
-- De knieregels zijn hard: knie-poort, knieslot met 48-uurstest en
-  opvlammingsmodus (§3.2, §6.6, §6.7). Een vergrendelde oefening mag via geen
-  enkele omweg toe te voegen of af te spelen zijn.
+- De opvlammingsmodus is hard (§6.7): tijdens een opvlamming mag een
+  oefening boven 45° via geen enkele omweg toe te voegen of af te spelen
+  zijn (W8, één poort: `access` in `knee.js`). Het knieslot met de
+  48-uurstest (§6.6) en de kniecap in de getoonde sterren zijn op verzoek
+  van Oscar verwijderd (23-10-2026, zie `AFWIJKINGEN.md`); de validator
+  controleert `locked` en de sterren in de bibliotheek nog wel.
 - Illustraties: eigen, originele SVG's (lichaamskaart en positie-iconen,
   §6.2). Niets overnemen.
 - Bij twijfel of tegenstrijdigheid in de spec: vraag het, gok niet. Leg elke

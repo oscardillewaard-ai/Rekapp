@@ -66,7 +66,7 @@ Je krijgt vier bestanden:
 
 | Bestand | Inhoud |
 |---|---|
-| `rekapp-JJJJ-MM-DD.json` | Alles: routines, sessies, kniechecks, ontgrendelingen, zelftests, opvlammingsmodus en instellingen. Dit is je back-up. |
+| `rekapp-JJJJ-MM-DD.json` | Alles: routines, sessies, kniechecks, zelftests, opvlammingsmodus en instellingen. Dit is je back-up. |
 | `sessies.csv` | Eén regel per sessie: datum, tijd, tijdzone, moment, routine, status, geplande en actieve tijd, intensiteit, kniepijn, notities. |
 | `kniechecks.csv` | Eén regel per kniecheck: datum, tijd, pijn, soort check, oefening. |
 | `dosis_per_week.csv` | Per week (vanaf maandag) en spiergroep de gedane seconden links, rechts en dynamisch. |
@@ -83,9 +83,10 @@ je sessies naast bijvoorbeeld je HRV-gegevens leggen.
    vervangen** om het over te nemen. Wat nu in de app staat, wordt dan
    vervangen.
 
-De knieregels blijven hard: een ontgrendeling die niet klopt met haar eigen
-48-uurscontroles, gaat bij het importeren terug naar vergrendeld. De app meldt
-dat.
+Een opvlamming in het bestand blijft aan. Een oudere export met
+ontgrendelingen (uit de tijd van het knieslot) is gewoon te importeren; de
+ontgrendelingen gaan niet mee, de rest wel. PNF-stappen van meer dan 180 s
+per kant worden ingekort. De app meldt beide.
 
 ## Acceptatie op een echte telefoon (checklist §11.3)
 
@@ -114,7 +115,8 @@ Handig om ook even te proberen:
 
 - [ ] De CSV-export opent correct in Excel; de JSON-import herstelt alles.
 - [ ] Een kantwissel wordt aangekondigd met spraak, piep en flits.
-- [ ] Een vergrendelde oefening is nergens toe te voegen of af te spelen.
+- [ ] Tijdens een opvlamming is een oefening boven 45° nergens toe te voegen
+      of af te spelen; "Terugdraaien" werkt binnen 24 uur na het aanzetten.
 
 ## Ontwikkelen
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateLibrary, checkedLibrary, rate, computeStars, weightsToPercent, LibraryError } from '../js/library.js';
+import { validateLibrary, checkedLibrary, rate, computeScore, computeStars, mustBeLocked, weightsToPercent, LibraryError } from '../js/library.js';
 import { rawLibrary, schema, lib } from './helpers.js';
 
 const errorsFor = (mutate) => {
@@ -25,7 +25,9 @@ test('verdeling van de sterren is zoals in §3.2', () => {
   assert.deepEqual(count, { 5: 3, 4.5: 9, 4: 14, 3.5: 30, 3: 4, 2: 10 });
 });
 
-// §11.1 A. Scores en sterren (moeten exact zo uit library.js komen).
+// §11.1 A. Scores en sterren (moeten exact zo uit library.js komen). De
+// validator rekent ze zo na, met de knie-poort; de weergave (rate) toont de
+// sterren sinds het besluit van Oscar zonder kniecap (AFWIJKINGEN.md).
 const VECTORS_A = [
   ['gastroc_muur', '5·5·4·5·5', 4.80, 5.0, false],
   ['hamstring_pnf', '5·5·5·5·4', 4.85, 5.0, false],
@@ -44,10 +46,14 @@ for (const [id, bkdrp, score, stars, locked] of VECTORS_A) {
     const x = lib.exercises.get(id);
     const [B, K, D, R, P] = bkdrp.split('·').map(Number);
     assert.deepEqual(x.scores, { B, K, D, R, P });
+    const pct = weightsToPercent(lib.meta.scoring.weights);
+    assert.equal(computeScore(x.scores, pct), score);
+    assert.equal(computeStars(x.scores, pct, lib.meta.scoring.kneeGate), stars);
+    assert.equal(mustBeLocked(x, lib.meta), locked);
+    // Weergave: dezelfde score, sterren zonder kniecap.
     const r = rate(x, lib.meta);
     assert.equal(r.score, score);
-    assert.equal(r.stars, stars);
-    assert.equal(r.locked, locked);
+    assert.equal(r.stars, locked ? Math.floor(score * 2 + 0.5) / 2 : stars);
     // De bibliotheek zelf staat ook zo.
     assert.equal(x.score, score);
     assert.equal(x.stars, stars);
@@ -156,13 +162,16 @@ test('negatief: spiergroep met maar één oefening als primair doel', () => {
   assert.ok(errors.some((e) => e.where === 'spiergroep nek'), JSON.stringify(errors));
 });
 
-test('een eigen weging verandert de sterren, niet de knie-poort', () => {
+test('een eigen weging verandert de getoonde sterren; geen kniecap meer in de weergave', () => {
   const kikker = lib.exercises.get('kikker');
   const triceps = lib.exercises.get('triceps_overhead');
   const custom = { B: 0, K: 0, D: 100, R: 0, P: 0 };
   assert.equal(rate(triceps, lib.meta, custom).stars, 4); // D = 4
-  const r = rate(kikker, lib.meta, custom); // D = 5, maar K = 1
+  const r = rate(kikker, lib.meta, custom); // D = 5, K = 1
   assert.equal(r.score, 5);
-  assert.equal(r.stars, 2);
-  assert.equal(r.locked, true);
+  assert.equal(r.stars, 5);
+  assert.equal('locked' in r, false);
+  // Standaardweging: kikker 3,05 → 3 sterren getoond; in de bibliotheek 2.
+  assert.equal(rate(kikker, lib.meta).stars, 3);
+  assert.equal(kikker.stars, 2);
 });

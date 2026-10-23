@@ -5,7 +5,7 @@ import { rate } from '../library.js';
 import { formatDose, evidenceLabel, SLOT_LABELS, TYPE_LABELS, SIDED_LABELS } from '../format.js';
 import { RUBRICS, BREATHING, CARD } from '../texts.js';
 import { WARNINGS } from '../warnings.js';
-import { access, unlockState } from '../knee.js';
+import { access } from '../knee.js';
 
 const LETTERS = ['B', 'K', 'D', 'R', 'P'];
 const LETTER_NAMES = { B: 'Bewijs', K: 'Knieveiligheid', D: 'Doelgerichtheid', R: 'Relevantie', P: 'Praktisch' };
@@ -24,7 +24,7 @@ function sourceItem(src) {
     : src.citation);
 }
 
-export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd, onUnlock }) {
+export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) {
   const root = h('section', { class: 'screen' });
   const toolbar = h('div', { class: 'toolbar' });
   const rubricSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'rubric-title' });
@@ -49,20 +49,6 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd, on
         h('button', { class: 'btn primary', type: 'button', onclick: () => rubricSheet.close() }, 'Sluiten')));
     rubricSheet.showModal();
     rubricSheet.querySelector('.current')?.scrollIntoView({ block: 'nearest' });
-  }
-
-  // Rode balk bij een vergrendelde oefening (§6.2), met de status in het
-  // ontgrendelprotocol (§6.6) en de weg naar de 48-uurstest.
-  function lockedBar(ex) {
-    const st = unlockState(ex, getContext().knee);
-    if (st === 'vrij') {
-      return h('div', { class: 'info-bar', role: 'note' }, 'Vrijgegeven via de 48-uurstest. Bij een opvlamming wordt hij weer vergrendeld.');
-    }
-    const status = st === 'vergrendeld' ? null : `In de proefperiode (status: ${st}).`;
-    return h('div', { class: 'locked-bar', role: 'note' },
-      h('strong', null, icon('lock'), st === 'vergrendeld' ? CARD.lockedBar : 'Proefperiode'),
-      status ? h('p', null, status) : null,
-      h('button', { class: 'btn danger', type: 'button', onclick: () => onUnlock(ex) }, st === 'vergrendeld' ? CARD.unlockButton : 'Naar de 48-uurstest'));
   }
 
   function render(id) {
@@ -111,13 +97,15 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd, on
         ex.pros.map((p) => h('li', { class: 'pro' }, icon('check'), h('span', null, h('span', { class: 'sr-only' }, 'Voordeel: '), p))),
         ex.cons.map((c) => h('li', { class: 'con' }, icon('cross'), h('span', null, h('span', { class: 'sr-only' }, 'Nadeel: '), c))))));
 
-    // 4. Knie, met de rode balk bij een vergrendelde oefening.
+    // 4. Knie. Het knieslot is verwijderd (AFWIJKINGEN.md); bij een lage
+    // kniescore staat er wel een gewone notitie, geen blokkade.
+    const lowK = ex.scores.K <= lib.meta.scoring.kneeGate.maxK;
     root.append(section('Knie',
       h('dl', null,
         h('dt', null, 'Maximale kniebuiging'), h('dd', null, `${ex.kneeFlexionMaxDeg}°`),
         h('dt', null, 'Kniebelasting'), h('dd', null, ex.kneeLoad)),
       h('p', null, ex.pfpsNote),
-      rating.locked ? lockedBar(ex) : null));
+      lowK ? h('div', { class: 'info-bar', role: 'note' }, `Lage kniescore (K${ex.scores.K}). Let zelf op je knie: pijn tijdens en na hooguit 2/10.`) : null));
 
     // 5. Uitvoering: cues, ademcue, standaarddosis, regressie, progressie.
     root.append(section('Uitvoering',
@@ -146,9 +134,8 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd, on
         group.note ? h('p', null, h('strong', null, 'Let op: '), group.note) : null,
         group.sources.length ? h('ul', null, group.sources.map((k) => sourceItem(lib.sources.get(k)))) : null)));
 
-    // 8. Knoppen, onderaan in de duimzone. Een vergrendelde oefening (W1), of
-    // tijdens een opvlamming alles boven 45° (W8), kan niet worden toegevoegd
-    // of afgespeeld. Vlak voor de speler start, past main.js (beginRun) dezelfde
+    // 8. Knoppen, onderaan in de duimzone. Tijdens een opvlamming kan alles
+    // boven 45° (W8) niet worden toegevoegd of afgespeeld. Vlak voor de speler start, past main.js (beginRun) dezelfde
     // poort (access) nog eens toe op elke stap.
     const gate = access(ex, getContext().knee, lib.meta.knee);
     const lockIcon = gate.allowed ? null : icon('lock');

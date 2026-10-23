@@ -21,11 +21,10 @@ test('activeFilterCount telt elk afwijkend filter één keer', () => {
   assert.equal(activeFilterCount({ ...defaultFilters(), query: 'kuit' }), 0); // zoeken is geen filter
 });
 
-test('"toon vergrendelde" uit verbergt alle 10 vergrendelde oefeningen (§11.2)', () => {
-  const shown = run({ showLocked: false });
-  assert.equal(shown.length, 60);
-  assert.ok(shown.every((id) => !ex(id).locked));
-  assert.equal(activeFilterCount({ ...defaultFilters(), showLocked: false }), 1);
+test('het filter "toon vergrendelde" bestaat niet meer: het knieslot is verwijderd (AFWIJKINGEN.md)', () => {
+  assert.equal('showLocked' in defaultFilters(), false);
+  // Ook een oud filter met showLocked: false verbergt niets meer.
+  assert.equal(run({ showLocked: false }).length, 70);
 });
 
 test('"alleen K ≥ 4" laat alleen K 4 en 5 zien', () => {
