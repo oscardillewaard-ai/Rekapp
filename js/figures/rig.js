@@ -8,7 +8,7 @@
 
 export const BONES = {
   low: 13, high: 13, shoulderAt: 10, neck: 3, head: 5, // rug in twee delen
-  arm: 13, fore: 12, hand: 4.5,
+  arm: 14, fore: 13.5, hand: 4.5,
   thigh: 20, shin: 19, foot: 7,
   hipW: 4, shoulderW: 7.5, // halve breedte in vooraanzicht
 };
@@ -39,6 +39,7 @@ export function twoBone(root, target, a, b, bend) {
 // hoogste van de twee. Voor houdingen waarin beide voeten vast staan.
 export function above(a, ra, b, rb) {
   const d = dist(a, b);
+  if (d < 1e-9) return [a[0], a[1] - ra]; // zelfde middelpunt: recht erboven
   const x = (ra * ra - rb * rb + d * d) / (2 * d);
   const y = Math.sqrt(Math.max(0, ra * ra - x * x));
   const u = [(b[0] - a[0]) / d, (b[1] - a[1]) / d];
@@ -67,13 +68,15 @@ export const onLeg = (ankle, angle, flex = 0) => add(ankle, dir(angle), legReach
 // pose = {
 //   pelvis: [x, y], torso (onderrug), chest? (bovenrug, standaard torso),
 //   head? (standaard chest), effort?, place?: { joint, at | x | y },
-//   legs: { n, f }: { ankle: [x, y], bend, foot } (vast punt) of
+//   twist? (zijaanzicht: verre schouder zoveel naar voren),
+//   legs: { n, f }: { ankle: [x, y], bend | straight: true, foot } (vast punt) of
 //                   { angle, shin?, foot } (hoeken; shin standaard = angle),
 //   arms: { n, f }: { hand: [x, y] | 'punt', bend, palm? } of
 //                   { angle, fore?, palm? },
 // }
 // Een hand kan ook een punt van het figuur zelf vastpakken ('n.ankle',
-// 'n.elbow', 'head', …): eerst de benen en de rug, dan de arm n, dan f.
+// 'n.thighMid', 'n.elbow', 'chest', 'head', …): eerst de benen en de rug, dan
+// de arm n, dan f.
 // place schuift het hele figuur zo dat dat punt op die plek staat (vaste
 // punten van andere ledematen blijven staan).
 export function joints(pose, view = 'side') {
@@ -92,20 +95,30 @@ function solve(pose, P, view) {
   const mid = add(P, dir(pose.torso), BONES.low);
   const neck = add(mid, dir(chest), BONES.high);
   const base = add(mid, dir(chest), BONES.shoulderAt);
-  const out = { pelvis: P, mid, neck, head: add(neck, dir(pose.head ?? chest), BONES.neck + BONES.head) };
+  const out = { pelvis: P, mid, chest: base, neck, head: add(neck, dir(pose.head ?? chest), BONES.neck + BONES.head) };
   for (const side of ['n', 'f']) {
     const sign = side === 'n' ? -1 : 1;
     const hip = front ? add(P, dir(pose.torso + sign * 90), BONES.hipW) : P;
     const leg = pose.legs[side];
     let knee;
     let ankle;
-    if (leg.ankle) ({ joint: knee, end: ankle } = twoBone(hip, leg.ankle, BONES.thigh, BONES.shin, leg.bend));
+    if (leg.ankle && leg.straight) {
+      // Gestrekt naar het doel: de knie buigt nooit, de enkel staat op een
+      // haar na (onderweg tussen twee houdingen) op haar plek.
+      const u = dir(angleOf(hip, leg.ankle));
+      knee = add(hip, u, BONES.thigh);
+      ankle = add(hip, u, BONES.thigh + BONES.shin);
+    } else if (leg.ankle) ({ joint: knee, end: ankle } = twoBone(hip, leg.ankle, BONES.thigh, BONES.shin, leg.bend));
     else { knee = add(hip, dir(leg.angle), BONES.thigh); ankle = add(knee, dir(leg.shin ?? leg.angle), BONES.shin); }
-    out[side] = { hip, knee, ankle, toe: add(ankle, dir(leg.foot ?? 90), BONES.foot) };
+    const half = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    out[side] = { hip, knee, ankle, toe: add(ankle, dir(leg.foot ?? 90), BONES.foot), thighMid: half(hip, knee), shinMid: half(knee, ankle) };
   }
   for (const side of ['n', 'f']) {
     const sign = side === 'n' ? -1 : 1;
-    const shoulder = front ? add(base, dir(chest + sign * 90), BONES.shoulderW) : base;
+    // Zijaanzicht: met twist staat de verre schouder iets naar voren (de romp
+    // draait mee, zodat die hand verder reikt).
+    const shoulder = front ? add(base, dir(chest + sign * 90), BONES.shoulderW)
+      : side === 'f' && pose.twist ? add(base, dir(chest - 90), pose.twist) : base;
     const arm = pose.arms[side];
     let elbow;
     let hand;

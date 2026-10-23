@@ -15,6 +15,8 @@ const LIMBS = (k) => [
   [`${k}.arm`, `${k}.shoulder`, `${k}.elbow`], [`${k}.fore`, `${k}.elbow`, `${k}.hand`], [`${k}.palm`, `${k}.hand`, `${k}.fingers`],
 ];
 const SPINE = [['hips', 'f.hip', 'n.hip'], ['spine.low', 'pelvis', 'mid'], ['spine.high', 'mid', 'neck'], ['shoulders', 'f.shoulder', 'n.shoulder'], ['neck', 'neck', 'head']];
+// Monnikskapspier (nek naar schouder): alleen getekend als die rekt.
+const TRAPS = [['n.trap', 'neck', 'n.shoulder'], ['f.trap', 'neck', 'f.shoulder']];
 const f2 = (n) => n.toFixed(2);
 
 // Punt voor een band om de voetzool: midden van de voet, iets voorbij de zool.
@@ -46,7 +48,7 @@ export function createFigure(id, className = '') {
   const line = ([name, a, b]) => ({ el: s('line', { class: fig.active.includes(name) ? 'bone active' : 'bone' }), a, b });
   const far = LIMBS('f').map(line);
   const near = LIMBS('n').map(line);
-  const spine = SPINE.filter(([name]) => front || (name !== 'hips' && name !== 'shoulders')).map(line);
+  const spine = [...SPINE.filter(([name]) => front || (name !== 'hips' && name !== 'shoulders')), ...TRAPS.filter(([name]) => fig.active.includes(name))].map(line);
   const head = s('circle', { class: fig.active.includes('head') ? 'head active' : 'head', r: BONES.head });
   const bands = (fig.bands ?? []).map(([a, b]) => ({ el: s('line', { class: 'band' }), a, b }));
   const effort = fig.effort ? [s('line', { class: 'effort' }), s('line', { class: 'effort' })] : [];
