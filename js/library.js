@@ -181,9 +181,24 @@ export function validateLibrary(lib, schema) {
   }
 
   // 7. Sjablonen: alleen niet-vergrendelde oefeningen; gecompileerde tijd =
-  // expectedTotalSec.
+  // expectedTotalSec. Een dagelijks sjabloon is voor de ochtend of de avond;
+  // een sport hoort precies bij opwarmen en cooling-down, en elke sport heeft
+  // er van allebei precies één (één tegel per sport, §6.3).
+  const perSport = new Map();
+  for (const r of lib.routines) {
+    if (!r.sport) continue;
+    const k = perSport.get(r.sport) ?? { opwarmen: 0, cooldown: 0 };
+    if (r.kind in k) k[r.kind] += 1;
+    perSport.set(r.sport, k);
+  }
+  for (const [sport, k] of perSport) {
+    if (k.opwarmen !== 1 || k.cooldown !== 1) add(`sport ${sport}`, 'sjablonen', `heeft ${k.opwarmen} opwarm- en ${k.cooldown} cooling-down-sjablonen; verwacht 1 en 1`);
+  }
   for (const r of lib.routines) {
     const where = `sjabloon ${r.id}`;
+    if (r.kind === 'dagelijks' && r.slot !== 'ochtend' && r.slot !== 'avond') add(where, 'slot', 'een dagelijks sjabloon is voor de ochtend of de avond');
+    const needsSport = r.kind === 'opwarmen' || r.kind === 'cooldown';
+    if (needsSport !== (r.sport !== undefined)) add(where, 'sport', needsSport ? 'ontbreekt bij opwarmen of cooling-down' : 'alleen bij opwarmen of cooling-down');
     let usable = true;
     r.steps.forEach((s, i) => {
       const ex = exercises.get(s.exerciseId);

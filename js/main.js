@@ -9,7 +9,7 @@ import { createHomeScreen } from './ui/home.js';
 import { createRoutineScreen } from './ui/routine.js';
 import { createPlayerScreen } from './ui/player.js';
 import { createSettingsScreen } from './ui/settings.js';
-import { createRoutinesScreen } from './ui/routines.js';
+import { createRoutinesScreen, createTemplatesScreen } from './ui/routines.js';
 import { createBuilderScreen } from './ui/builder.js';
 import { createWeekScreen } from './ui/week.js';
 import { createMoreScreen } from './ui/more.js';
@@ -356,6 +356,7 @@ async function boot() {
     lib, getData,
     onNew: () => openBuilder(newRoutine({ id: newId(), now: Date.now() }), { fresh: true }),
   });
+  const templatesScreen = createTemplatesScreen({ lib, getData, onBack: goBack('#/routines') });
   const week = createWeekScreen({ lib, getData });
   const more = createMoreScreen();
   const log = createLogScreen({ lib, getData });
@@ -735,6 +736,7 @@ async function boot() {
   const views = {
     start: h('div', null, home.root),
     routines: h('div', null, routinesScreen.root),
+    sjablonen: h('div', null, templatesScreen.root, templatesScreen.toolbar),
     bibliotheek: h('div', null, library.root),
     week: h('div', null, week.root),
     meer: h('div', null, more.root),
@@ -880,6 +882,12 @@ async function boot() {
         pendingNew = null;
       }
       show('bouwer', 'Routine bewerken');
+      return;
+    }
+    if ((m = /^#\/sjablonen\/([a-z]+)$/.exec(hash))) {
+      const tile = templatesScreen.render(m[1]);
+      show('sjablonen', tile?.name ?? 'Sjablonen');
+      window.scrollTo(0, 0);
       return;
     }
     if ((m = /^#\/zelftest\/([a-z0-9_]+)$/.exec(hash))) {

@@ -2150,6 +2150,7 @@
     {
       "id": "O5",
       "name": "Ochtend 5 min",
+      "kind": "dagelijks",
       "slot": "ochtend",
       "variant": 5,
       "template": true,
@@ -2161,6 +2162,7 @@
     {
       "id": "O10",
       "name": "Ochtend 10 min",
+      "kind": "dagelijks",
       "slot": "ochtend",
       "variant": 10,
       "template": true,
@@ -2172,6 +2174,7 @@
     {
       "id": "O15",
       "name": "Ochtend 15 min",
+      "kind": "dagelijks",
       "slot": "ochtend",
       "variant": 15,
       "template": true,
@@ -2183,6 +2186,7 @@
     {
       "id": "A5",
       "name": "Avond 5 min",
+      "kind": "dagelijks",
       "slot": "avond",
       "variant": 5,
       "template": true,
@@ -2194,6 +2198,7 @@
     {
       "id": "A10",
       "name": "Avond 10 min",
+      "kind": "dagelijks",
       "slot": "avond",
       "variant": 10,
       "template": true,
@@ -2205,6 +2210,7 @@
     {
       "id": "A15",
       "name": "Avond 15 min",
+      "kind": "dagelijks",
       "slot": "avond",
       "variant": 15,
       "template": true,
@@ -2212,6 +2218,146 @@
       "preRun": false,
       "steps": [{"exerciseId": "gastroc_muur", "perSideSec": 45}, {"exerciseId": "soleus_muur", "perSideSec": 45}, {"exerciseId": "lat_deurpost", "perSideSec": 45}, {"exerciseId": "rf_zijlig", "perSideSec": 45}, {"exerciseId": "open_boek", "perSideSec": 40, "reps": 6}, {"exerciseId": "hamstring_pnf", "pnf": {"rounds": 2, "contractSec": 5, "stretchSec": 25}}, {"exerciseId": "figuur4_muur", "perSideSec": 45}, {"exerciseId": "vlinder_breed", "durationSec": 60}, {"exerciseId": "spreidzit_muur", "durationSec": 60}],
       "expectedTotalSec": 885
+    },
+    {
+      "id": "OW-LOOP",
+      "name": "Opwarmen hardlopen en trail",
+      "kind": "opwarmen",
+      "sport": "hardlopen",
+      "slot": "vrij",
+      "variant": 5,
+      "template": true,
+      "timesPerWeek": 3,
+      "preRun": true,
+      "steps": [{"exerciseId": "enkel_rock", "perSideSec": 30, "reps": 12}, {"exerciseId": "beenzwaai_va", "perSideSec": 25, "reps": 12}, {"exerciseId": "beenzwaai_zij", "perSideSec": 25, "reps": 12}, {"exerciseId": "heupbuiger_dyn", "perSideSec": 30, "reps": 6}, {"exerciseId": "soldier_kick", "perSideSec": 30, "reps": 8}],
+      "expectedTotalSec": 330
+    },
+    {
+      "id": "OW-KLIM",
+      "name": "Opwarmen boulderen en klimmen",
+      "kind": "opwarmen",
+      "sport": "klimmen",
+      "slot": "vrij",
+      "variant": 5,
+      "template": true,
+      "timesPerWeek": 2,
+      "preRun": false,
+      "steps": [{"exerciseId": "muurslide", "durationSec": 40, "reps": 10}, {"exerciseId": "thor_rot_staand", "perSideSec": 35, "reps": 8}, {"exerciseId": "polsbuigers_muur", "perSideSec": 20}, {"exerciseId": "polsstrekkers", "perSideSec": 20}, {"exerciseId": "heup_car", "perSideSec": 40, "reps": 3}, {"exerciseId": "gate_opener", "perSideSec": 35, "reps": 8}, {"exerciseId": "lateraal_shift", "durationSec": 40, "reps": 10}],
+      "expectedTotalSec": 440
+    },
+    {
+      "id": "OW-KRACHT",
+      "name": "Opwarmen krachttraining",
+      "kind": "opwarmen",
+      "sport": "kracht",
+      "slot": "vrij",
+      "variant": 5,
+      "template": true,
+      "timesPerWeek": 2,
+      "preRun": false,
+      "steps": [{"exerciseId": "kat_koe_staand", "durationSec": 40, "reps": 8}, {"exerciseId": "thor_rot_staand", "perSideSec": 35, "reps": 8}, {"exerciseId": "muurslide", "durationSec": 40, "reps": 10}, {"exerciseId": "heupbuiger_dyn", "perSideSec": 30, "reps": 6}, {"exerciseId": "heup_car", "perSideSec": 40, "reps": 3}],
+      "expectedTotalSec": 330
+    },
+    {
+      "id": "OW-WANDEL",
+      "name": "Opwarmen bergwandelen",
+      "kind": "opwarmen",
+      "sport": "wandelen",
+      "slot": "vrij",
+      "variant": 5,
+      "template": true,
+      "timesPerWeek": 1,
+      "preRun": false,
+      "steps": [{"exerciseId": "enkel_rock", "perSideSec": 30, "reps": 12}, {"exerciseId": "beenzwaai_va", "perSideSec": 25, "reps": 12}, {"exerciseId": "gate_opener", "perSideSec": 35, "reps": 8}, {"exerciseId": "heupbuiger_dyn", "perSideSec": 30, "reps": 6}, {"exerciseId": "muurslide", "durationSec": 40, "reps": 10}],
+      "expectedTotalSec": 325
+    },
+    {
+      "id": "CD-LOOP",
+      "name": "Cooling-down na hardlopen en trail",
+      "kind": "cooldown",
+      "sport": "hardlopen",
+      "slot": "vrij",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 3,
+      "preRun": false,
+      "steps": [{"exerciseId": "gastroc_muur", "perSideSec": 45}, {"exerciseId": "soleus_muur", "perSideSec": 45}, {"exerciseId": "hamstring_staand_trede", "perSideSec": 45}, {"exerciseId": "heupbuiger_statisch", "perSideSec": 45}, {"exerciseId": "heup_buiten_overhead", "perSideSec": 45}],
+      "expectedTotalSec": 500
+    },
+    {
+      "id": "CD-KLIM",
+      "name": "Cooling-down na klimmen",
+      "kind": "cooldown",
+      "sport": "klimmen",
+      "slot": "vrij",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 2,
+      "preRun": false,
+      "steps": [{"exerciseId": "polsbuigers_muur", "perSideSec": 30}, {"exerciseId": "polsstrekkers", "perSideSec": 30}, {"exerciseId": "lat_deurpost", "perSideSec": 45}, {"exerciseId": "borst_deurpost", "perSideSec": 45}, {"exerciseId": "cross_body", "perSideSec": 30}, {"exerciseId": "triceps_overhead", "perSideSec": 30}, {"exerciseId": "nek_trapezius", "perSideSec": 30}],
+      "expectedTotalSec": 550
+    },
+    {
+      "id": "CD-KRACHT",
+      "name": "Cooling-down na krachttraining",
+      "kind": "cooldown",
+      "sport": "kracht",
+      "slot": "vrij",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 2,
+      "preRun": false,
+      "steps": [{"exerciseId": "gastroc_muur", "perSideSec": 45}, {"exerciseId": "heupbuiger_statisch", "perSideSec": 45}, {"exerciseId": "hamstring_staand_trede", "perSideSec": 45}, {"exerciseId": "lat_aanrecht", "durationSec": 45}, {"exerciseId": "borst_hoek", "durationSec": 45}, {"exerciseId": "figuur4_stoel", "perSideSec": 45}],
+      "expectedTotalSec": 500
+    },
+    {
+      "id": "CD-WANDEL",
+      "name": "Cooling-down na bergwandelen",
+      "kind": "cooldown",
+      "sport": "wandelen",
+      "slot": "vrij",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 1,
+      "preRun": false,
+      "steps": [{"exerciseId": "gastroc_muur", "perSideSec": 45}, {"exerciseId": "soleus_muur", "perSideSec": 45}, {"exerciseId": "heupbuiger_statisch", "perSideSec": 45}, {"exerciseId": "figuur4_stoel", "perSideSec": 45}, {"exerciseId": "voorover_hangen_stoel", "durationSec": 60}],
+      "expectedTotalSec": 465
+    },
+    {
+      "id": "LN-HEUP",
+      "name": "Lenigheid heupen",
+      "kind": "lenigheid",
+      "slot": "avond",
+      "variant": 15,
+      "template": true,
+      "timesPerWeek": 5,
+      "preRun": false,
+      "steps": [{"exerciseId": "heupbuiger_statisch", "perSideSec": 60}, {"exerciseId": "rf_zijlig", "perSideSec": 60}, {"exerciseId": "knie_naar_borst_90", "perSideSec": 60}, {"exerciseId": "figuur4_muur", "perSideSec": 60}, {"exerciseId": "heup_buiten_kruis_ruglig", "perSideSec": 60}, {"exerciseId": "spreidzit_muur", "durationSec": 60}, {"exerciseId": "vlinder_breed", "durationSec": 60}],
+      "expectedTotalSec": 815
+    },
+    {
+      "id": "LN-BENEN",
+      "name": "Lenigheid hamstrings en kuiten",
+      "kind": "lenigheid",
+      "slot": "avond",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 5,
+      "preRun": false,
+      "steps": [{"exerciseId": "gastroc_muur", "perSideSec": 60}, {"exerciseId": "soleus_muur", "perSideSec": 60}, {"exerciseId": "voetzool_muur", "perSideSec": 60}, {"exerciseId": "hamstring_pnf", "pnf": {"rounds": 2, "contractSec": 5, "stretchSec": 25}}, {"exerciseId": "hamstring_deurpost", "perSideSec": 60}],
+      "expectedTotalSec": 665
+    },
+    {
+      "id": "LN-BOVEN",
+      "name": "Lenigheid schouders en rug",
+      "kind": "lenigheid",
+      "slot": "avond",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 5,
+      "preRun": false,
+      "steps": [{"exerciseId": "lat_deurpost", "perSideSec": 60}, {"exerciseId": "borst_deurpost", "perSideSec": 45}, {"exerciseId": "thor_rot_staand", "perSideSec": 35, "reps": 8}, {"exerciseId": "thoracaal_handdoekrol", "durationSec": 60}, {"exerciseId": "borst_ruglig_handdoek", "durationSec": 45}, {"exerciseId": "open_boek", "perSideSec": 40, "reps": 6}, {"exerciseId": "sleeper_aangepast", "perSideSec": 60}],
+      "expectedTotalSec": 670
     }
   ],
   "tests": [
@@ -2305,6 +2451,11 @@
     }
   ],
   "sources": [
+    {
+      "key": "herbert2011",
+      "citation": "Herbert RD, de Noronha M, Kamper SJ (2011). Stretching to prevent or reduce muscle soreness after exercise. Cochrane Database Syst Rev (7):CD004577.",
+      "url": "https://www.cochrane.org/evidence/CD004577_stretching-prevent-or-reduce-muscle-soreness-after-exercise"
+    },
     {
       "key": "adams1987",
       "citation": "Adams MA, Dolan P, Hutton WC (1987). Diurnal variations in the stresses on the lumbar spine. Spine 12(2):130–137."

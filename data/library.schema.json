@@ -704,6 +704,7 @@
       "required": [
         "id",
         "name",
+        "kind",
         "slot",
         "variant",
         "template",
@@ -718,6 +719,22 @@
         },
         "name": {
           "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "dagelijks",
+            "opwarmen",
+            "cooldown",
+            "lenigheid"
+          ]
+        },
+        "sport": {
+          "enum": [
+            "hardlopen",
+            "klimmen",
+            "kracht",
+            "wandelen"
+          ]
         },
         "slot": {
           "enum": [

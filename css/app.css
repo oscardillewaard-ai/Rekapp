@@ -304,6 +304,7 @@ details.sources .chev svg { width: 1.25rem; height: 1.25rem; }
 .chipset button { display: inline-flex; align-items: center; gap: .375rem; }
 .chipset button svg { width: 1.25rem; height: 1.25rem; }
 .card-head .note, .screen > .note { margin-top: 1rem; }
+.screen > .note.group-note { margin: 0 0 .5rem; }
 
 /* ---------- Bladen (dialoog onderin) ---------- */
 
@@ -729,3 +730,23 @@ button.log-row { color: var(--text); }
   .player.big-figure .player-visual .fig-lg { height: 6rem; }
 }
 
+
+/* ---------- Tegels met sjablonen (§6.3) ---------- */
+
+.tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.tiles > li { display: grid; }
+.tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: .375rem;
+  min-height: 7.5rem; padding: .875rem; border-radius: var(--radius);
+  background: var(--surface); color: var(--text); text-decoration: none;
+}
+.tile:active { background: var(--surface-2); }
+.tile-icon {
+  display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%;
+  background: var(--surface-3); color: var(--accent); flex: none;
+}
+.tile-icon svg { width: 1.625rem; height: 1.625rem; }
+.tile .name { font-weight: 600; line-height: 1.25; margin-top: auto; overflow-wrap: anywhere; }
+.tile .meta { color: var(--muted); font-size: .875rem; }
+.tile-head { display: flex; align-items: center; gap: .75rem; }
+.tile-head h1 { margin: 0; }

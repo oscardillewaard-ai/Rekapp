@@ -31,6 +31,27 @@ export function copyTemplate(tpl, { id, now }) {
   };
 }
 
+// Tegels op het scherm Routines (§6.3): icoon, naam en de sjablonen eronder,
+// per soort in de volgorde dagelijks, opwarmen, cooling-down, lenigheid.
+const TILES = [
+  ['ochtend', 'Ochtend', 'sun', (r) => r.kind === 'dagelijks' && r.slot === 'ochtend'],
+  ['avond', 'Avond', 'moon', (r) => r.kind === 'dagelijks' && r.slot === 'avond'],
+  ['hardlopen', 'Hardlopen en trail', 'run', (r) => r.sport === 'hardlopen'],
+  ['klimmen', 'Boulderen en klimmen', 'climb', (r) => r.sport === 'klimmen'],
+  ['kracht', 'Krachttraining', 'dumbbell', (r) => r.sport === 'kracht'],
+  ['wandelen', 'Bergwandelen', 'mountain', (r) => r.sport === 'wandelen'],
+  ['lenigheid', 'Lenigheid', 'stretch', (r) => r.kind === 'lenigheid'],
+];
+export const KIND_ORDER = ['dagelijks', 'opwarmen', 'cooldown', 'lenigheid'];
+
+export function templateTiles(templates) {
+  const all = [...templates];
+  return TILES.map(([key, name, icon, match]) => ({
+    key, name, icon,
+    templates: all.filter(match).sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || a.variant - b.variant),
+  }));
+}
+
 export function duplicateRoutine(r, { id, now }) {
   return { ...clone(r), id, name: `${r.name} (kopie)`, createdAt: now, updatedAt: now };
 }

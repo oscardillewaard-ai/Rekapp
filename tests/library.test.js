@@ -16,7 +16,10 @@ test('de bibliotheek laadt 70 oefeningen en 24 spiergroepen en de validator slaa
   assert.equal(data.exercises.length, 70);
   assert.equal(data.groups.length, 24);
   assert.equal(data.exercises.filter((x) => x.locked).length, 10);
-  assert.equal(data.routines.length, 6);
+  assert.equal(data.routines.length, 17);
+  const kinds = {};
+  for (const r of data.routines) kinds[r.kind] = (kinds[r.kind] ?? 0) + 1;
+  assert.deepEqual(kinds, { dagelijks: 6, opwarmen: 4, cooldown: 4, lenigheid: 3 });
 });
 
 test('verdeling van de sterren is zoals in §3.2', () => {
@@ -146,6 +149,14 @@ test('negatief: een sjabloon met een vergrendelde oefening of een verkeerde tijd
   assert.ok(errors.some((e) => e.where === 'sjabloon A5' && /vergrendelde oefening couch_stretch/.test(e.message)), JSON.stringify(errors));
   const errors2 = errorsFor((d) => { d.routines.find((r) => r.id === 'O5').expectedTotalSec = 300; });
   assert.ok(errors2.some((e) => e.where === 'sjabloon O5' && e.field === 'expectedTotalSec'), JSON.stringify(errors2));
+  // Soort en sport horen bij elkaar; een dagelijks sjabloon is ochtend of avond.
+  const errors3 = errorsFor((d) => { delete d.routines.find((r) => r.id === 'OW-LOOP').sport; d.routines.find((r) => r.id === 'LN-HEUP').sport = 'klimmen'; d.routines.find((r) => r.id === 'A5').slot = 'vrij'; });
+  assert.ok(errors3.some((e) => e.where === 'sjabloon OW-LOOP' && e.field === 'sport'), JSON.stringify(errors3));
+  assert.ok(errors3.some((e) => e.where === 'sjabloon LN-HEUP' && e.field === 'sport'), JSON.stringify(errors3));
+  assert.ok(errors3.some((e) => e.where === 'sjabloon A5' && e.field === 'slot'), JSON.stringify(errors3));
+  const errors4 = errorsFor((d) => { d.routines.find((r) => r.id === 'CD-WANDEL').sport = 'klimmen'; });
+  assert.ok(errors4.some((e) => e.where === 'sport klimmen'), JSON.stringify(errors4));
+  assert.ok(errors4.some((e) => e.where === 'sport wandelen'), JSON.stringify(errors4));
 });
 
 test('negatief: onbekende spiergroep, eerste doel met gewicht 0,5, dubbele id', () => {

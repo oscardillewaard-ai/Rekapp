@@ -43,6 +43,7 @@ Bouw een installeerbare, offline werkende web-app (PWA) in het Nederlands voor i
 - **Bibliotheek:** van 19 naar 70 oefeningen, van 8 naar 24 spiergroepen. 10 oefeningen zijn vergrendeld door de knie-poort (§3.2).
 - **Nieuw:** sterrensysteem met vijf deelscores, voor- en nadelen per oefening, routinebouwer, weekdosis met "keer per week", knieslot met 48-uurstest, opvlammingsmodus en een lichaamskaart.
 - **De zes routines uit v1 blijven** als sjablonen: alleen-lezen, wel kopieerbaar. De totale tijden zijn ongewijzigd: 305, 610, 900, 295, 615 en 885 s.
+- **Aanvulling (oktober 2026, met Oscar):** elf extra sjablonen naast de zes dagelijkse: opwarmen voor hardlopen en trail, boulderen en klimmen, krachttraining en bergwandelen; cooling-down na hardlopen en trail, na klimmen, na krachttraining en na bergwandelen; en lenigheid voor de heupen, voor hamstrings en kuiten, en voor schouders en rug. Een sjabloon heeft daarvoor een soort (`kind`) en, bij opwarmen en cooling-down, een sport (§6.3).
 - **Dosis herberekend.** v1 telde een oefening volledig mee voor elke spiergroep die hij raakte. v2 telt een bijbetrokken spiergroep voor 50% mee en splitst "heupbuigers/RF" in twee groepen. Daardoor verschuiven de weektotalen (§6.4.3). Voorbeelden voor het pakket STANDAARD (ochtend 10 + avond 10, dagelijks): hamstrings van 840 naar 630 s per week, soleus van 210 naar 367,5 s per week, en de heupbuigers apart nu 157,5 s per week (statisch).
 - **Validatieregel aangepast.** v1 weigerde elke oefening met meer dan 90° kniebuiging. v2 accepteert die alleen als de oefening vergrendeld is.
 - **Scores na de literatuurtoets, vergeleken met het voorstel in de chat:** de bewijsscore van de quadricepsgroepen ging van 2 naar 3 (een 4-weekse PNF-studie en een RCT bij PFP-patiënten). Gevolg: "Rectus femoris zijlig met band" van 3,50 naar 3,75 (★★★★), "Hiel naar bil staand" van 2,80 naar 3,05, maar door de knie-poort blijft die op 2 sterren.
@@ -57,7 +58,8 @@ Bouw een installeerbare, offline werkende web-app (PWA) in het Nederlands voor i
 | Boven ~10 min (600 s) per week komt er waarschijnlijk niets meer bij | Bennett 2025 | matig | Info-melding boven 600 s (W5) |
 | Statisch en PNF geven meer blijvende winst dan dynamisch | Konrad 2024 | matig | Dosismeter telt alleen statisch en PNF; B −1 voor dynamisch en actief (§3.1) |
 | Rekintensiteit maakt gemiddeld weinig uit | Bennett 2025 | matig | Cue "rek 5–6/10" |
-| ≥60 s statisch per spiergroep vlak voor inspanning kost ~4–5% prestatie; korter vrijwel niets | Behm 2016 | matig | Waarschuwing in routines met "vóór een run" (W3) |
+| ≥60 s statisch per spiergroep vlak voor inspanning kost ~4–5% prestatie; korter vrijwel niets | Behm 2016 | matig | Waarschuwing in routines met "vóór een run" (W3); opwarmsjablonen rekken statisch hooguit 30 s per kant |
+| Rekken voor of na het sporten vermindert spierpijn niet merkbaar | Herbert 2011 (Cochrane) | matig | Cooling-down-sjablonen beloven geen sneller herstel; ze zijn om te ontspannen en de bewegingsuitslag te onderhouden |
 | Rugbuigen vlak na het opstaan belast de tussenwervelschijven het meest | Adams 1987; Snook 1998 | matig | Waarschuwing in ochtendroutines (W2) |
 | Winst loopt terug als je stopt | Konrad 2025 | matig | Onderhoudsadvies na week 12 (§6.4.2) |
 | Rekken voorkomt geen blessures; krachttraining wel | Lauersen 2014 | sterk | Geen blessureclaims in de app; uitleg op het scherm "Over" |
@@ -306,7 +308,7 @@ Routine = {
   timesPerWeek: 1–14,
   active: boolean,              // telt mee in de weekdosis
   steps: Step[],
-  fromTemplate?: 'O5'|'O10'|'O15'|'A5'|'A10'|'A15',
+  fromTemplate?: string,        // id van het sjabloon
   createdAt, updatedAt
 }
 Step = {
@@ -329,7 +331,41 @@ Step = {
 - "Extra set zwakke kant" per unilaterale stap: L, R of uit. Voegt na de normale kanten één extra werkblok toe aan die kant.
 - Overgangstijd automatisch: hoog = staand of stoel, laag = vloer of liggend. Hoog→hoog 5 s, laag→laag 10 s, hoog↔laag 15 s. Per stap aan te passen. De laatste stap heeft geen overgang.
 - Onderaan: de actieve waarschuwingen (§6.5) en "Dosis van deze routine": seconden per spiergroep per kant, × keer per week.
-- Opslaan, Start, Dupliceren, Verwijderen. De sjablonen O5 tot en met A15 zijn alleen-lezen met de knop "Kopiëren en aanpassen".
+- Opslaan, Start, Dupliceren, Verwijderen. Alle sjablonen zijn alleen-lezen met de knop "Kopiëren en aanpassen".
+
+**Sjablonen**
+
+Elk sjabloon heeft een soort (`kind`); opwarmen en cooling-down hebben ook een sport (`sport`: `hardlopen`, `klimmen`, `kracht` of `wandelen`).
+
+| Soort | Sjablonen | Opbouw |
+|---|---|---|
+| `dagelijks` | O5, O10, O15 (ochtend) en A5, A10, A15 (avond) | De zes routines uit v1. |
+| `opwarmen` | Hardlopen en trail (OW-LOOP), boulderen en klimmen (OW-KLIM), krachttraining (OW-KRACHT), bergwandelen (OW-WANDEL) | Dynamisch en actief; statisch hooguit 30 s per kant en geen PNF (§2, Behm 2016). Alleen staand of op een stoel, dus zonder mat. Hardlopen staat op "vóór een run" en geeft geen W3. |
+| `cooldown` | Na hardlopen en trail (CD-LOOP), na klimmen (CD-KLIM), na krachttraining (CD-KRACHT), na bergwandelen (CD-WANDEL) | Statisch, 30–60 s per kant, staand of op een stoel. |
+| `lenigheid` | Heupen (LN-HEUP), hamstrings en kuiten (LN-BENEN), schouders en rug (LN-BOVEN) | Statisch en PNF, 's avonds, 5× per week. Elke hoofdgroep komt op 300–600 s per kant per week (geen W5 of W6), en het sjabloon duurt hooguit 15 minuten. |
+
+`variant` is bij de nieuwe soorten de afgeronde lengte (5, 10 of 15 minuten); de app toont daar de echte duur.
+
+Op het scherm Routines staan de sjablonen als tegels met een icoon en een naam, in deze volgorde:
+
+| Tegel | Icoon | Sjablonen |
+|---|---|---|
+| Ochtend | zon | O5, O10, O15 |
+| Avond | maan | A5, A10, A15 |
+| Hardlopen en trail | loper | OW-LOOP, CD-LOOP |
+| Boulderen en klimmen | klimmer aan een greep | OW-KLIM, CD-KLIM |
+| Krachttraining | halter | OW-KRACHT, CD-KRACHT |
+| Bergwandelen | berg | OW-WANDEL, CD-WANDEL |
+| Lenigheid | voorover reiken | LN-HEUP, LN-BENEN, LN-BOVEN |
+
+Onder de naam staat het aantal routines ("3 routines"). Een tik opent de routines van die tegel, per soort onder een eigen kop met deze uitleg:
+
+- **Dagelijks:** "Elke dag; kies 5, 10 of 15 minuten."
+- **Opwarmen:** "Het beweeglijke deel van je warming-up. Begin met een paar minuten rustig inlopen, inklimmen of een lichte eerste set."
+- **Cooling-down:** "Om te ontspannen en je bewegingsuitslag te onderhouden. Minder spierpijn of sneller herstel mag je er niet van verwachten."
+- **Lenigheid:** "Langere programma's voor blijvend meer bewegingsuitslag: 5× per week, zo'n 5 minuten per spiergroep per week."
+
+Het startscherm toont alleen de dagelijkse sjablonen (Ochtend en Avond, 5 · 10 · 15 min).
 
 ### 6.4 Dosismeter en weekplanning
 
@@ -1293,6 +1329,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
       "required": [
         "id",
         "name",
+        "kind",
         "slot",
         "variant",
         "template",
@@ -1307,6 +1344,22 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
         },
         "name": {
           "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "dagelijks",
+            "opwarmen",
+            "cooldown",
+            "lenigheid"
+          ]
+        },
+        "sport": {
+          "enum": [
+            "hardlopen",
+            "klimmen",
+            "kracht",
+            "wandelen"
+          ]
         },
         "slot": {
           "enum": [
@@ -1439,7 +1492,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 4. `scores.K ≤ 2` of `kneeFlexionMaxDeg > 90` ⇒ `locked` moet `true` zijn, en omgekeerd.
 5. `scores.B` = groeps-`bBase`, min 1 voor dynamisch en actief (minimaal 1), tenzij `bNote` aanwezig is.
 6. Elke spiergroep heeft minstens 2 oefeningen met die groep als primair doel, en minstens 1 niet-vergrendelde. Uitzondering: `quadriceps_vasti` (zie §4).
-7. Elke sjabloonroutine bevat alleen niet-vergrendelde oefeningen, en haar gecompileerde totale tijd (§6.8.1) is gelijk aan `expectedTotalSec`.
+7. Elke sjabloonroutine bevat alleen niet-vergrendelde oefeningen, en haar gecompileerde totale tijd (§6.8.1) is gelijk aan `expectedTotalSec`. Een dagelijks sjabloon heeft moment `ochtend` of `avond`; `sport` staat er precies bij de soorten `opwarmen` en `cooldown`, en elke sport heeft precies één opwarm- en één cooling-down-sjabloon.
 8. Bij een fout: toon een duidelijke foutmelding met de oefening en het veld, en start de app niet met kapotte data.
 
 ---
@@ -3600,6 +3653,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
     {
       "id": "O5",
       "name": "Ochtend 5 min",
+      "kind": "dagelijks",
       "slot": "ochtend",
       "variant": 5,
       "template": true,
@@ -3611,6 +3665,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
     {
       "id": "O10",
       "name": "Ochtend 10 min",
+      "kind": "dagelijks",
       "slot": "ochtend",
       "variant": 10,
       "template": true,
@@ -3622,6 +3677,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
     {
       "id": "O15",
       "name": "Ochtend 15 min",
+      "kind": "dagelijks",
       "slot": "ochtend",
       "variant": 15,
       "template": true,
@@ -3633,6 +3689,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
     {
       "id": "A5",
       "name": "Avond 5 min",
+      "kind": "dagelijks",
       "slot": "avond",
       "variant": 5,
       "template": true,
@@ -3644,6 +3701,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
     {
       "id": "A10",
       "name": "Avond 10 min",
+      "kind": "dagelijks",
       "slot": "avond",
       "variant": 10,
       "template": true,
@@ -3655,6 +3713,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
     {
       "id": "A15",
       "name": "Avond 15 min",
+      "kind": "dagelijks",
       "slot": "avond",
       "variant": 15,
       "template": true,
@@ -3662,6 +3721,146 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
       "preRun": false,
       "steps": [{"exerciseId": "gastroc_muur", "perSideSec": 45}, {"exerciseId": "soleus_muur", "perSideSec": 45}, {"exerciseId": "lat_deurpost", "perSideSec": 45}, {"exerciseId": "rf_zijlig", "perSideSec": 45}, {"exerciseId": "open_boek", "perSideSec": 40, "reps": 6}, {"exerciseId": "hamstring_pnf", "pnf": {"rounds": 2, "contractSec": 5, "stretchSec": 25}}, {"exerciseId": "figuur4_muur", "perSideSec": 45}, {"exerciseId": "vlinder_breed", "durationSec": 60}, {"exerciseId": "spreidzit_muur", "durationSec": 60}],
       "expectedTotalSec": 885
+    },
+    {
+      "id": "OW-LOOP",
+      "name": "Opwarmen hardlopen en trail",
+      "kind": "opwarmen",
+      "sport": "hardlopen",
+      "slot": "vrij",
+      "variant": 5,
+      "template": true,
+      "timesPerWeek": 3,
+      "preRun": true,
+      "steps": [{"exerciseId": "enkel_rock", "perSideSec": 30, "reps": 12}, {"exerciseId": "beenzwaai_va", "perSideSec": 25, "reps": 12}, {"exerciseId": "beenzwaai_zij", "perSideSec": 25, "reps": 12}, {"exerciseId": "heupbuiger_dyn", "perSideSec": 30, "reps": 6}, {"exerciseId": "soldier_kick", "perSideSec": 30, "reps": 8}],
+      "expectedTotalSec": 330
+    },
+    {
+      "id": "OW-KLIM",
+      "name": "Opwarmen boulderen en klimmen",
+      "kind": "opwarmen",
+      "sport": "klimmen",
+      "slot": "vrij",
+      "variant": 5,
+      "template": true,
+      "timesPerWeek": 2,
+      "preRun": false,
+      "steps": [{"exerciseId": "muurslide", "durationSec": 40, "reps": 10}, {"exerciseId": "thor_rot_staand", "perSideSec": 35, "reps": 8}, {"exerciseId": "polsbuigers_muur", "perSideSec": 20}, {"exerciseId": "polsstrekkers", "perSideSec": 20}, {"exerciseId": "heup_car", "perSideSec": 40, "reps": 3}, {"exerciseId": "gate_opener", "perSideSec": 35, "reps": 8}, {"exerciseId": "lateraal_shift", "durationSec": 40, "reps": 10}],
+      "expectedTotalSec": 440
+    },
+    {
+      "id": "OW-KRACHT",
+      "name": "Opwarmen krachttraining",
+      "kind": "opwarmen",
+      "sport": "kracht",
+      "slot": "vrij",
+      "variant": 5,
+      "template": true,
+      "timesPerWeek": 2,
+      "preRun": false,
+      "steps": [{"exerciseId": "kat_koe_staand", "durationSec": 40, "reps": 8}, {"exerciseId": "thor_rot_staand", "perSideSec": 35, "reps": 8}, {"exerciseId": "muurslide", "durationSec": 40, "reps": 10}, {"exerciseId": "heupbuiger_dyn", "perSideSec": 30, "reps": 6}, {"exerciseId": "heup_car", "perSideSec": 40, "reps": 3}],
+      "expectedTotalSec": 330
+    },
+    {
+      "id": "OW-WANDEL",
+      "name": "Opwarmen bergwandelen",
+      "kind": "opwarmen",
+      "sport": "wandelen",
+      "slot": "vrij",
+      "variant": 5,
+      "template": true,
+      "timesPerWeek": 1,
+      "preRun": false,
+      "steps": [{"exerciseId": "enkel_rock", "perSideSec": 30, "reps": 12}, {"exerciseId": "beenzwaai_va", "perSideSec": 25, "reps": 12}, {"exerciseId": "gate_opener", "perSideSec": 35, "reps": 8}, {"exerciseId": "heupbuiger_dyn", "perSideSec": 30, "reps": 6}, {"exerciseId": "muurslide", "durationSec": 40, "reps": 10}],
+      "expectedTotalSec": 325
+    },
+    {
+      "id": "CD-LOOP",
+      "name": "Cooling-down na hardlopen en trail",
+      "kind": "cooldown",
+      "sport": "hardlopen",
+      "slot": "vrij",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 3,
+      "preRun": false,
+      "steps": [{"exerciseId": "gastroc_muur", "perSideSec": 45}, {"exerciseId": "soleus_muur", "perSideSec": 45}, {"exerciseId": "hamstring_staand_trede", "perSideSec": 45}, {"exerciseId": "heupbuiger_statisch", "perSideSec": 45}, {"exerciseId": "heup_buiten_overhead", "perSideSec": 45}],
+      "expectedTotalSec": 500
+    },
+    {
+      "id": "CD-KLIM",
+      "name": "Cooling-down na klimmen",
+      "kind": "cooldown",
+      "sport": "klimmen",
+      "slot": "vrij",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 2,
+      "preRun": false,
+      "steps": [{"exerciseId": "polsbuigers_muur", "perSideSec": 30}, {"exerciseId": "polsstrekkers", "perSideSec": 30}, {"exerciseId": "lat_deurpost", "perSideSec": 45}, {"exerciseId": "borst_deurpost", "perSideSec": 45}, {"exerciseId": "cross_body", "perSideSec": 30}, {"exerciseId": "triceps_overhead", "perSideSec": 30}, {"exerciseId": "nek_trapezius", "perSideSec": 30}],
+      "expectedTotalSec": 550
+    },
+    {
+      "id": "CD-KRACHT",
+      "name": "Cooling-down na krachttraining",
+      "kind": "cooldown",
+      "sport": "kracht",
+      "slot": "vrij",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 2,
+      "preRun": false,
+      "steps": [{"exerciseId": "gastroc_muur", "perSideSec": 45}, {"exerciseId": "heupbuiger_statisch", "perSideSec": 45}, {"exerciseId": "hamstring_staand_trede", "perSideSec": 45}, {"exerciseId": "lat_aanrecht", "durationSec": 45}, {"exerciseId": "borst_hoek", "durationSec": 45}, {"exerciseId": "figuur4_stoel", "perSideSec": 45}],
+      "expectedTotalSec": 500
+    },
+    {
+      "id": "CD-WANDEL",
+      "name": "Cooling-down na bergwandelen",
+      "kind": "cooldown",
+      "sport": "wandelen",
+      "slot": "vrij",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 1,
+      "preRun": false,
+      "steps": [{"exerciseId": "gastroc_muur", "perSideSec": 45}, {"exerciseId": "soleus_muur", "perSideSec": 45}, {"exerciseId": "heupbuiger_statisch", "perSideSec": 45}, {"exerciseId": "figuur4_stoel", "perSideSec": 45}, {"exerciseId": "voorover_hangen_stoel", "durationSec": 60}],
+      "expectedTotalSec": 465
+    },
+    {
+      "id": "LN-HEUP",
+      "name": "Lenigheid heupen",
+      "kind": "lenigheid",
+      "slot": "avond",
+      "variant": 15,
+      "template": true,
+      "timesPerWeek": 5,
+      "preRun": false,
+      "steps": [{"exerciseId": "heupbuiger_statisch", "perSideSec": 60}, {"exerciseId": "rf_zijlig", "perSideSec": 60}, {"exerciseId": "knie_naar_borst_90", "perSideSec": 60}, {"exerciseId": "figuur4_muur", "perSideSec": 60}, {"exerciseId": "heup_buiten_kruis_ruglig", "perSideSec": 60}, {"exerciseId": "spreidzit_muur", "durationSec": 60}, {"exerciseId": "vlinder_breed", "durationSec": 60}],
+      "expectedTotalSec": 815
+    },
+    {
+      "id": "LN-BENEN",
+      "name": "Lenigheid hamstrings en kuiten",
+      "kind": "lenigheid",
+      "slot": "avond",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 5,
+      "preRun": false,
+      "steps": [{"exerciseId": "gastroc_muur", "perSideSec": 60}, {"exerciseId": "soleus_muur", "perSideSec": 60}, {"exerciseId": "voetzool_muur", "perSideSec": 60}, {"exerciseId": "hamstring_pnf", "pnf": {"rounds": 2, "contractSec": 5, "stretchSec": 25}}, {"exerciseId": "hamstring_deurpost", "perSideSec": 60}],
+      "expectedTotalSec": 665
+    },
+    {
+      "id": "LN-BOVEN",
+      "name": "Lenigheid schouders en rug",
+      "kind": "lenigheid",
+      "slot": "avond",
+      "variant": 10,
+      "template": true,
+      "timesPerWeek": 5,
+      "preRun": false,
+      "steps": [{"exerciseId": "lat_deurpost", "perSideSec": 60}, {"exerciseId": "borst_deurpost", "perSideSec": 45}, {"exerciseId": "thor_rot_staand", "perSideSec": 35, "reps": 8}, {"exerciseId": "thoracaal_handdoekrol", "durationSec": 60}, {"exerciseId": "borst_ruglig_handdoek", "durationSec": 45}, {"exerciseId": "open_boek", "perSideSec": 40, "reps": 6}, {"exerciseId": "sleeper_aangepast", "perSideSec": 60}],
+      "expectedTotalSec": 670
     }
   ],
   "tests": [
@@ -3755,6 +3954,11 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
     }
   ],
   "sources": [
+    {
+      "key": "herbert2011",
+      "citation": "Herbert RD, de Noronha M, Kamper SJ (2011). Stretching to prevent or reduce muscle soreness after exercise. Cochrane Database Syst Rev (7):CD004577.",
+      "url": "https://www.cochrane.org/evidence/CD004577_stretching-prevent-or-reduce-muscle-soreness-after-exercise"
+    },
     {
       "key": "adams1987",
       "citation": "Adams MA, Dolan P, Hutton WC (1987). Diurnal variations in the stresses on the lumbar spine. Spine 12(2):130–137."
@@ -3996,6 +4200,22 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 | A10 | 615 s | 615 s |
 | A15 | 885 s | 885 s |
 
+**B2. Totale tijd van de sjablonen voor opwarmen, cooling-down en lenigheid** (§6.8.1)
+
+| Sjabloon | verwacht | berekend |
+|---|---|---|
+| OW-LOOP | 330 s | 330 s |
+| OW-KLIM | 440 s | 440 s |
+| OW-KRACHT | 330 s | 330 s |
+| OW-WANDEL | 325 s | 325 s |
+| CD-LOOP | 500 s | 500 s |
+| CD-KLIM | 550 s | 550 s |
+| CD-KRACHT | 500 s | 500 s |
+| CD-WANDEL | 465 s | 465 s |
+| LN-HEUP | 815 s | 815 s |
+| LN-BENEN | 665 s | 665 s |
+| LN-BOVEN | 670 s | 670 s |
+
 **C. Weekdosis STANDAARD** (O10 + A10, elk 7× per week): exact de middelste kolom van de tabel in §6.4.3. Steekproef: gastrocnemius 315 s, soleus 367,5 s, hamstrings 630 s, rectus femoris 315 s, heupbuigers 157,5 s (+297,5 s dynamisch), adductoren 420 s, heupdraaiers 315 s.
 
 **D. Testroutine T1** — moment ochtend, vóór een run aan, 5× per week. Stappen: `gastroc_muur` 45 s/kant, `soleus_muur` 30 s/kant, `hamstring_zittend_vouw` 60 s, `heupbuiger_dyn` 30 s/kant.
@@ -4029,7 +4249,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 - [ ] "Mijn week" toont gepland en werkelijk; de waarden voor STANDAARD zijn gelijk aan de tabel in §6.4.3.
 - [ ] Ontgrendelprotocol: scenario's U1 tot en met U4 in §11.1 geven de verwachte status.
 - [ ] Opvlammingsmodus: scenario's F1 en F2 in §11.1 geven het verwachte gedrag.
-- [ ] Alle zes sjablonen spelen af; de gemeten duur wijkt hooguit 2 s af van `expectedTotalSec`.
+- [ ] Alle sjablonen spelen af; de gemeten duur wijkt hooguit 2 s af van `expectedTotalSec`.
 - [ ] Een kantwissel wordt aangekondigd met spraak, piep en flits; pauze en hervatten behouden de resterende tijd tot op 0,2 s.
 - [ ] PNF loopt per kant 2 × (5 s aanspannen + 25 s rekken) met de juiste cues.
 - [ ] Een sessie wordt gelogd met tijdzone, status en `segmentsDone`; de werkelijke dosis neemt toe met precies die seconden.
@@ -4071,6 +4291,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 - González-de-la-Flor Á, e.a. (2024). Comparison of two different stretching strategies to improve hip extension mobility in healthy and active adults: a crossover clinical trial. BMC Musculoskelet Disord. <https://doaj.org/article/51e5a0775e7e4cd1a9f6829b306d56c3>
 - Hanney WJ, Puentedura EJ, Kolber MJ, e.a. (2017). The immediate effects of manual stretching and cervicothoracic junction manipulation on cervical range of motion and upper trapezius pressure pain thresholds. <https://stars.library.ucf.edu/scopus2015/5086>
 - Hatha-yoga met segmentale stabilisatie, 12 weken, 72 gezonde volwassenen: rompflexibiliteit. Slovenian J Public Health (2025). <https://reference-global.com/article/10.2478/sjph-2025-0019>
+- Herbert RD, de Noronha M, Kamper SJ (2011). Stretching to prevent or reduce muscle soreness after exercise. Cochrane Database Syst Rev (7):CD004577. <https://www.cochrane.org/evidence/CD004577_stretching-prevent-or-reduce-muscle-soreness-after-exercise>
 - Herrington L, Horsley I (2014). Effects of latissimus dorsi length on shoulder flexion in canoeists, swimmers, rugby players, and controls. J Sport Health Sci. <https://doi.org/10.1016/j.jshs.2013.01.004>
 - Higgs F, Winter SL (2009). The effect of a four-week proprioceptive neuromuscular facilitation stretching program on isokinetic torque production. J Strength Cond Res 23(5):1442–1447. <https://kar.kent.ac.uk/47688>
 - Kamankesh S, Tadibi V (2014). Effect of static stretching with different duration on strength and range of motion of wrist in female rock climbers. J Res Sport Rehabil 1(2):59–64. <https://rsr.basu.ac.ir/article_631_en.html>

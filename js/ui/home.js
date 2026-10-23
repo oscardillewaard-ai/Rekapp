@@ -18,7 +18,7 @@ export function createHomeScreen({ lib, getData, topCards = () => [], bottom = (
   const seconds = (r, { settings, knee }) => totalSec(playableRoutine(r, { lib, knee }).routine, lib.exercises, lib.meta.timing, settings.sideSwitchSec);
 
   function slotCard(slot, title, data) {
-    const templates = [...lib.templates.values()].filter((r) => r.slot === slot).sort((a, b) => a.variant - b.variant);
+    const templates = [...lib.templates.values()].filter((r) => r.kind === 'dagelijks' && r.slot === slot).sort((a, b) => a.variant - b.variant);
     return h('section', { class: 'section slot-card' },
       h('h2', null, title),
       h('div', { class: 'variant-buttons' }, templates.map((r) =>

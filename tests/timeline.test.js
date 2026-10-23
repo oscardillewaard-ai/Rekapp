@@ -14,6 +14,15 @@ for (const [id, expected] of [['O5', 305], ['O10', 610], ['O15', 900], ['A5', 29
   });
 }
 
+// §11.1 B2. Totale tijd van de sjablonen voor opwarmen, cooling-down en lenigheid.
+for (const [id, expected] of [['OW-LOOP', 330], ['OW-KLIM', 440], ['OW-KRACHT', 330], ['OW-WANDEL', 325], ['CD-LOOP', 500], ['CD-KLIM', 550], ['CD-KRACHT', 500], ['CD-WANDEL', 465], ['LN-HEUP', 815], ['LN-BENEN', 665], ['LN-BOVEN', 670]]) {
+  test(`B2: sjabloon ${id} duurt ${expected} s`, () => {
+    const r = lib.templates.get(id);
+    assert.equal(r.expectedTotalSec, expected);
+    assert.equal(compile(r).totalSec, expected);
+  });
+}
+
 
 test('D: T1 duurt 325 s met automatische overgangen 5, 15 en 15 s', () => {
   const { segments, totalSec } = compile(T1);
