@@ -293,7 +293,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
         bodyMap(ex.targets, { className: 'large' }),
         h('ol', { class: 'cues' }, ex.cues.map((c) => h('li', null, c))),
         h('p', null, h('strong', null, 'Ademhaling: '), BREATHING[ex.type]),
-        h('p', null, h('strong', null, 'Knie: '), `max ${ex.kneeFlexionMaxDeg}°. ${ex.pfpsNote}`),
+        getSettings().kneeFeatures ? h('p', null, h('strong', null, 'Knie: '), `max ${ex.kneeFlexionMaxDeg}°. ${ex.pfpsNote}`) : null,
         h('p', null, h('strong', null, 'Regressie: '), ex.regression),
         h('p', null, h('strong', null, 'Progressie: '), ex.progression)),
       h('div', { class: 'sheet-foot' }, h('button', { class: 'btn primary', type: 'button', onclick: () => detail.close() }, 'Sluiten')));
@@ -324,7 +324,8 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
     // Standaard op de cue "rek 5–6/10".
     const intensity = slider('Rekintensiteit', 5);
     const save = h('button', { class: 'btn primary', type: 'button' }, 'Opslaan');
-    const knee = slider('Kniepijn tijdens', 0);
+    // Kniepijn tijdens alleen met Kniefuncties (instelling).
+    const knee = getSettings().kneeFeatures ? slider('Kniepijn tijdens', 0) : null;
     const notes = h('textarea', { rows: 3, 'aria-label': 'Notitie', placeholder: 'Notitie (optioneel)' });
     const error = h('p', { class: 'warn-bar', role: 'alert', hidden: true });
     const showError = (e) => {
@@ -339,7 +340,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
     save.addEventListener('click', async () => {
       save.disabled = true;
       try {
-        await onSave(record({ stretchIntensity: intensity.value(), kneePainDuring: knee.value(), notes: notes.value.trim() }));
+        await onSave(record({ stretchIntensity: intensity.value(), kneePainDuring: knee ? knee.value() : null, notes: notes.value.trim() }));
         state = null;
         finishing = false;
         onFinished();
@@ -353,7 +354,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
         h('header', { class: 'card-head' },
           h('h1', { tabindex: '-1' }, status === 'voltooid' ? 'Klaar!' : 'Gestopt'),
           h('p', { class: 'evidence' }, `${routine.name} · ${status} · actief ${formatDuration(run.activeSec)} van ${formatDuration(run.plannedSec)}`)),
-        h('section', { class: 'section' }, intensity.el, knee.el, notes),
+        h('section', { class: 'section' }, intensity.el, knee?.el, notes),
         error),
       h('div', { class: 'toolbar' }, save));
     runView.hidden = true;

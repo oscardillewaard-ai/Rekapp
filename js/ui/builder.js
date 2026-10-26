@@ -2,6 +2,7 @@
 import { h, fill, preserveFocus } from './dom.js';
 import { icon, starsWithScore } from './graphics.js';
 import { rate } from '../library.js';
+import { ratingWeights } from '../settings.js';
 import { formatDose, formatDuration } from '../format.js';
 import { autoTransitionSec } from '../timeline.js';
 import { routineDose } from '../dose.js';
@@ -206,11 +207,11 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
         h('button', { class: `row step-main${gate.allowed ? '' : ' locked'}`, type: 'button', onclick: () => openStep(i), 'aria-label': `${ex.name}, ${formatDose(step, ex)}. Tik om te bewerken.` },
           h('div', { class: 'main' },
             h('div', { class: 'name' }, ex.name),
-            h('div', { class: 'meta' }, starsWithScore(rate(ex, lib.meta, settings.weights)),
+            h('div', { class: 'meta' }, starsWithScore(rate(ex, lib.meta, ratingWeights(settings))),
               h('span', { class: 'chip dose-chip' }, formatDose(step, ex), step.extraWeakSide ? ` + extra ${step.extraWeakSide}` : '')),
           ),
           h('div', { class: 'side' },
-            h('span', { class: 'knee-badge' }, h('span', { class: 'sr-only' }, 'Knie maximaal '), `${ex.kneeFlexionMaxDeg}°`),
+            settings.kneeFeatures ? h('span', { class: 'knee-badge' }, h('span', { class: 'sr-only' }, 'Knie maximaal '), `${ex.kneeFlexionMaxDeg}°`) : null,
             gate.allowed ? null : icon('lock', 'lock'))),
         h('button', { class: 'btn icon', type: 'button', 'aria-label': `${ex.name} verwijderen`, onclick: () => change(removeStep(r, i)) }, icon('cross')));
       steps.append(li);

@@ -18,6 +18,8 @@ function scoreHundredths(scores, pct) {
   return LETTERS.reduce((sum, l) => sum + pct[l] * scores[l], 0);
 }
 
+const weightSum = (pct) => LETTERS.reduce((sum, l) => sum + pct[l], 0);
+
 // §3.2: score = Σ gewicht·deelscore, twee decimalen.
 export function computeScore(scores, weightsPct) {
   return scoreHundredths(scores, weightsPct) / 100;
@@ -42,11 +44,20 @@ export function mustBeLocked(ex, meta) {
 // zelf. De validator hieronder controleert de bibliotheek nog wel volgens
 // §3.2 en §9.2, met de knie-poort.
 const NO_CAP = { maxK: -Infinity, maxStars: Infinity };
+//
+// Een weging die niet op 100 % uitkomt, telt naar verhouding: zo laten de
+// sterren zonder Kniefuncties K weg (K = 0) en wegen B, D, R en P samen 100 %.
+// Exact in gehele getallen: sterren = floor((4h + W) / 2W) / 2, met h de
+// gewogen som en W de som van de gewichten (bij W = 100 gelijk aan §3.2).
 export function rate(ex, meta, weightsPct = weightsToPercent(meta.scoring.weights)) {
-  return {
-    score: computeScore(ex.scores, weightsPct),
-    stars: computeStars(ex.scores, weightsPct, NO_CAP),
-  };
+  let pct = weightsPct;
+  if (weightSum(pct) <= 0) pct = weightsToPercent(meta.scoring.weights);
+  const W = weightSum(pct);
+  if (W === 100) {
+    return { score: computeScore(ex.scores, pct), stars: computeStars(ex.scores, pct, NO_CAP) };
+  }
+  const h = scoreHundredths(ex.scores, pct);
+  return { score: Math.round((h * 100) / W) / 100, stars: Math.floor((4 * h + W) / (2 * W)) / 2 };
 }
 
 export class LibraryError extends Error {

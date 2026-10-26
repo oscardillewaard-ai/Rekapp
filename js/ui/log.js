@@ -1,5 +1,6 @@
 // Logboek (§6.9): sessies, kniechecks en zelftestmetingen per dag, nieuwste
 // eerst, met een filter. Een tik op een sessie toont wat er gedaan is.
+// Kniechecks en kniepijn alleen met Kniefuncties aan (instelling).
 import { h, fill, preserveFocus } from './dom.js';
 import { icon } from './graphics.js';
 import { formatDuration } from '../format.js';
@@ -28,7 +29,8 @@ export function createLogScreen({ lib, getData }) {
   // datum en tijd (in de tijdzone van dat moment); kniechecks een tijdstempel,
   // die in de tijdzone van het toestel.
   function items() {
-    const { sessions, knee, tests } = getData();
+    const { sessions, knee, tests, settings } = getData();
+    const kneeOn = settings.kneeFeatures;
     const out = [];
     const localDay = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
     const time = (ms) => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
@@ -39,7 +41,7 @@ export function createLogScreen({ lib, getData }) {
         const day = s.startedAt.slice(0, 10);
         const extra = [
           s.stretchIntensity !== null && s.stretchIntensity !== undefined ? `rek ${s.stretchIntensity}/10` : null,
-          s.kneePainDuring !== null && s.kneePainDuring !== undefined ? `knie ${s.kneePainDuring}/10` : null,
+          kneeOn && s.kneePainDuring !== null && s.kneePainDuring !== undefined ? `knie ${s.kneePainDuring}/10` : null,
         ].filter(Boolean).join(' · ');
         out.push({
           at, day, kind: 'sessie',
@@ -50,7 +52,7 @@ export function createLogScreen({ lib, getData }) {
         });
       }
     }
-    if (filter === 'alles' || filter === 'kniechecks') {
+    if (kneeOn && (filter === 'alles' || filter === 'kniechecks')) {
       for (const c of knee.checks) {
         const ex = c.exerciseId ? lib.exercises.get(c.exerciseId)?.name ?? c.exerciseId : null;
         out.push({
@@ -96,7 +98,7 @@ export function createLogScreen({ lib, getData }) {
         h('dl', null,
           h('dt', null, 'Actief'), h('dd', null, `${formatDuration(Math.round(s.activeSec))} van ${formatDuration(s.plannedSec)}`),
           h('dt', null, 'Rekintensiteit'), h('dd', null, s.stretchIntensity ?? '–'),
-          h('dt', null, 'Kniepijn tijdens'), h('dd', null, s.kneePainDuring ?? '–')),
+          getData().settings.kneeFeatures ? [h('dt', null, 'Kniepijn tijdens'), h('dd', null, s.kneePainDuring ?? '–')] : null),
         per.size ? h('ul', { class: 'plain log-segments' }, [...per.entries()].map(([id, e]) => h('li', null,
           h('strong', null, lib.exercises.get(id)?.name ?? id), ': ',
           [e.L ? `links ${num(e.L)} s` : null, e.R ? `rechts ${num(e.R)} s` : null, e.both ? `${num(e.both)} s` : null].filter(Boolean).join(', ')))) : h('p', null, 'Geen werktijd.'),
@@ -110,6 +112,8 @@ export function createLogScreen({ lib, getData }) {
   }
 
   function renderScreen() {
+    const kneeOn = getData().settings.kneeFeatures;
+    if (!kneeOn && filter === 'kniechecks') filter = 'alles';
     const all = items();
     // Hele dagen: de nieuwste dag en de `days` − 1 dagen ervoor, nieuwste eerst.
     const dayKeys = [...new Set(all.map((x) => x.day))].sort().reverse();
@@ -119,7 +123,7 @@ export function createLogScreen({ lib, getData }) {
     for (const x of shown) byDay.get(x.day).push(x);
     fill(root,
       h('header', { class: 'topbar' }, h('h1', { id: 'log-title', tabindex: '-1' }, 'Logboek')),
-      h('div', { class: 'chipset log-filter', role: 'group', 'aria-label': 'Toon' }, FILTERS.map(([v, text]) =>
+      h('div', { class: 'chipset log-filter', role: 'group', 'aria-label': 'Toon' }, FILTERS.filter(([v]) => kneeOn || v !== 'kniechecks').map(([v, text]) =>
         h('button', { type: 'button', 'aria-pressed': String(filter === v), onclick: () => { filter = v; days = PAGE_DAYS; render(); } }, text))),
       all.length ? null : h('p', { class: 'empty' }, 'Nog niets vastgelegd.'),
       ...[...byDay.entries()].flatMap(([day, list]) => [

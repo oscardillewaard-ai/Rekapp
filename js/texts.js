@@ -80,6 +80,11 @@ export const CARD = {
 export const KNEE = {
   painNow: 'Kniepijn nu (0–10)',
   flareButton: 'Ik heb een opvlamming',
+  // §6.11 Kniefuncties (standaard uit).
+  featuresLabel: 'Kniefuncties',
+  featuresHint: 'De kniescore K in de sterren, de dagelijkse kniecheck, de opvlammingsmodus (alles boven 45° uit) en de knie-informatie bij de oefeningen.',
+  featuresOffTitle: 'Kniefuncties uitzetten?',
+  featuresOffFlare: 'Je opvlammingsmodus staat aan. Zonder Kniefuncties kun je oefeningen boven 45° weer kiezen en afspelen. De opvlamming blijft bewaard en geldt weer zodra je Kniefuncties aanzet.',
 };
 
 // §6.10 zelftests.
@@ -106,6 +111,20 @@ export const STARS_MEANING = [
   ['D en R zijn oordelen', 'en K is voorzorg. De kaart toont daarom altijd het bewijsniveau in woorden (§6.2).'],
   ['Bekend effect van de weging:', 'oefeningen zonder kniebetrokkenheid (romp, schouders, armen) krijgen K = 5 en scoren daardoor relatief hoog, ook als ze voor jouw doelen weinig opleveren (lage R). Twee oplossingen in de app: sorteren op R, en "Weging aanpassen" in de instellingen (§6.11). De standaardweging blijft 25/25/20/15/15, zoals afgesproken.'],
 ];
+
+// §6.11 Zonder Kniefuncties: de sterren op het scherm "Over".
+export const STARS_NO_KNEE = {
+  intro: 'Elke oefening krijgt deelscores van 1 tot 5. Zonder Kniefuncties telt de kniescore K niet mee: de score is het gewogen gemiddelde van B, D, R en P, naar verhouding van hun gewicht.',
+  formula: [
+    'score   = (0,25·B + 0,20·D + 0,15·R + 0,15·P) / 0,75     (bereik 1–5, twee decimalen)',
+    'sterren = score afgerond op 0,5; een halve stap rondt naar boven af',
+  ],
+  meaning: [
+    ['Ze zijn persoonlijk.', 'Ze gelden voor jouw doelen: trail en klimmen.'],
+    ['B is bijna altijd groepsbewijs.', 'Studies naar één specifieke variant zijn zeldzaam. Twee stretches voor dezelfde spiergroep verschillen daarom vooral in D, R en P.'],
+    ['D en R zijn oordelen.', 'De kaart toont daarom altijd het bewijsniveau in woorden (§6.2).'],
+  ],
+};
 
 // §7 installeren.
 export const INSTALL = {

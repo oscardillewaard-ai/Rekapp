@@ -72,41 +72,64 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data, p
   }
 
   // Weging aanpassen (§6.11): som altijd 100 %; herberekent alleen de getoonde
-  // sterren.
+  // sterren. Zonder Kniefuncties staat K er niet bij: B, D, R en P tellen
+  // naar verhouding, en de verborgen K vangt het verschil op, zodat de
+  // opgeslagen weging samen 100 % blijft.
   let draft = null;
   function weights() {
+    const kneeOn = getSettings().kneeFeatures;
+    const letters = Object.keys(LETTER_NAMES).filter((k) => kneeOn || k !== 'K');
     draft ??= { ...getSettings().weights };
     const wrap = h('section', { class: 'section' });
     const paint = () => {
-      const sum = Object.values(draft).reduce((a, b) => a + b, 0);
+      const sum = letters.reduce((a, k) => a + draft[k], 0);
       const set = (k, d) => {
-        draft = { ...draft, [k]: Math.min(100, Math.max(0, draft[k] + d)) };
-        const total = Object.values(draft).reduce((a, b) => a + b, 0);
-        if (total === 100) update({ weights: { ...draft } });
+        const v = Math.min(100, Math.max(0, draft[k] + d));
+        if (kneeOn) {
+          draft = { ...draft, [k]: v };
+          const total = Object.values(draft).reduce((a, b) => a + b, 0);
+          if (total === 100) update({ weights: { ...draft } });
+        } else {
+          const visible = sum - draft[k] + v;
+          if (visible > 100 || visible <= 0) return;
+          draft = { ...draft, [k]: v, K: 100 - visible };
+          update({ weights: { ...draft } });
+        }
         preserveFocus(wrap, paint);
       };
+      const status = kneeOn
+        ? h('p', { class: sum === 100 ? 'note' : 'warn-bar', role: 'status' },
+          sum === 100 ? 'Som: 100 %.' : `Som: ${sum} %. Pas aan tot 100 %; tot dan blijft de vorige weging gelden.`)
+        : h('p', { class: 'note', role: 'status' }, `Samen ${sum} %; de sterren rekenen dat naar verhouding om naar 100 %.`);
       fill(wrap, 
         h('h2', null, 'Weging aanpassen'),
         h('p', { class: 'note' }, 'Verandert alleen de sterren die je ziet.'),
-        ...Object.keys(LETTER_NAMES).map((k) => h('div', { class: 'stepper', role: 'group', 'aria-label': `${k} ${LETTER_NAMES[k]}` },
+        ...letters.map((k) => h('div', { class: 'stepper', role: 'group', 'aria-label': `${k} ${LETTER_NAMES[k]}` },
           h('span', { class: 'stepper-label' }, `${k} · ${LETTER_NAMES[k]}`),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': `${LETTER_NAMES[k]} lager`, onclick: () => set(k, -5) }, '−'),
           h('output', null, `${draft[k]}%`),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': `${LETTER_NAMES[k]} hoger`, onclick: () => set(k, 5) }, '+'))),
-        h('p', { class: sum === 100 ? 'note' : 'warn-bar', role: 'status' },
-          sum === 100 ? 'Som: 100 %.' : `Som: ${sum} %. Pas aan tot 100 %; tot dan blijft de vorige weging gelden.`),
+        status,
         h('button', {
           class: 'btn', type: 'button',
           onclick: () => { draft = { ...DEFAULT_SETTINGS.weights }; update({ weights: { ...draft } }); preserveFocus(wrap, paint); },
-        }, 'terug naar standaard 25/25/20/15/15'));
+        }, kneeOn ? 'terug naar standaard 25/25/20/15/15' : 'terug naar standaard 25/20/15/15'));
     };
     paint();
     return wrap;
   }
 
-  // Knie (§6.11): opvlammingsmodus handmatig aan, en binnen 24 uur terug
+  // Knie (§6.11): de schakelaar Kniefuncties (standaard uit), en met
+  // Kniefuncties aan de opvlammingsmodus handmatig aan, en binnen 24 uur terug
   // (per ongeluk aangezet). Ontgrendelingen resetten vervalt met het knieslot.
   function kneeSection() {
+    const on = getSettings().kneeFeatures;
+    const input = h('input', { type: 'checkbox', role: 'switch' });
+    input.checked = on;
+    input.addEventListener('change', () => knee.setFeatures(input.checked));
+    const sw = h('label', { class: 'switch' },
+      h('span', null, KNEE.featuresLabel, h('small', { class: 'hint' }, KNEE.featuresHint)), input);
+    if (!on) return h('section', { class: 'section' }, h('h2', null, 'Knie'), sw);
     const state = knee.get();
     const flare = state.unknown
       ? h('p', { class: 'note' }, 'Je kniestatus kon niet worden gelezen; voor de zekerheid geldt de opvlammingsmodus.')
@@ -116,7 +139,7 @@ export function createSettingsScreen({ audio, getSettings, update, knee, data, p
     const undo = !state.unknown && canUndoFlare(state, Date.now())
       ? h('button', { class: 'btn', type: 'button', onclick: () => knee.undoFlare() }, 'Per ongeluk aangezet: terugdraaien')
       : null;
-    return h('section', { class: 'section' }, h('h2', null, 'Knie'), flare, undo);
+    return h('section', { class: 'section' }, h('h2', null, 'Knie'), sw, flare, undo);
   }
 
   // Herinneringen (§7): geen push zonder server; een .ics met dagelijkse

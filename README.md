@@ -39,6 +39,9 @@ import (zie hieronder).
 
 ### Daarna
 
+- **Instellingen → Knie → Kniefuncties** zet de knieregels aan: de kniescore
+  in de sterren, de dagelijkse kniecheck en de opvlammingsmodus. Standaard
+  staan ze uit.
 - **Instellingen → Opslag** laat zien of je gegevens blijvend zijn opgeslagen.
   Staat er "niet blijvend", tik dan op **Blijvend opslaan aanvragen**.
 - **Instellingen → Herinneringen:** kies een tijd en tik op **Herinnering in
@@ -62,13 +65,13 @@ de app herinnert je er elke 14 dagen aan.
 2. Kies **Alles delen of bewaren**. Op de iPhone kies je daarna bijvoorbeeld
    **Bewaar in Bestanden**. Of download de bestanden één voor één.
 
-Je krijgt vier bestanden:
+Je krijgt vier bestanden (drie met Kniefuncties uit):
 
 | Bestand | Inhoud |
 |---|---|
 | `rekapp-JJJJ-MM-DD.json` | Alles: routines, sessies, kniechecks, zelftests, opvlammingsmodus en instellingen. Dit is je back-up. |
 | `sessies.csv` | Eén regel per sessie: datum, tijd, tijdzone, moment, routine, status, geplande en actieve tijd, intensiteit, kniepijn, notities. |
-| `kniechecks.csv` | Eén regel per kniecheck: datum, tijd, pijn, soort check, oefening. |
+| `kniechecks.csv` | Eén regel per kniecheck: datum, tijd, pijn, soort check, oefening. Alleen met Kniefuncties aan. |
 | `dosis_per_week.csv` | Per week (vanaf maandag) en spiergroep de gedane seconden links, rechts en dynamisch. |
 
 De CSV-bestanden gebruiken een puntkomma als scheidingsteken en UTF-8 met BOM,
@@ -115,8 +118,11 @@ Handig om ook even te proberen:
 
 - [ ] De CSV-export opent correct in Excel; de JSON-import herstelt alles.
 - [ ] Een kantwissel wordt aangekondigd met spraak, piep en flits.
-- [ ] Tijdens een opvlamming is een oefening boven 45° nergens toe te voegen
-      of af te spelen; "Terugdraaien" werkt binnen 24 uur na het aanzetten.
+- [ ] Met **Kniefuncties** uit (standaard) staat er nergens iets over de
+      knie: geen K in de sterren, geen kniekaarten, -badges of kniepijn.
+- [ ] Met Kniefuncties aan: tijdens een opvlamming is een oefening boven 45°
+      nergens toe te voegen of af te spelen; "Terugdraaien" werkt binnen 24
+      uur na het aanzetten.
 - [ ] Stokfiguren: op een paar kaarten loopt de demo vloeiend en stopt hij met
       de pauzeknop; in de speler volgt het figuur de fasen, ook met "Groot
       stokfiguur" aan en in de nachtmodus.

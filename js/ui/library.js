@@ -20,6 +20,8 @@ const plural = (n) => `${n} ${n === 1 ? 'oefening' : 'oefeningen'}`;
 // Twee standen: de gewone bibliotheek (rij = link naar de kaart) en de kiezer
 // van de routinebouwer (rij = knop; onPick krijgt de oefening). blockedCodes(ex)
 // geeft de blokkerende waarschuwingen (W8 tijdens een opvlamming), of [].
+// kneeInfo() zegt of Kniefuncties aan staan: dan de kniebadge en het
+// kniefilter.
 let instances = 0;
 
 // Zoeken, filters en sortering. De bibliotheek en de kiezer van de bouwer
@@ -28,7 +30,7 @@ let instances = 0;
 export const libraryState = () => ({ filters: defaultFilters(), sort: 'score', grouped: true });
 
 export function createLibraryScreen({
-  lib, equipmentOrder, weights, title = 'Bibliotheek', onPick = null,
+  lib, equipmentOrder, weights, kneeInfo = () => true, title = 'Bibliotheek', onPick = null,
   blockedCodes = () => [], scrollTop = () => window.scrollTo(0, 0), headerExtra = null,
   state = libraryState(), attention = () => new Map(),
 }) {
@@ -78,7 +80,7 @@ export function createLibraryScreen({
           h('div', { class: 'meta' }, starsWithScore(rating), h('span', null, groupLabels),
             primaryGroups(ex).some((g) => attention().has(g)) ? h('span', { class: 'chip attention-chip' }, 'aandacht') : null)),
         h('div', { class: 'side' },
-          h('span', { class: 'knee-badge', title: 'Maximale kniebuiging' }, h('span', { class: 'sr-only' }, 'Knie maximaal '), `${ex.kneeFlexionMaxDeg}°`),
+          kneeInfo() ? h('span', { class: 'knee-badge', title: 'Maximale kniebuiging' }, h('span', { class: 'sr-only' }, 'Knie maximaal '), `${ex.kneeFlexionMaxDeg}°`) : null,
           locked ? h('span', { title: 'Tijdelijk uit tijdens een opvlamming' }, icon('lock', 'lock'), h('span', { class: 'sr-only' }, 'Tijdelijk uit tijdens een opvlamming')) : null));
     rows.set(ex.id, li);
     return li;
@@ -143,6 +145,9 @@ export function createLibraryScreen({
 
   const toggleIn = (arr, v) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
   const f = () => state.filters;
+  const kneeFilter = h('fieldset', null, h('legend', null, 'Knie'),
+    switchRow(cap(FILTERS.onlyK4), () => f().onlyK4, (on) => { f().onlyK4 = on; }));
+  updaters.push(() => { kneeFilter.hidden = !kneeInfo(); });
   const groupsByRegion = REGIONS.map((region) => [region, [...lib.groups.values()].filter((g) => g.region === region)]);
 
   sheet.append(
@@ -160,8 +165,7 @@ export function createLibraryScreen({
         (v) => f().equipment.includes(v), (v) => { f().equipment = toggleIn(f().equipment, v); }),
       chipset('Minimum aantal sterren', STAR_OPTIONS, (v) => f().minStars === v, (v) => { f().minStars = v; }),
       chipset('Type', TYPE_OPTIONS, (v) => f().type === v, (v) => { f().type = v; }),
-      h('fieldset', null, h('legend', null, 'Knie'),
-        switchRow(cap(FILTERS.onlyK4), () => f().onlyK4, (on) => { f().onlyK4 = on; }))),
+      kneeFilter),
     h('div', { class: 'sheet-foot' },
       h('button', { class: 'btn', type: 'button', onclick: () => { state.filters = { ...defaultFilters(), query: state.filters.query }; update(); } }, 'Wis filters'),
       showButton,
@@ -194,11 +198,13 @@ export function createLibraryScreen({
     if (changed) scrollTop();
   });
 
-  // Eigen weging (§6.11): sterren opnieuw voor de weergave.
+  // Eigen weging (§6.11) of Kniefuncties aan/uit: sterren en rijen opnieuw
+  // voor de weergave. Zonder Kniefuncties geldt het kniefilter niet.
   function setWeights(pct) {
     items = catalogItems(lib, pct);
+    if (!kneeInfo()) state.filters.onlyK4 = false;
     rows.clear();
-    renderList();
+    update({ silent: true });
   }
 
   // Rijen opnieuw opbouwen (bv. als de kniestatus veranderde).

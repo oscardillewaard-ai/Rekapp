@@ -2,6 +2,7 @@
 import { h, clear, fill } from './dom.js';
 import { starsWithScore, icon, bodyMap, positionIcon } from './graphics.js';
 import { rate } from '../library.js';
+import { ratingWeights } from '../settings.js';
 import { formatDose, evidenceLabel, SLOT_LABELS, TYPE_LABELS, SIDED_LABELS } from '../format.js';
 import { RUBRICS, BREATHING, CARD } from '../texts.js';
 import { WARNINGS } from '../warnings.js';
@@ -63,7 +64,10 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) 
       return;
     }
 
-    const rating = rate(ex, lib.meta, getContext().settings.weights);
+    const { settings } = getContext();
+    const rating = rate(ex, lib.meta, ratingWeights(settings));
+    // Zonder Kniefuncties (instelling) geen K-score en geen kniedeel.
+    const letters = settings.kneeFeatures ? LETTERS : LETTERS.filter((l) => l !== 'K');
     const primary = ex.targets.filter((t) => t.weight === 1).map((t) => lib.groups.get(t.group));
     const secondary = ex.targets.filter((t) => t.weight !== 1).map((t) => lib.groups.get(t.group));
     const evidence = evidenceLabel(ex.scores.B, lib.meta);
@@ -84,11 +88,11 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) 
         h('span', { class: 'chip' }, positionIcon(ex.position), cap(ex.position)),
         h('span', { class: 'chip' }, cap(SIDED_LABELS[ex.sided])),
         ...(ex.equipment.length ? ex.equipment.map((e) => h('span', { class: 'chip' }, cap(e))) : [h('span', { class: 'chip' }, 'Geen materiaal')]))));
-    if (figure) root.append(figureDemo(ex.id, { mode3d: getContext().settings.figure3d }));
+    if (figure) root.append(figureDemo(ex.id, { mode3d: settings.figure3d }));
 
     // 2. Vijf deelscores; tik toont de rubriek uit §3.1.
     root.append(section('Deelscores',
-      h('div', { class: 'scores' }, LETTERS.map((l) =>
+      h('div', { class: 'scores' }, letters.map((l) =>
         h('button', { class: 'score-bar', type: 'button', 'aria-label': `${LETTER_NAMES[l]}: ${ex.scores[l]} van 5. Tik voor de uitleg.`, onclick: () => openRubric(l, ex) },
           h('span', { class: 'letter', 'aria-hidden': 'true' }, l, h('span', null, LETTER_NAMES[l])),
           h('span', { class: 'track', 'aria-hidden': 'true' }, h('span', { class: 'fill', style: `width:${ex.scores[l] * 20}%` })),
@@ -101,10 +105,11 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) 
         ex.pros.map((p) => h('li', { class: 'pro' }, icon('check'), h('span', null, h('span', { class: 'sr-only' }, 'Voordeel: '), p))),
         ex.cons.map((c) => h('li', { class: 'con' }, icon('cross'), h('span', null, h('span', { class: 'sr-only' }, 'Nadeel: '), c))))));
 
-    // 4. Knie. Het knieslot is verwijderd (AFWIJKINGEN.md); bij een lage
-    // kniescore staat er wel een gewone notitie, geen blokkade.
+    // 4. Knie (alleen met Kniefuncties). Het knieslot is verwijderd
+    // (AFWIJKINGEN.md); bij een lage kniescore staat er wel een gewone
+    // notitie, geen blokkade.
     const lowK = ex.scores.K <= lib.meta.scoring.kneeGate.maxK;
-    root.append(section('Knie',
+    if (settings.kneeFeatures) root.append(section('Knie',
       h('dl', null,
         h('dt', null, 'Maximale kniebuiging'), h('dd', null, `${ex.kneeFlexionMaxDeg}°`),
         h('dt', null, 'Kniebelasting'), h('dd', null, ex.kneeLoad)),

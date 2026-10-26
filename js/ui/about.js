@@ -1,14 +1,15 @@
 // "Over" (§6.12): geen medisch advies, wat rekken wel en niet doet, de uitleg
-// van de sterren (§3) en het bewijs per spiergroep (§4).
+// van de sterren (§3) en het bewijs per spiergroep (§4). Zonder Kniefuncties
+// (instelling) zonder K en zonder de kniescores (§6.11).
 import { h, fill } from './dom.js';
 import { icon } from './graphics.js';
-import { ABOUT, STARS_FORMULA, STARS_MEANING, RUBRICS } from '../texts.js';
+import { ABOUT, STARS_FORMULA, STARS_MEANING, STARS_NO_KNEE, RUBRICS } from '../texts.js';
 import { REGIONS } from '../catalog.js';
 
 const LETTERS = ['B', 'K', 'D', 'R', 'P'];
 const cap = (t) => t[0].toUpperCase() + t.slice(1);
 
-export function createAboutScreen({ lib }) {
+export function createAboutScreen({ lib, getSettings }) {
   const root = h('section', { class: 'screen about', 'aria-labelledby': 'about-title' });
 
   const source = (key) => {
@@ -20,14 +21,18 @@ export function createAboutScreen({ lib }) {
     h('summary', null, h('span', null, title), h('span', { class: 'chev', 'aria-hidden': 'true' }, icon('back'))), ...children);
 
   function render() {
+    const kneeOn = getSettings().kneeFeatures;
+    const about = kneeOn ? ABOUT : ABOUT.filter((t) => !t.startsWith('De kniescores'));
     fill(root,
       h('header', { class: 'topbar' }, h('h1', { id: 'about-title', tabindex: '-1' }, 'Over Rekapp')),
-      h('section', { class: 'section' }, h('ul', { class: 'about-list' }, ABOUT.map((t) => h('li', null, t)))),
+      h('section', { class: 'section' }, h('ul', { class: 'about-list' }, about.map((t) => h('li', null, t)))),
       h('section', { class: 'section' },
         h('h2', null, 'De sterren'),
-        h('p', null, 'Elke oefening krijgt vijf deelscores van 1 tot 5. De score is een gewogen gemiddelde. Deze app toont de sterren zonder knie-poort: het knieslot is op jouw verzoek verwijderd. Kies je liever knievriendelijk, zet dan het filter "alleen K ≥ 4" aan of geef K meer gewicht bij "Weging aanpassen" in de instellingen.'),
-        h('pre', { class: 'formula' }, STARS_FORMULA.join('\n')),
-        ...LETTERS.map((l) => {
+        h('p', null, kneeOn
+          ? 'Elke oefening krijgt vijf deelscores van 1 tot 5. De score is een gewogen gemiddelde. Deze app toont de sterren zonder knie-poort: het knieslot is op jouw verzoek verwijderd. Kies je liever knievriendelijk, zet dan het filter "alleen K ≥ 4" aan of geef K meer gewicht bij "Weging aanpassen" in de instellingen.'
+          : STARS_NO_KNEE.intro),
+        h('pre', { class: 'formula' }, (kneeOn ? STARS_FORMULA : STARS_NO_KNEE.formula).join('\n')),
+        ...LETTERS.filter((l) => kneeOn || l !== 'K').map((l) => {
           const r = RUBRICS[l];
           return details(r.title.replace(/\.$/, ''),
             r.intro ? h('p', null, cap(r.intro)) : null,
@@ -35,7 +40,7 @@ export function createAboutScreen({ lib }) {
             r.outro ? h('p', { class: 'note' }, r.outro) : null);
         }),
         h('h3', null, 'Wat de sterren wel en niet zeggen'),
-        h('ul', { class: 'about-list' }, STARS_MEANING.map(([lead, rest]) => h('li', null, h('strong', null, lead), ' ', rest)))),
+        h('ul', { class: 'about-list' }, (kneeOn ? STARS_MEANING : STARS_NO_KNEE.meaning).map(([lead, rest]) => h('li', null, h('strong', null, lead), ' ', rest)))),
       h('section', { class: 'section' },
         h('h2', null, 'Bewijs per spiergroep'),
         ...REGIONS.map((region) => [

@@ -17,9 +17,11 @@ stellen en begeleid af te spelen. De volledige specificatie staat in
   thema standaard (§8.3).
 - Gebruikersdata in IndexedDB (§8.2), niet in localStorage.
 - Tijd altijd uit tijdstempels, nooit tellen met `setInterval` (§6.8.2).
-- De opvlammingsmodus is hard (§6.7): tijdens een opvlamming mag een
-  oefening boven 45° via geen enkele omweg toe te voegen of af te spelen
-  zijn (W8, één poort: `access` in `knee.js`). Het knieslot met de
+- Alle kniefuncties zitten achter de instelling "Kniefuncties" (§6.11,
+  standaard uit; 26-10-2026, zie `AFWIJKINGEN.md`). Staan ze aan, dan is de
+  opvlammingsmodus hard (§6.7): tijdens een opvlamming mag een oefening
+  boven 45° via geen enkele omweg toe te voegen of af te spelen zijn (W8,
+  één poort: `access` in `knee.js`, altijd met `effectiveKnee`). Het knieslot met de
   48-uurstest (§6.6) en de kniecap in de getoonde sterren zijn op verzoek
   van Oscar verwijderd (23-10-2026, zie `AFWIJKINGEN.md`); de validator
   controleert `locked` en de sterren in de bibliotheek nog wel.

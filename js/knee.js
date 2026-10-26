@@ -4,8 +4,8 @@
 //
 // Het knieslot met de 48-uurstest (§6.6) is op verzoek van Oscar verwijderd
 // (zie AFWIJKINGEN.md): oefeningen met K ≤ 2 zijn gewoon bruikbaar. De
-// opvlammingsmodus blijft hard: tijdens een opvlamming is alles boven 45°
-// kniebuiging geblokkeerd (W8).
+// opvlammingsmodus blijft hard zolang Kniefuncties aan staan: tijdens een
+// opvlamming is alles boven 45° kniebuiging geblokkeerd (W8).
 //
 // KneeState = {
 //   flare:  { active, since, exitProposedAt },
@@ -22,6 +22,14 @@ export function emptyKneeState() {
 
 function clone(state) {
   return structuredClone(state);
+}
+
+// De kniestatus waar de rest van de app mee rekent. Met Kniefuncties uit
+// (instelling, standaard uit; keuze Oscar) geldt geen opvlamming en zijn er
+// geen kniechecks te zien; de opgeslagen status blijft bewaard en geldt weer
+// zodra je Kniefuncties aanzet.
+export function effectiveKnee(state, kneeFeatures) {
+  return kneeFeatures ? state : emptyKneeState();
 }
 
 // Mag deze oefening worden toegevoegd en afgespeeld? Alleen de

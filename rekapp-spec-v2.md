@@ -537,6 +537,28 @@ De tests staan in `library.json` onder `tests`.
 
 Geluid in stille modus (aan), mixen met muziek (uit), spraak (aan) met stemkeuze, piepvolume, auto-pauze bij een verborgen scherm (aan), nachtmodus, kantwisselduur (5 s), standaard statische houdtijd (45 s), vergrendelde oefeningen tonen (aan), **weging aanpassen** (B, K, D, R, P; som altijd 100%, met de knop "terug naar standaard 25/25/20/15/15"; herberekent sterren alleen voor de weergave, de knie-poort blijft altijd gelden), herinneringen via `.ics`, opvlammingsmodus handmatig, ontgrendelingen resetten, opslagstatus (`navigator.storage.persisted()`), laatste export, import.
 
+**Kniefuncties** (schakelaar, standaard uit; toegevoegd op verzoek van Oscar, oktober 2026). Hint: "De kniescore K in de sterren, de dagelijkse kniecheck, de opvlammingsmodus (alles boven 45° uit) en de knie-informatie bij de oefeningen."
+
+- **Aan:** alles zoals in §3, §6.5–6.7 en §6.9 beschreven.
+- **Uit:** de sterren rekenen zonder K: B, D, R en P wegen naar verhouding van hun gewicht (score = Σ gewicht·deelscore / Σ gewicht, exact in gehele getallen; bij een som van 100 % gelijk aan §3.2). Bij "Weging aanpassen" staat K er dan niet bij; de knop heet "terug naar standaard 25/20/15/15". Geen kniekaarten op het startscherm en geen knop "Ik heb een opvlamming"; geen opvlammingsmodus (W8 geldt niet); geen kniebadges, geen filter "alleen K ≥ 4", geen deelscore K en geen kniedeel op de kaart, geen knie-informatie in de speler en bij de zelftests; geen vraag "Kniepijn tijdens" na een sessie en geen kniechecks in het logboek; de export laat `kniechecks.csv` weg. De opgeslagen kniestatus blijft bewaard en geldt weer zodra Kniefuncties aan gaan.
+- **Uitzetten tijdens een opvlamming** vraagt eerst een bevestiging: "Kniefuncties uitzetten?" — "Je opvlammingsmodus staat aan. Zonder Kniefuncties kun je oefeningen boven 45° weer kiezen en afspelen. De opvlamming blijft bewaard en geldt weer zodra je Kniefuncties aanzet."
+- **Bestaande gebruikers:** wie van vóór deze schakelaar al kniechecks of een opvlamming heeft (of een kniestatus die niet te lezen is), houdt Kniefuncties aan.
+
+Zonder Kniefuncties toont "Over" bij de sterren:
+
+Elke oefening krijgt deelscores van 1 tot 5. Zonder Kniefuncties telt de kniescore K niet mee: de score is het gewogen gemiddelde van B, D, R en P, naar verhouding van hun gewicht.
+
+```
+score   = (0,25·B + 0,20·D + 0,15·R + 0,15·P) / 0,75     (bereik 1–5, twee decimalen)
+sterren = score afgerond op 0,5; een halve stap rondt naar boven af
+```
+
+- **Ze zijn persoonlijk.** Ze gelden voor jouw doelen: trail en klimmen.
+- **B is bijna altijd groepsbewijs.** Studies naar één specifieke variant zijn zeldzaam. Twee stretches voor dezelfde spiergroep verschillen daarom vooral in D, R en P.
+- **D en R zijn oordelen.** De kaart toont daarom altijd het bewijsniveau in woorden (§6.2).
+
+De punt "De kniescores zijn voorzorg, geen bewezen schade." (§6.12) vervalt dan.
+
 ### 6.12 Scherm "Over"
 
 - Geen medisch advies.
@@ -4255,6 +4277,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 - [ ] Een sessie wordt gelogd met tijdzone, status en `segmentsDone`; de werkelijke dosis neemt toe met precies die seconden.
 - [ ] De CSV-export opent correct in Excel (puntkomma, UTF-8 met BOM); de JSON-import herstelt alles.
 - [ ] Weging aanpassen verandert de getoonde sterren, niet de knie-poort, en "terug naar standaard" herstelt 25/25/20/15/15.
+- [ ] Met Kniefuncties uit (standaard): geen K in de sterren en bij de weging, geen kniekaarten, kniebadges, kniefilter, kniedeel of vraag naar kniepijn; met Kniefuncties aan werkt alles zoals hierboven, ook een opvlamming die er al was.
 
 ### 11.3 Platform (echte iPhone met iOS ≥ 18.4 en een Android-telefoon met Chrome)
 

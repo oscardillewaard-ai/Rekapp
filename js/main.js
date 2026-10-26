@@ -26,10 +26,10 @@ import {
 import { buildDump, sessionsCsv, kneeChecksCsv, weekDoseCsv, parseDump, exportReminderDue, checkKneeState } from './backup.js';
 import { newMeasurement, analyse, attentionGroups } from './selftests.js';
 import { isoWithOffset } from './session.js';
-import { withDefaults, DEFAULT_SETTINGS } from './settings.js';
+import { withDefaults, DEFAULT_SETTINGS, migrateKneeFeatures, ratingWeights } from './settings.js';
 import { createAudio } from './audio.js';
 import {
-  access, recordKneeCheck, activateFlare, endFlare, postponeFlareExit, latestKneeTime, flareExitDue, canUndoFlare,
+  access, recordKneeCheck, activateFlare, endFlare, postponeFlareExit, latestKneeTime, flareExitDue, canUndoFlare, effectiveKnee,
 } from './knee.js';
 import { KNEE } from './texts.js';
 import { formatDay } from './format.js';
@@ -77,7 +77,8 @@ async function boot() {
   // Eerst de instellingen, zodat ook "Laden…" en foutschermen al in het goede
   // thema staan (nachtmodus: geen grijs of wit).
   const store = await openStore();
-  let settings = withDefaults(await loadSettings(store).catch(() => null));
+  const storedSettings = await loadSettings(store).catch(() => null);
+  let settings = withDefaults(storedSettings);
   applyTheme(settings);
   app.append(h('p', { class: 'empty' }, 'Laden…'));
   let lib;
@@ -98,6 +99,14 @@ async function boot() {
   };
   const bootKnee = store.persistent ? await readKnee() : null;
   let knee = bootKnee ? bootKnee.knee : UNKNOWN_KNEE();
+  // Kniefuncties (standaard uit): wie al kniegegevens had, houdt ze aan.
+  if (migrateKneeFeatures(storedSettings, knee)) {
+    settings = { ...settings, kneeFeatures: true };
+    saveSettings(store, settings).catch(() => {});
+  }
+  // De kniestatus waar de app mee rekent: zonder Kniefuncties geen opvlamming
+  // en geen kniechecks (knee.js, effectiveKnee). Alle poorten gebruiken deze.
+  const kneeNow = () => effectiveKnee(knee, settings.kneeFeatures);
   // Eigen routines: alleen geldige (een kapotte routine zou de speler of de
   // dosis verstoren); sessies voor "Mijn week".
   // PNF-stappen van vóór de grens van 180 s per kant worden eerst ingekort
@@ -120,19 +129,20 @@ async function boot() {
   const audio = createAudio();
   audio.configure(settings);
   const getSettings = () => settings;
-  const getContext = () => ({ settings, knee, routines });
-  const getData = () => ({ settings, knee, routines, sessions, tests });
+  const getContext = () => ({ settings, knee: kneeNow(), routines });
+  const getData = () => ({ settings, knee: kneeNow(), routines, sessions, tests });
   // Spiergroepen met "aandacht" uit de zelftests (§6.10), voor de bibliotheek.
   // Opgeslagen metingen die niet te lezen zijn, mogen de start niet blokkeren.
   const safeAttention = () => { try { return attentionGroups([...lib.tests.values()], tests, Date.now()); } catch { return new Map(); } };
   let attention = safeAttention();
-  const blockedCodes = (ex) => access(ex, knee, lib.meta.knee).codes;
+  const blockedCodes = (ex) => access(ex, kneeNow(), lib.meta.knee).codes;
 
   // Vaste meldingen bovenaan de app (opslag, kniestatus).
   const notices = h('div', { class: 'app-notices', role: 'status' });
   const notice = (text) => { if (![...notices.children].some((n) => n.textContent === text)) notices.append(h('p', { class: 'warn-bar' }, text)); };
   if (!store.persistent) notice('Opslaan lukt niet in deze browser: sessies en instellingen worden niet bewaard. Open de app buiten een privévenster of herlaad hem.');
-  if (knee.unknown) notice('Je kniestatus kon niet worden gelezen. Voor de zekerheid staan oefeningen boven 45° uit, zoals bij een opvlamming.');
+  const UNKNOWN_NOTICE = 'Je kniestatus kon niet worden gelezen. Voor de zekerheid staan oefeningen boven 45° uit, zoals bij een opvlamming.';
+  if (knee.unknown && settings.kneeFeatures) notice(UNKNOWN_NOTICE);
   for (const w of bootKnee?.warnings ?? []) notice(w);
   if (bootKnee?.changed) saveKneeState(store, knee).catch(() => {});
   if (shortened.length) notice(`PNF ingekort tot hoogstens 180 s per kant in: ${shortened.map((r) => r.name).join(', ')}.`);
@@ -290,11 +300,41 @@ async function boot() {
     undoSheet.showModal();
   }
 
+  // Kniefuncties aan of uit (§6.11). Uitzetten tijdens een opvlamming heft de
+  // blokkade boven 45° op; dat gebeurt pas na een bevestiging. De kniestatus
+  // zelf blijft bewaard.
+  const kneeOffSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'knee-off-title' });
+  kneeOffSheet.addEventListener('click', (e) => { if (e.target === kneeOffSheet) kneeOffSheet.close(); });
+  kneeOffSheet.addEventListener('close', () => { if (current === 'instellingen') settingsScreen.render({ keepDraft: true }); });
+  async function setKneeFeatures(on) {
+    if (on || !(knee.flare.active || knee.unknown)) {
+      await updateSettings({ kneeFeatures: on });
+      refreshView();
+      return;
+    }
+    fill(kneeOffSheet,
+      h('div', { class: 'sheet-body' },
+        h('h2', { id: 'knee-off-title' }, KNEE.featuresOffTitle),
+        h('p', null, KNEE.featuresOffFlare)),
+      h('div', { class: 'sheet-foot' },
+        h('button', { class: 'btn', type: 'button', onclick: () => kneeOffSheet.close() }, 'Aan laten'),
+        h('button', {
+          class: 'btn danger', type: 'button',
+          onclick: async () => { await updateSettings({ kneeFeatures: false }); kneeOffSheet.close(); },
+        }, 'Uitzetten')));
+    kneeOffSheet.showModal();
+  }
+
   async function updateSettings(patch) {
     settings = withDefaults({ ...settings, ...patch });
     applyTheme(settings);
     audio.configure(settings);
-    if ('weights' in patch) { library.setWeights(settings.weights); picker.setWeights(settings.weights); }
+    if ('weights' in patch || 'kneeFeatures' in patch) {
+      library.setWeights(ratingWeights(settings));
+      picker.setWeights(ratingWeights(settings));
+    }
+    if (patch.kneeFeatures && knee.unknown) notice(UNKNOWN_NOTICE);
+    if (patch.kneeFeatures === false) for (const p of notices.querySelectorAll('.warn-bar')) if (p.textContent === UNKNOWN_NOTICE) p.remove();
     try {
       await saveSettings(store, settings);
     } catch (e) {
@@ -316,13 +356,13 @@ async function boot() {
   const home = createHomeScreen({
     lib, getData,
     // Kniekaarten bovenaan (§6.7) en "Ik heb een opvlamming" onderaan.
-    topCards: () => [...kneeCards({ lib, knee, now: Date.now(), actions: kneeActions }), ...dataCards()],
-    bottom: () => (knee.flare.active || knee.unknown ? null
+    topCards: () => [...(settings.kneeFeatures ? kneeCards({ lib, knee, now: Date.now(), actions: kneeActions }) : []), ...dataCards()],
+    bottom: () => (!settings.kneeFeatures || knee.flare.active || knee.unknown ? null
       : h('button', { class: 'btn flare-button', type: 'button', onclick: askFlare }, KNEE.flareButton)),
   });
   const libState = libraryState();
   const library = createLibraryScreen({
-    lib, equipmentOrder, weights: settings.weights, blockedCodes, state: libState,
+    lib, equipmentOrder, weights: ratingWeights(settings), kneeInfo: () => settings.kneeFeatures, blockedCodes, state: libState,
     attention: () => attention,
   });
   const exercise = createExerciseScreen({
@@ -346,6 +386,7 @@ async function boot() {
     audio, getSettings, update: updateSettings,
     knee: {
       get: () => knee,
+      setFeatures: (on) => setKneeFeatures(on),
       askFlare,
       undoFlare: () => askUndoFlare(),
     },
@@ -362,7 +403,7 @@ async function boot() {
   const log = createLogScreen({ lib, getData });
   const testsScreen = createTestsScreen({ lib, getData });
   const install = createInstallScreen();
-  const about = createAboutScreen({ lib });
+  const about = createAboutScreen({ lib, getSettings });
 
   // Herinnering in de agenda (§7): een .ics met dagelijkse herhaling en alarm.
   function downloadReminder(key, time) {
@@ -405,9 +446,9 @@ async function boot() {
     return [
       { name: `rekapp-${exportedAt.slice(0, 10)}.json`, type: 'application/json', text: `${JSON.stringify(dump, null, 2)}\n`, backup: true },
       { name: 'sessies.csv', type: 'text/csv;charset=utf-8', text: sessionsCsv(data.sessions) },
-      { name: 'kniechecks.csv', type: 'text/csv;charset=utf-8', text: kneeChecksCsv(data.kneeChecks) },
+      settings.kneeFeatures ? { name: 'kniechecks.csv', type: 'text/csv;charset=utf-8', text: kneeChecksCsv(data.kneeChecks) } : null,
       { name: 'dosis_per_week.csv', type: 'text/csv;charset=utf-8', text: weekDoseCsv(data.sessions, lib) },
-    ];
+    ].filter(Boolean);
   }
   const markExported = () => updateSettings({ lastExportAt: Date.now(), exportReminderSnoozedAt: null });
   function download(f) {
@@ -439,7 +480,7 @@ async function boot() {
         h('div', { class: 'sheet-head' },
           h('h2', { id: 'export-title' }, 'Exporteren'),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Sluiten', onclick: () => exportSheet.close() }, icon('cross'))),
-        h('p', null, 'Het JSON-bestand is je volledige back-up (importeren zet alles terug). De drie CSV-bestanden openen in Excel.'),
+        h('p', null, 'Het JSON-bestand is je volledige back-up (importeren zet alles terug). De CSV-bestanden openen in Excel.'),
         canShare ? h('button', {
           class: 'btn primary export-share', type: 'button',
           onclick: async () => {
@@ -545,7 +586,7 @@ async function boot() {
   let pickResolve = null;
   const pickerClose = h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Sluiten', onclick: () => pickerDialog.close() }, icon('cross'));
   const picker = createLibraryScreen({
-    lib, equipmentOrder, weights: settings.weights, blockedCodes, state: libState,
+    lib, equipmentOrder, weights: ratingWeights(settings), kneeInfo: () => settings.kneeFeatures, blockedCodes, state: libState,
     title: 'Kies een oefening', headerExtra: pickerClose,
     scrollTop: () => { pickerList().scrollTop = 0; },
     onPick: (ex, codes) => {
@@ -596,7 +637,7 @@ async function boot() {
     },
     onStart: (r) => {
       if (builderDraft?.routine.id === r.id) dropDraft();
-      const { routine: playable } = playableRoutine(r, { lib, knee });
+      const { routine: playable } = playableRoutine(r, { lib, knee: kneeNow() });
       if (playable.steps.length) beginRun(playable, r);
     },
     onBack: goBack('#/routines'),
@@ -664,7 +705,7 @@ async function boot() {
   const addSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'add-title' });
   addSheet.addEventListener('click', (e) => { if (e.target === addSheet) addSheet.close(); });
   function openAddSheet(ex) {
-    if (!access(ex, knee, lib.meta.knee).allowed) return;
+    if (!access(ex, kneeNow(), lib.meta.knee).allowed) return;
     const addTo = async (r, fresh) => {
       addSheet.close();
       const next = { ...r, steps: [...r.steps, newStep(ex, settings)], updatedAt: Date.now() };
@@ -695,7 +736,7 @@ async function boot() {
   // nu blokkeert (W8), komt er niet in (§6.5 "voorkomen toevoegen"). Zeg wat
   // er is weggelaten.
   function withoutBlocked(r) {
-    const { routine: kept, removed } = playableRoutine(r, { lib, knee });
+    const { routine: kept, removed } = playableRoutine(r, { lib, knee: kneeNow() });
     if (removed.length) {
       const names = [...new Set(removed.map((x) => exName(x.exerciseId)))].join(', ');
       flash(`Niet overgenomen (opvlammingsmodus): ${names}.`);
@@ -708,7 +749,7 @@ async function boot() {
   // stap nog eens toegepast: wat boven 45° gaat (W8), speelt nooit af. Geeft
   // true als de speler start.
   function beginRun(playable, meta) {
-    const steps = playable.steps.filter((st) => access(lib.exercises.get(st.exerciseId), knee, K).allowed);
+    const steps = playable.steps.filter((st) => access(lib.exercises.get(st.exerciseId), kneeNow(), K).allowed);
     if (!steps.length) return false;
     audio.unlock();
     player.begin({ ...playable, steps }, { id: meta.id, name: meta.name, slot: meta.slot });
@@ -719,7 +760,7 @@ async function boot() {
   // "Probeer nu" (§6.2): alleen deze oefening met de standaarddosis. De
   // opvlammingsmodus wordt hier opnieuw gecontroleerd.
   function tryExercise(ex) {
-    if (!access(ex, knee, lib.meta.knee).allowed) return;
+    if (!access(ex, kneeNow(), lib.meta.knee).allowed) return;
     const step = { exerciseId: ex.id, ...ex.defaultDose };
     beginRun({ steps: [step] }, { id: `probeer:${ex.id}`, name: `Probeer nu: ${ex.name}`, slot: 'vrij' });
   }
@@ -753,7 +794,7 @@ async function boot() {
   };
   for (const v of Object.values(views)) v.hidden = true;
   fill(app, notices, ...Object.values(views), tabbar,
-    library.sheet, exercise.sheet, picker.sheet, pickerDialog, addSheet, ...builder.sheets, flareSheet, undoSheet, exportSheet, importSheet, toasts);
+    library.sheet, exercise.sheet, picker.sheet, pickerDialog, addSheet, ...builder.sheets, flareSheet, undoSheet, kneeOffSheet, exportSheet, importSheet, toasts);
   watchBars();
 
   // Service worker (§8.1) en "Update beschikbaar → herladen" (§11.3). Een
@@ -870,7 +911,7 @@ async function boot() {
         // routine stond, komt er niet bij (net als bij kopiëren).
         const base = routines.find((x) => x.id === id) ?? null;
         const had = new Set((base?.steps ?? []).map((st) => st.exerciseId));
-        const steps = pendingDraft.routine.steps.filter((st) => had.has(st.exerciseId) || access(lib.exercises.get(st.exerciseId), knee, K).allowed);
+        const steps = pendingDraft.routine.steps.filter((st) => had.has(st.exerciseId) || access(lib.exercises.get(st.exerciseId), kneeNow(), K).allowed);
         if (steps.length < pendingDraft.routine.steps.length) flash('Niet overgenomen uit het concept (opvlammingsmodus): geblokkeerde oefeningen.');
         builder.restore({ ...pendingDraft, routine: { ...pendingDraft.routine, steps } }, base);
         pendingDraft = null;

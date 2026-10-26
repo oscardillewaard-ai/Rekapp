@@ -235,7 +235,7 @@ export function createTestScreen({ lib, getData, onSave, onDelete, onBack }) {
       h('section', { class: 'section' },
         h('h2', null, 'Uitvoering'),
         h('ol', { class: 'cues' }, test.instructions.map((t) => h('li', null, t))),
-        h('p', null, h('strong', null, 'Knie: '), test.pfpsNote),
+        getData().settings.kneeFeatures ? h('p', null, h('strong', null, 'Knie: '), test.pfpsNote) : null,
         h('p', { class: 'note' }, h('strong', null, 'Meetprotocol: '), SELFTEST.protocol)),
       h('section', { class: 'section' },
         h('h2', null, 'Nieuwe meting'),

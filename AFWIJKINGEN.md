@@ -3,6 +3,39 @@
 Elke bewuste afwijking van `rekapp-spec-v2.md`, met reden, plus de keuzes
 waar de spec geen of een tegenstrijdig antwoord gaf.
 
+## Besluiten Oscar (26-10-2026)
+
+### Kniefuncties achter een instelling, standaard uit (aanvulling op §6.11)
+Oscar: "Haal alles met kniebewust en bescherming enzo uit de app, dat is
+alleen voor mijzelf belangrijk." Alles over de knie zit nu achter de
+schakelaar **Kniefuncties** (Instellingen → Knie), standaard uit. Uit:
+- de sterren rekenen zonder K (B, D, R en P naar verhouding; `rate()` deelt
+  door de som van de gewichten, exact in gehele getallen). Bij "Weging
+  aanpassen" staat K er niet bij; de verborgen K vangt het verschil op, zodat
+  de opgeslagen weging samen 100 % blijft en een export/import ongewijzigd
+  werkt;
+- geen opvlammingsmodus: de app rekent met `effectiveKnee()` (`knee.js`),
+  een lege kniestatus. `access` blijft de ene poort; alleen de status die
+  erin gaat, hangt af van de instelling. De opgeslagen status blijft
+  bewaard en geldt weer zodra Kniefuncties aan gaan;
+- geen kniekaarten, geen knop "Ik heb een opvlamming", geen kniebadges, geen
+  filter "alleen K ≥ 4", geen deelscore K en geen kniedeel op de kaart, geen
+  knie-informatie in de speler en bij de zelftests, geen vraag "Kniepijn
+  tijdens", geen kniechecks in het logboek, geen `kniechecks.csv` in de
+  export, en op "Over" de sterren zonder K.
+
+Uitzetten tijdens een opvlamming vraagt eerst een bevestiging. Wie al
+kniechecks of een opvlamming had (of een kniestatus die niet te lezen is),
+houdt Kniefuncties aan bij de update (`migrateKneeFeatures`): anders zou een
+lopende opvlamming ongemerkt vervallen. Teksten en gedrag staan in §6.11 van
+de spec. Wat blijft: knieverwijzingen in de teksten van de oefeningen zelf
+(voor- en nadelen, cues) en in de rubrieken (R: "of in verband gebracht met
+PFP"), omdat `data/library.json` niet met de hand verandert.
+
+**Reden:** keuze van Oscar; de knieregels zijn persoonlijk en horen niet in
+de standaardapp. De punten hieronder over de opvlammingsmodus ("blijft
+hard") gelden zolang Kniefuncties aan staan.
+
 ## Besluiten Oscar (23-10-2026)
 
 Deze besluiten gaan vóór de spec en vóór oudere punten in dit bestand. Waar

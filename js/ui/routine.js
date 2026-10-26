@@ -7,6 +7,7 @@ import { compileRoutine } from '../timeline.js';
 import { formatDose, formatDuration } from '../format.js';
 import { routineWarnings, playableRoutine, WARNINGS } from '../warnings.js';
 import { rate } from '../library.js';
+import { ratingWeights } from '../settings.js';
 
 export function createRoutineScreen({ lib, getContext, onStart, onBack, onCopy, onEdit }) {
   const root = h('section', { class: 'screen' });
@@ -57,9 +58,9 @@ export function createRoutineScreen({ lib, getContext, onStart, onBack, onCopy, 
           bodyMap(ex.targets, { crop: 'mini', className: 'mini' }) ?? positionIcon(ex.position, 'mini'),
           h('div', { class: 'main' },
             h('div', { class: 'name' }, ex.name),
-            h('div', { class: 'meta' }, starsWithScore(rate(ex, lib.meta, ctx.settings.weights)), h('span', null, formatDose(step, ex)))),
+            h('div', { class: 'meta' }, starsWithScore(rate(ex, lib.meta, ratingWeights(ctx.settings))), h('span', null, formatDose(step, ex)))),
           h('div', { class: 'side' },
-            h('span', { class: 'knee-badge' }, h('span', { class: 'sr-only' }, 'Knie maximaal '), `${ex.kneeFlexionMaxDeg}°`),
+            ctx.settings.kneeFeatures ? h('span', { class: 'knee-badge' }, h('span', { class: 'sr-only' }, 'Knie maximaal '), `${ex.kneeFlexionMaxDeg}°`) : null,
             skipped ? icon('lock', 'lock') : null)));
     })));
 
