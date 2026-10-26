@@ -6,7 +6,7 @@
 // De lijst en de versie worden bijgewerkt met: node tools/update-sw.mjs
 // (tests/sw.test.js controleert dat ze kloppen).
 
-const VERSION = 'v-4a32056f61';
+const VERSION = 'v-0fdfa317a2';
 const FILES = [
   './',
   './index.html',

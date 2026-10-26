@@ -27,18 +27,20 @@ function add(dose, ex, sec, factor) {
   }
 }
 
-// §6.4.1 secondenPerKant.
+// §6.4.1 secondenPerKant, maal het aantal sets (de extra set zwakke kant
+// telt één keer).
 export function secondsPerSide(step, ex) {
   const basis = step.pnf
     ? step.pnf.rounds * (step.pnf.contractSec + step.pnf.stretchSec)
     : (step.perSideSec ?? step.durationSec);
+  const all = basis * (step.sets ?? 1);
   if (ex.sided === 'unilateral') {
-    const sec = { L: basis, R: basis };
+    const sec = { L: all, R: all };
     if (step.extraWeakSide) sec[step.extraWeakSide] += basis;
     return sec;
   }
-  if (ex.sided === 'bilateral') return { L: basis, R: basis };
-  return { L: basis / 2, R: basis / 2 }; // afwisselend
+  if (ex.sided === 'bilateral') return { L: all, R: all };
+  return { L: all / 2, R: all / 2 }; // afwisselend
 }
 
 // Dosis van één routine, vermenigvuldigd met factor (1 = één sessie).

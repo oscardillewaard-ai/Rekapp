@@ -1,7 +1,7 @@
 // Eigen routines (§6.3): aanmaken, kopiëren, stappen bewerken en controleren.
 // Puur: id's en tijdstippen komen van de aanroeper.
 import { compileRoutine } from './timeline.js';
-import { stepDoseErrors } from './library.js';
+import { stepDoseErrors, SETS_MAX, REST_MIN, REST_MAX } from './library.js';
 
 export const DOSE_STEP = 5;
 export const DOSE_MIN = 10;
@@ -66,6 +66,7 @@ export function newStep(ex, { defaultStaticHoldSec = 45 } = {}) {
   else if (ex.sided === 'unilateral') step.perSideSec = d.perSideSec;
   else step.durationSec = d.durationSec;
   if (d.reps) step.reps = d.reps;
+  if (d.sets > 1) { step.sets = d.sets; step.restSec = d.restSec; }
   if (ex.type === 'static') {
     if (step.perSideSec === 45) step.perSideSec = clampSec(defaultStaticHoldSec);
     if (step.durationSec === 45) step.durationSec = clampSec(defaultStaticHoldSec);
@@ -131,6 +132,23 @@ export function capPnf(r) {
     return { ...st, pnf: fitPnf(p) };
   });
   return changed ? { routine: { ...r, steps }, changed } : { routine: r, changed };
+}
+
+// Sets (§6.3): 1–5; vanaf 2 sets een rust tussen de sets (standaard 60 s,
+// stappen van 5 s, 10–180 s). Terug naar 1 set haalt de rust weg.
+export const REST_DEFAULT = 60;
+export function setSets(step, n) {
+  const s = clone(step);
+  const sets = Math.min(SETS_MAX, Math.max(1, Math.round(n)));
+  if (sets > 1) { s.sets = sets; s.restSec ??= REST_DEFAULT; } else { delete s.sets; delete s.restSec; }
+  return s;
+}
+export function setRest(step, sec) {
+  const s = clone(step);
+  if (!(s.sets > 1)) return s;
+  const n = Math.round(Number(sec) / DOSE_STEP) * DOSE_STEP;
+  s.restSec = Math.min(REST_MAX, Math.max(REST_MIN, Number.isFinite(n) ? n : REST_DEFAULT));
+  return s;
 }
 
 // Extra set zwakke kant (§6.3): L, R of uit; alleen bij unilaterale stappen.

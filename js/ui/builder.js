@@ -9,7 +9,7 @@ import { routineDose } from '../dose.js';
 import { routineWarnings, playableRoutine } from '../warnings.js';
 import { access } from '../knee.js';
 import {
-  newStep, adjustDose, setPnf, setExtraWeakSide, setTransition, moveStep, removeStep, totalSec, MAX_TOTAL_SEC, PNF_MAX_SEC, pnfSec,
+  newStep, adjustDose, setPnf, setExtraWeakSide, setTransition, setSets, setRest, moveStep, removeStep, totalSec, MAX_TOTAL_SEC, PNF_MAX_SEC, pnfSec,
 } from '../routines.js';
 
 const SLOTS = [['ochtend', 'Ochtend'], ['avond', 'Avond'], ['vrij', 'Vrij']];
@@ -90,6 +90,13 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
       dose.push(stepper(ex.sided === 'alternating' ? 'Seconden totaal (afwisselend)' : 'Seconden totaal', step.durationSec, () => update(adjustDose(step, -5)), () => update(adjustDose(step, 5)), ' s'));
     }
 
+    // Sets met rust ertussen (niet bij PNF: die heeft rondes).
+    if (!step.pnf) {
+      const sets = step.sets ?? 1;
+      dose.push(stepper('Sets', sets, () => update(setSets(step, sets - 1)), () => update(setSets(step, sets + 1))));
+      if (sets > 1) dose.push(stepper('Rust tussen de sets', step.restSec, () => update(setRest(step, step.restSec - 5)), () => update(setRest(step, step.restSec + 5)), ' s'));
+    }
+
     const extra = ex.sided === 'unilateral'
       ? segmented('Extra set zwakke kant', [['L', 'Links'], ['R', 'Rechts'], [null, 'Uit']], step.extraWeakSide ?? null, (v) => update(setExtraWeakSide(step, v)))
       : null;
@@ -113,7 +120,7 @@ export function createBuilderScreen({ lib, getData, pickExercise, onSave, onDele
           h('button', { class: 'btn icon', type: 'button', 'aria-label': 'Sluiten', onclick: () => stepSheet.close() }, icon('cross'))),
         h('p', { class: 'note' }, step.pnf
           ? `Standaard: ${formatDose(ex.defaultDose, ex)}. Rekken in stappen van 5 s (10–60 s), aanspannen 3–10 s, 1–5 rondes; samen hoogstens ${PNF_MAX_SEC} s per kant. Nu ${pnfSec(step.pnf)} s.`
-          : `Standaard: ${formatDose(ex.defaultDose, ex)}. Stappen van 5 s, minimaal 10 s, maximaal 180 s.`),
+          : `Standaard: ${formatDose(ex.defaultDose, ex)}. Stappen van 5 s, minimaal 10 s, maximaal 180 s; 1–5 sets, rust 10–180 s.`),
         ...dose, extra, transition,
         h('div', { class: 'actions' },
           h('button', { class: 'btn', type: 'button', disabled: index === 0, onclick: () => { change(moveStep(r, index, index - 1)); openStep(index - 1); } }, 'Omhoog'),

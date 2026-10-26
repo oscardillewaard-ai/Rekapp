@@ -454,7 +454,7 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: 1; }
 .ring { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring-track { fill: none; stroke: var(--surface-3); stroke-width: 6; }
 .ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; }
-.player[data-kind="switch"] .ring-fill, .player[data-kind="transition"] .ring-fill, .player[data-kind="prep"] .ring-fill { stroke: var(--warn); }
+.player[data-kind="switch"] .ring-fill, .player[data-kind="transition"] .ring-fill, .player[data-kind="prep"] .ring-fill, .player[data-kind="rest"] .ring-fill { stroke: var(--warn); }
 .player[data-kind="contract"] .ring-fill { stroke: var(--bad); }
 .player-visual .mini-lg { width: 3.75rem; height: 5.5rem; }
 .player-visual .fig-lg { width: 9.5rem; height: 5.5rem; }

@@ -317,6 +317,8 @@ Step = {
   durationSec?  // bilateraal of afwisselend
   pnf?: { rounds, contractSec, stretchSec },
   reps?,
+  sets?: 1–5,                   // niet bij PNF; zonder: 1 set
+  restSec?: 10–180,             // rust tussen de sets, vanaf 2 sets verplicht
   transitionAfterSec?,          // anders automatisch, zie hieronder
   extraWeakSide?: 'L' | 'R' | null
 }
@@ -329,6 +331,7 @@ Step = {
 - "+ Oefening" opent de bibliotheek als sheet; filters blijven bewaard. Een vergrendelde oefening kun je niet toevoegen; een tik opent §6.6.
 - Dosis bewerken: unilateraal in seconden per kant, bilateraal en afwisselend in totale seconden, PNF als rondes × (aanspannen + rekken). Stappen van 5 s, minimaal 10 s, maximaal 180 s. Bij een nieuwe stap wordt `defaultDose` uit de bibliotheek gebruikt.
 - "Extra set zwakke kant" per unilaterale stap: L, R of uit. Voegt na de normale kanten één extra werkblok toe aan die kant.
+- **Sets** (toegevoegd oktober 2026, voor de trainingssjablonen; geldt voor elke stap behalve PNF): 1–5 sets, standaard 1. Vanaf 2 sets een **rust tussen de sets** van 10–180 s in stappen van 5 s, standaard 60 s; terug naar 1 set haalt de rust weg. Een unilaterale stap speelt per set links en rechts, daarna de rust; de extra set zwakke kant komt na de laatste set. Met 1 set verandert er niets aan de tijdlijn.
 - Overgangstijd automatisch: hoog = staand of stoel, laag = vloer of liggend. Hoog→hoog 5 s, laag→laag 10 s, hoog↔laag 15 s. Per stap aan te passen. De laatste stap heeft geen overgang.
 - Onderaan: de actieve waarschuwingen (§6.5) en "Dosis van deze routine": seconden per spiergroep per kant, × keer per week.
 - Opslaan, Start, Dupliceren, Verwijderen. Alle sjablonen zijn alleen-lezen met de knop "Kopiëren en aanpassen".
@@ -390,9 +393,10 @@ function weekdosis(routines, lib):                   // gepland
 function secondenPerKant(s, ex):
   basis = s.pnf ? s.pnf.rounds × (s.pnf.contractSec + s.pnf.stretchSec)
                 : (s.perSideSec ?? s.durationSec)
-  unilateraal:  L = R = basis; met extraWeakSide: + basis voor die kant
-  bilateraal:   L = R = basis                        // beide kanten tegelijk
-  afwisselend:  L = R = basis / 2
+  alle  = basis × (s.sets ?? 1)
+  unilateraal:  L = R = alle; met extraWeakSide: + basis voor die kant
+  bilateraal:   L = R = alle                         // beide kanten tegelijk
+  afwisselend:  L = R = alle / 2
 ```
 
 De **werkelijke** dosis wordt op dezelfde manier berekend uit de gelogde werkblokken (`segmentsDone`) van de afgelopen 7 × 24 uur (rollend venster).
@@ -483,11 +487,13 @@ voor stap i in routine.steps:
     kanten = unilateraal ? [L, R] : [–]
     voor elke kant (met 'switch' 5 s ertussen):
       herhaal stap.pnf.rounds keer: contract (contractSec), relax (stretchSec)
-  anders als ex.sided == unilateraal:
-    work L (perSideSec), switch 5 s, work R (perSideSec)
-    als extraWeakSide: switch 5 s, work [zwakke kant] (perSideSec)
-  anders:                                   // bilateraal of afwisselend
-    work – (durationSec)
+  anders, voor set n = 1 … (stap.sets ?? 1):
+    als n > 1: rest (restSec)               // "Rust", daarna set n
+    als ex.sided == unilateraal:
+      work L (perSideSec), switch 5 s, work R (perSideSec)
+      als extraWeakSide en n de laatste set: switch 5 s, work [zwakke kant] (perSideSec)
+    anders:                                 // bilateraal of afwisselend
+      work – (durationSec)
   als i niet de laatste is: transition (transitionAfterSec of automatisch, §6.3)
 totaal = som van alle segmentduren
 ```
@@ -502,6 +508,7 @@ De engine bewaart alleen `segmentIndex`, `segmentStartedAt` en `pausedRemainingM
 IDLE --start (gebruikersgebaar)--> PREP (5 s) --> RUNNING
 RUNNING: work / contract / relax --tijd op--> volgend segment
   switch: "Wissel van kant"   transition: "Volgende: <naam>"
+  rest: "Rust." (tussen twee sets)
 RUNNING --pauze--> PAUSED --hervat--> RUNNING   (segmentStartedAt = nu − verstreken)
 RUNNING --volgende--> volgende oefening   --terug--> begin huidige oefening
 RUNNING --scherm verborgen en auto-pauze--> PAUSED
@@ -509,7 +516,7 @@ RUNNING --laatste segment klaar--> DONE --> LOG (voltooid; intensiteit, kniepijn
 elke status --stop--> BEVESTIG --> LOG (gedeeltelijk of afgebroken)
 ```
 
-**Cues:** spraak bij elk werkblok ("Linkerkant. Kuit tegen de muur. 45 seconden."), een zachte piep halverwege, piepjes bij 3-2-1. Bij PNF: "Aanspannen…" en "Loslaten, zak verder". Op Android een korte trilling bij een kantwissel en aan het eind. Bij elke kantwissel ook een visuele flits, zodat alles zonder geluid werkt.
+**Cues:** spraak bij elk werkblok ("Linkerkant. Kuit tegen de muur. 45 seconden."), een zachte piep halverwege, piepjes bij 3-2-1. Met sets begint elke set met "Set 2 van 3." vóór de kant; de rust ertussen met "Rust. 60 seconden.", met de 3-2-1 aan het eind en de volgende houding al in beeld. ⏭ tijdens de rust slaat de rust over en start de volgende set. Bij PNF: "Aanspannen…" en "Loslaten, zak verder". Op Android een korte trilling bij een kantwissel en aan het eind. Bij elke kantwissel ook een visuele flits, zodat alles zonder geluid werkt.
 
 ### 6.9 Logboek, kniechecks en export
 
@@ -901,6 +908,16 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
         "reps": {
           "type": "integer",
           "minimum": 1
+        },
+        "sets": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "restSec": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 180
         },
         "pnf": {
           "$ref": "#/$defs/pnf"
@@ -1311,6 +1328,16 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
           "type": "integer",
           "minimum": 1
         },
+        "sets": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "restSec": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 180
+        },
         "pnf": {
           "$ref": "#/$defs/pnf"
         },
@@ -1514,7 +1541,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 4. `scores.K ≤ 2` of `kneeFlexionMaxDeg > 90` ⇒ `locked` moet `true` zijn, en omgekeerd.
 5. `scores.B` = groeps-`bBase`, min 1 voor dynamisch en actief (minimaal 1), tenzij `bNote` aanwezig is.
 6. Elke spiergroep heeft minstens 2 oefeningen met die groep als primair doel, en minstens 1 niet-vergrendelde. Uitzondering: `quadriceps_vasti` (zie §4).
-7. Elke sjabloonroutine bevat alleen niet-vergrendelde oefeningen, en haar gecompileerde totale tijd (§6.8.1) is gelijk aan `expectedTotalSec`. Een dagelijks sjabloon heeft moment `ochtend` of `avond`; `sport` staat er precies bij de soorten `opwarmen` en `cooldown`, en elke sport heeft precies één opwarm- en één cooling-down-sjabloon.
+7. Elke sjabloonroutine bevat alleen niet-vergrendelde oefeningen, en haar gecompileerde totale tijd (§6.8.1) is gelijk aan `expectedTotalSec`. Een dagelijks sjabloon heeft moment `ochtend` of `avond`; `sport` staat er precies bij de soorten `opwarmen` en `cooldown`, en elke sport heeft precies één opwarm- en één cooling-down-sjabloon. Sets in een stap: niet bij PNF, en vanaf 2 sets een `restSec`; met 1 set geen `restSec`.
 8. Bij een fout: toon een duidelijke foutmelding met de oefening en het veld, en start de app niet met kapotte data.
 
 ---

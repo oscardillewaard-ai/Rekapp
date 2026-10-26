@@ -177,14 +177,17 @@ const stepOf = (seg) => (seg.kind === 'prep' ? -1 : seg.stepIndex);
 
 // ⏭ Volgende oefening: eerst naar de aangekondigde overgang ("Volgende: …"),
 // vanuit de overgang of de voorbereiding naar het begin van de volgende
-// oefening. Na de laatste oefening is de routine klaar.
+// oefening. Na de laatste oefening is de routine klaar. Tijdens de rust
+// tussen twee sets: de rust overslaan, door naar de volgende set.
 export function next(state, now) {
   if (state.status !== 'running' && state.status !== 'paused') return { state, events: [] };
   const segs = state.segments;
   const cur = segs[state.segmentIndex];
   const step = stepOf(cur);
   let target;
-  if (cur.kind === 'transition' || cur.kind === 'prep') {
+  if (cur.kind === 'rest') {
+    target = state.segmentIndex + 1;
+  } else if (cur.kind === 'transition' || cur.kind === 'prep') {
     target = segs.findIndex((x) => x.kind !== 'prep' && x.kind !== 'transition' && x.stepIndex === step + 1);
     if (target < 0) target = segs.length;
   } else {

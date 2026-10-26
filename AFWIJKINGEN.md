@@ -36,6 +36,20 @@ PFP"), omdat `data/library.json` niet met de hand verandert.
 de standaardapp. De punten hieronder over de opvlammingsmodus ("blijft
 hard") gelden zolang Kniefuncties aan staan.
 
+### Sets met rusttimer (aanvulling op §6.3, §6.4.1, §6.8)
+Voor de trainingssjablonen ("Sets met rusttimer", keuze Oscar). Een stap
+kan 1–5 sets hebben met 10–180 s rust ertussen (standaard 60 s), voor elke
+oefening behalve PNF (die heeft rondes). Een unilaterale stap speelt per set
+links en rechts en dan de rust, zodat de ene kant herstelt terwijl de andere
+werkt; de extra set zwakke kant komt na de laatste set. De rust is een eigen
+segment ("Rust. 60 seconden.", oranje ring, de volgende houding in beeld, de
+3-2-1 aan het eind) en telt niet als gedaan werk. ⏭ tijdens de rust slaat de
+rust over en start de volgende set: de spec zegt "⏭ = volgende oefening",
+maar midden in een oefening met sets is "klaar met rusten" de vraag die je
+hebt. De weekdosis telt elke set. Met 1 set (alle bestaande routines en
+sjablonen) is de tijdlijn precies als voorheen; de testvectoren zijn
+ongewijzigd.
+
 ## Besluiten Oscar (23-10-2026)
 
 Deze besluiten gaan vóór de spec en vóór oudere punten in dit bestand. Waar

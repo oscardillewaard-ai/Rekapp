@@ -255,6 +255,16 @@
           "type": "integer",
           "minimum": 1
         },
+        "sets": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "restSec": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 180
+        },
         "pnf": {
           "$ref": "#/$defs/pnf"
         }
@@ -663,6 +673,16 @@
         "reps": {
           "type": "integer",
           "minimum": 1
+        },
+        "sets": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "restSec": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 180
         },
         "pnf": {
           "$ref": "#/$defs/pnf"

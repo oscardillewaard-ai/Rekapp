@@ -80,6 +80,10 @@ function whereFromPath(lib, path) {
   return { where: `${label} ${id}`, field: m[3] ?? '' };
 }
 
+export const SETS_MAX = 5;
+export const REST_MIN = 10;
+export const REST_MAX = 180;
+
 // Controleert of de dosis van een stap past bij de oefening (PNF ↔ pnf,
 // unilateraal ↔ perSideSec, bilateraal/afwisselend ↔ durationSec).
 export function stepDoseErrors(step, ex) {
@@ -95,6 +99,15 @@ export function stepDoseErrors(step, ex) {
   }
   if (step.extraWeakSide && ex.sided !== 'unilateral') {
     errors.push({ field: 'extraWeakSide', message: 'extra set zwakke kant kan alleen bij een unilaterale oefening' });
+  }
+  // Sets met rust ertussen (§6.3): 1–5 sets; vanaf 2 sets een rust van
+  // 10–180 s. PNF heeft rondes, geen sets.
+  if (step.sets !== undefined || step.restSec !== undefined) {
+    const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+    if (step.pnf) errors.push({ field: 'sets', message: 'PNF heeft rondes, geen sets' });
+    else if (!int(step.sets, 1, SETS_MAX)) errors.push({ field: 'sets', message: `sets moet 1–${SETS_MAX} zijn` });
+    else if (step.sets > 1 && !int(step.restSec, REST_MIN, REST_MAX)) errors.push({ field: 'restSec', message: `rust tussen sets moet ${REST_MIN}–${REST_MAX} s zijn` });
+    else if (step.sets === 1 && step.restSec !== undefined) errors.push({ field: 'restSec', message: 'rust tussen sets kan pas vanaf 2 sets' });
   }
   return errors;
 }

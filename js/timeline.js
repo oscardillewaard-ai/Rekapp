@@ -25,22 +25,31 @@ export function compileRoutine(routine, exercises, { timing, sideSwitchSec = tim
     const unilateral = ex.sided === 'unilateral';
     const sw = () => push({ ...base, kind: 'switch', side: null, durationSec: sideSwitchSec });
 
-    // Kanten in afspeelvolgorde: L, R en eventueel de extra set zwakke kant.
-    const sides = unilateral ? ['L', 'R'] : [null];
-    if (unilateral && step.extraWeakSide) sides.push(step.extraWeakSide);
+    // Sets (§6.8.1): per set L en R (of één blok), met rust tussen de sets.
+    // Zonder sets (1) zijn de segmenten precies als voorheen.
+    const sets = step.sets ?? 1;
+    const setInfo = (n) => (sets > 1 ? { setNo: n, setCount: sets } : {});
+    for (let n = 1; n <= sets; n++) {
+      if (n > 1) push({ ...base, kind: 'rest', side: null, ...setInfo(n), durationSec: step.restSec });
+      // Kanten in afspeelvolgorde: L, R en na de laatste set eventueel de
+      // extra set zwakke kant.
+      const sides = unilateral ? ['L', 'R'] : [null];
+      if (unilateral && step.extraWeakSide && n === sets) sides.push(step.extraWeakSide);
 
-    sides.forEach((side, i) => {
-      if (i > 0) sw();
-      const set = i < 2 ? 'normaal' : 'extra';
-      if (step.pnf) {
-        for (let round = 1; round <= step.pnf.rounds; round++) {
-          push({ ...base, kind: 'contract', side, set, round, durationSec: step.pnf.contractSec });
-          push({ ...base, kind: 'relax', side, set, round, durationSec: step.pnf.stretchSec });
+      sides.forEach((side, i) => {
+        if (i > 0) sw();
+        const set = i < 2 ? 'normaal' : 'extra';
+        const info = set === 'normaal' ? setInfo(n) : {};
+        if (step.pnf) {
+          for (let round = 1; round <= step.pnf.rounds; round++) {
+            push({ ...base, kind: 'contract', side, set, round, durationSec: step.pnf.contractSec });
+            push({ ...base, kind: 'relax', side, set, round, durationSec: step.pnf.stretchSec });
+          }
+        } else {
+          push({ ...base, kind: 'work', side, set, ...info, durationSec: unilateral ? step.perSideSec : step.durationSec });
         }
-      } else {
-        push({ ...base, kind: 'work', side, set, durationSec: unilateral ? step.perSideSec : step.durationSec });
-      }
-    });
+      });
+    }
 
     const next = routine.steps[stepIndex + 1];
     if (next) {

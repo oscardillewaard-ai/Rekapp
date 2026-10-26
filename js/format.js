@@ -24,18 +24,21 @@ export const SIDED_LABELS = { unilateral: 'per kant', bilateral: 'beide kanten t
 export const evidenceLabel = (B, meta) => meta.scoring.evidenceLabels[String(B)];
 
 // Dosis in woorden, bv. "45 s per kant", "2 × (5 s aanspannen + 25 s rekken)
-// per kant", "60 s · 16 herhalingen".
+// per kant", "60 s · 16 herhalingen", "3 × 40 s per kant · 10 herhalingen ·
+// 60 s rust".
 export function formatDose(dose, ex) {
   const parts = [];
+  const sets = dose.sets > 1 ? `${dose.sets} × ` : '';
   if (dose.pnf) {
     const { rounds, contractSec, stretchSec } = dose.pnf;
     parts.push(`${rounds} × (${contractSec} s aanspannen + ${stretchSec} s rekken)${ex.sided === 'unilateral' ? ' per kant' : ''}`);
   } else if (dose.perSideSec !== undefined) {
-    parts.push(`${dose.perSideSec} s per kant`);
+    parts.push(`${sets}${dose.perSideSec} s per kant`);
   } else if (dose.durationSec !== undefined) {
-    parts.push(`${dose.durationSec} s${ex.sided === 'alternating' ? ', afwisselend' : ''}`);
+    parts.push(`${sets}${dose.durationSec} s${ex.sided === 'alternating' ? ', afwisselend' : ''}`);
   }
   if (dose.reps) parts.push(`${dose.reps} ${dose.reps === 1 ? 'herhaling' : 'herhalingen'}`);
+  if (sets) parts.push(`${dose.restSec} s rust`);
   return parts.join(' · ');
 }
 

@@ -105,7 +105,7 @@ export function turnViewBox(fig3) {
 // ---------- Tijd → houding ----------
 
 // Segmentsoort van de speler → tijdlijn van het figuur.
-const PHASES = { prep: 'prep', switch: 'prep', transition: 'prep', work: 'work', contract: 'contract', relax: 'relax', demo: 'demo' };
+const PHASES = { prep: 'prep', switch: 'prep', rest: 'prep', transition: 'prep', work: 'work', contract: 'contract', relax: 'relax', demo: 'demo' };
 
 export function timeline(fig, phase, round = 1) {
   const p = PHASES[phase] ?? 'prep';
