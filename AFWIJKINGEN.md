@@ -84,6 +84,30 @@ bibliotheek: 6 voor de heupen, 8 voor de enkels. Keuzes:
   aangevuld met de titels zoals ik ze ken. Bij twijfel over auteurs staat er
   "e.a.".
 
+### Trainingssjablonen Heupkracht en Enkelstabiliteit (aanvulling op §6.3, §9.2)
+Twee nieuwe sjablonen van de soort `training`, elk met een eigen tegel
+(zijsteun en balanskussen als icoon) en een `focus`:
+- **Heupkracht (TR-HEUP):** de zes heupoefeningen, 3 sets, 3× per week, 32:50.
+  Het document noemt 3× per week en minstens 6 weken (Nascimento 2018) en
+  3 × 8 tot 3 × 20 herhalingen; ik koos meestal het onderste deel van die
+  marges (de RDL zit in het midden) en 30–45 s rust, zodat het binnen ruim een half uur blijft.
+- **Enkelstabiliteit (TR-ENKEL):** de acht oefeningen in de volgorde van de
+  video, 1× per week (zoals de video), 17:40 (het document noemt ±18 min).
+  Waar je van materiaal wisselt (BOSU, trede, gewicht, band) staat de
+  overgang op 15 s. De korte varianten uit het document (balansblok,
+  warming-up) staan er niet in; die kun je met "Kopiëren en aanpassen" zelf
+  maken.
+- Regel 7 (§9.2): een trainingssjabloon mag langer zijn dan 15 minuten en
+  vergrendelde oefeningen bevatten, maar alleen trainingsoefeningen van zijn
+  focus. Andere sjablonen blijven hooguit 900 s (de validator controleert
+  dat nu ook zelf, nu het schema tot 3600 s toestaat).
+- `variant` mag nu elk veelvoud van 5 minuten zijn (Heupkracht 35,
+  Enkelstabiliteit 20); alleen de dagelijkse sjablonen gebruiken het voor de
+  knoppen 5 · 10 · 15.
+- De uitleg per soort op het tegelscherm staat nu in `texts.js`
+  (`TEMPLATE_KINDS`), zodat een test controleert dat hij letterlijk in de
+  spec staat.
+
 ### Sets met rusttimer (aanvulling op §6.3, §6.4.1, §6.8)
 Voor de trainingssjablonen ("Sets met rusttimer", keuze Oscar). Een stap
 kan 1–5 sets hebben met 10–180 s rust ertussen (standaard 60 s), voor elke

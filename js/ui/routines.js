@@ -6,14 +6,9 @@ import { icon } from './graphics.js';
 import { formatDuration } from '../format.js';
 import { totalSec, templateTiles, KIND_ORDER } from '../routines.js';
 import { playableRoutine } from '../warnings.js';
+import { TEMPLATE_KINDS as KIND_TEXT } from '../texts.js';
 
 const SLOT_TEXT = { ochtend: 'Ochtend', avond: 'Avond', vrij: 'Vrij' };
-const KIND_TEXT = {
-  dagelijks: ['Dagelijks', 'Elke dag; kies 5, 10 of 15 minuten.'],
-  opwarmen: ['Opwarmen', 'Het beweeglijke deel van je warming-up. Begin met een paar minuten rustig inlopen, inklimmen of een lichte eerste set.'],
-  cooldown: ['Cooling-down', 'Om te ontspannen en je bewegingsuitslag te onderhouden. Minder spierpijn of sneller herstel mag je er niet van verwachten.'],
-  lenigheid: ['Lenigheid', "Langere programma's voor blijvend meer bewegingsuitslag: 5× per week, zo'n 5 minuten per spiergroep per week."],
-};
 
 // Eén routine als rij, met de tijd zoals de preview hem toont: met de
 // ingestelde kantwisselduur en zonder stappen die de opvlammingsmodus

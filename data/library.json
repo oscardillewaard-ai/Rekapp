@@ -2782,6 +2782,32 @@
       "preRun": false,
       "steps": [{"exerciseId": "lat_deurpost", "perSideSec": 60}, {"exerciseId": "borst_deurpost", "perSideSec": 45}, {"exerciseId": "thor_rot_staand", "perSideSec": 35, "reps": 8}, {"exerciseId": "thoracaal_handdoekrol", "durationSec": 60}, {"exerciseId": "borst_ruglig_handdoek", "durationSec": 45}, {"exerciseId": "open_boek", "perSideSec": 40, "reps": 6}, {"exerciseId": "sleeper_aangepast", "perSideSec": 60}],
       "expectedTotalSec": 670
+    },
+    {
+      "id": "TR-HEUP",
+      "name": "Heupkracht",
+      "kind": "training",
+      "focus": "heupen",
+      "slot": "vrij",
+      "variant": 35,
+      "template": true,
+      "timesPerWeek": 3,
+      "preRun": false,
+      "steps": [{"exerciseId": "heup_abductie_zij", "perSideSec": 50, "reps": 15, "sets": 3, "restSec": 30}, {"exerciseId": "zijsteun", "perSideSec": 30, "sets": 3, "restSec": 30}, {"exerciseId": "bridge_eenbenig", "perSideSec": 40, "reps": 12, "sets": 3, "restSec": 30}, {"exerciseId": "abductie_band", "perSideSec": 40, "reps": 15, "sets": 3, "restSec": 30}, {"exerciseId": "rdl_eenbenig", "perSideSec": 40, "reps": 10, "sets": 3, "restSec": 45}, {"exerciseId": "squat_eenbenig", "perSideSec": 35, "reps": 8, "sets": 3, "restSec": 45}],
+      "expectedTotalSec": 1970
+    },
+    {
+      "id": "TR-ENKEL",
+      "name": "Enkelstabiliteit",
+      "kind": "training",
+      "focus": "enkels",
+      "slot": "vrij",
+      "variant": 20,
+      "template": true,
+      "timesPerWeek": 1,
+      "preRun": false,
+      "steps": [{"exerciseId": "runners_touch", "perSideSec": 40, "reps": 10, "transitionAfterSec": 15}, {"exerciseId": "bosu_reach", "perSideSec": 30, "transitionAfterSec": 15}, {"exerciseId": "stepup_balans", "perSideSec": 35, "reps": 8, "sets": 2, "restSec": 30, "transitionAfterSec": 15}, {"exerciseId": "bulgarian_bosu", "perSideSec": 40, "reps": 8, "sets": 2, "restSec": 45, "transitionAfterSec": 15}, {"exerciseId": "rdl_rotatie", "perSideSec": 45, "reps": 10, "transitionAfterSec": 15}, {"exerciseId": "band_inuit", "durationSec": 30, "sets": 3, "restSec": 30, "transitionAfterSec": 15}, {"exerciseId": "drop_landing", "perSideSec": 50, "reps": 10}, {"exerciseId": "pogo_eenbenig", "perSideSec": 30}],
+      "expectedTotalSec": 1060
     }
   ],
   "tests": [

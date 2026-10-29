@@ -126,6 +126,9 @@ Handig om ook even te proberen:
 - [ ] Stokfiguren: op een paar kaarten loopt de demo vloeiend en stopt hij met
       de pauzeknop; in de speler volgt het figuur de fasen, ook met "Groot
       stokfiguur" aan en in de nachtmodus.
+- [ ] Routines → Heupkracht en Enkelstabiliteit: de tegels openen, de
+      preview toont sets en rust, en een sessie speelt met "Rust" tussen de
+      sets; ⏭ tijdens de rust start meteen de volgende set.
 - [ ] Trainingsoefeningen (bibliotheek → Training): de kaart toont de
       trainingsrubriek bij B en D en "Onzeker" waar de bron twijfelt; in de
       speler hoor je "Set 1 van 3", het aantal herhalingen en "Rust".

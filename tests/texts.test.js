@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { RUBRICS, RUBRICS_TRAINING, BREATHING, CARD, FILTERS, KNEE, SELFTEST, ABOUT, STARS_FORMULA, STARS_MEANING, STARS_NO_KNEE, INSTALL } from '../js/texts.js';
+import { TEMPLATE_KINDS, RUBRICS, RUBRICS_TRAINING, BREATHING, CARD, FILTERS, KNEE, SELFTEST, ABOUT, STARS_FORMULA, STARS_MEANING, STARS_NO_KNEE, INSTALL } from '../js/texts.js';
 import { WARNINGS } from '../js/warnings.js';
 
 // Elke vaste tekst in de app moet letterlijk in de spec staan.
@@ -21,6 +21,10 @@ test('B- en D-rubriek voor training uit §3.1 staan letterlijk in de spec', () =
     inSpec(`**${r.title}** ${r.intro}`, `${letter} training: titel en intro`);
     for (const [level, text] of Object.entries(r.levels)) inSpec(`| ${level} | ${text} |`, `${letter}${level} training`);
   }
+});
+
+test('kop en uitleg per soort sjabloon uit §6.3 staan letterlijk in de spec', () => {
+  for (const [title, note] of Object.values(TEMPLATE_KINDS)) inSpec(`- **${title}:** "${note}"`, title);
 });
 
 test('ademcues uit §6.2 staan letterlijk in de spec', () => {

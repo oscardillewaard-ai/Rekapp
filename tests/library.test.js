@@ -21,10 +21,10 @@ test('de bibliotheek laadt 70 rekoefeningen, 14 trainingsoefeningen en 25 spierg
   assert.equal(data.groups.length, 25);
   assert.equal(stretches.filter((x) => x.locked).length, 10);
   assert.equal(data.exercises.filter((x) => x.locked).length, 13);
-  assert.equal(data.routines.length, 17);
+  assert.equal(data.routines.length, 19);
   const kinds = {};
   for (const r of data.routines) kinds[r.kind] = (kinds[r.kind] ?? 0) + 1;
-  assert.deepEqual(kinds, { dagelijks: 6, opwarmen: 4, cooldown: 4, lenigheid: 3 });
+  assert.deepEqual(kinds, { dagelijks: 6, opwarmen: 4, cooldown: 4, lenigheid: 3, training: 2 });
 });
 
 test('verdeling van de sterren is zoals in §3.2', () => {

@@ -142,6 +142,15 @@ export const STARS_MEANING = [
   ['Bekend effect van de weging:', 'oefeningen zonder kniebetrokkenheid (romp, schouders, armen) krijgen K = 5 en scoren daardoor relatief hoog, ook als ze voor jouw doelen weinig opleveren (lage R). Twee oplossingen in de app: sorteren op R, en "Weging aanpassen" in de instellingen (§6.11). De standaardweging blijft 25/25/20/15/15, zoals afgesproken.'],
 ];
 
+// §6.3 Sjablonen: kop en uitleg per soort op het tegelscherm.
+export const TEMPLATE_KINDS = {
+  dagelijks: ['Dagelijks', 'Elke dag; kies 5, 10 of 15 minuten.'],
+  opwarmen: ['Opwarmen', 'Het beweeglijke deel van je warming-up. Begin met een paar minuten rustig inlopen, inklimmen of een lichte eerste set.'],
+  cooldown: ['Cooling-down', 'Om te ontspannen en je bewegingsuitslag te onderhouden. Minder spierpijn of sneller herstel mag je er niet van verwachten.'],
+  lenigheid: ['Lenigheid', "Langere programma's voor blijvend meer bewegingsuitslag: 5× per week, zo'n 5 minuten per spiergroep per week."],
+  training: ['Training', "Kracht, balans en sprongen in plaats van rekken. Onderzocht zijn heupprogramma's van 3× per week gedurende minstens 6 weken en balansprogramma's van 3× per week gedurende 8 weken; reken pas daarna op effect."],
+};
+
 // §6.11 Zonder Kniefuncties: de sterren op het scherm "Over".
 export const STARS_NO_KNEE = {
   intro: 'Elke oefening krijgt deelscores van 1 tot 5. Zonder Kniefuncties telt de kniescore K niet mee: de score is het gewogen gemiddelde van B, D, R en P, naar verhouding van hun gewicht.',

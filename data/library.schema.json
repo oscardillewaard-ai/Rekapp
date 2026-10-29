@@ -764,7 +764,14 @@
             "dagelijks",
             "opwarmen",
             "cooldown",
-            "lenigheid"
+            "lenigheid",
+            "training"
+          ]
+        },
+        "focus": {
+          "enum": [
+            "heupen",
+            "enkels"
           ]
         },
         "sport": {
@@ -783,11 +790,10 @@
           ]
         },
         "variant": {
-          "enum": [
-            5,
-            10,
-            15
-          ]
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 60,
+          "multipleOf": 5
         },
         "template": {
           "const": true
@@ -810,7 +816,7 @@
         "expectedTotalSec": {
           "type": "integer",
           "minimum": 60,
-          "maximum": 900
+          "maximum": 3600
         }
       }
     },

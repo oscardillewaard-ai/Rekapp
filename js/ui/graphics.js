@@ -71,6 +71,10 @@ const ICONS = {
   // Ronddraaien (3D-figuur op de kaart).
   turn: [['path', { d: 'M20.5 12c0 2.2-3.8 4-8.5 4s-8.5-1.8-8.5-4 3.8-4 8.5-4c1.6 0 3 .2 4.3.5' }], ['path', { d: 'M14.5 6l2.3 2.5-2.8 1.5' }]],
   stretch: [['circle', { cx: 14, cy: 6.8, r: 1.9 }], ['path', { d: 'M6.5 21.5l3-6.5 3 6.5M9.5 15l2.6-6M11.2 9.8l-.6-7.3M11.6 10.6l3.4 2.6' }]],
+  // Heupkracht: zijsteun op de onderarm. Enkelstabiliteit: op één been op
+  // een balanskussen.
+  sideplank: [['circle', { cx: 5, cy: 9.5, r: 1.9 }], ['path', { d: 'M7.5 12.5l14 7M7.5 12.5v7.5h5M7.5 12.5L10 6' }]],
+  balance: [['circle', { cx: 12, cy: 3.8, r: 1.9 }], ['path', { d: 'M12 6.5V13v5.5M12 13l4 1.5-1 3.5M6 9.5h12M7.5 21.5a4.5 2.5 0 0 1 9 0' }]],
 };
 
 export function icon(name, cls = '') {

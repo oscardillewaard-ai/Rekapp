@@ -43,7 +43,7 @@ Bouw een installeerbare, offline werkende web-app (PWA) in het Nederlands voor i
 - **Bibliotheek:** van 19 naar 70 oefeningen, van 8 naar 24 spiergroepen. 10 oefeningen zijn vergrendeld door de knie-poort (§3.2).
 - **Nieuw:** sterrensysteem met vijf deelscores, voor- en nadelen per oefening, routinebouwer, weekdosis met "keer per week", knieslot met 48-uurstest, opvlammingsmodus en een lichaamskaart.
 - **De zes routines uit v1 blijven** als sjablonen: alleen-lezen, wel kopieerbaar. De totale tijden zijn ongewijzigd: 305, 610, 900, 295, 615 en 885 s.
-- **Aanvulling (oktober 2026, met Oscar):** elf extra sjablonen naast de zes dagelijkse: opwarmen voor hardlopen en trail, boulderen en klimmen, krachttraining en bergwandelen; cooling-down na hardlopen en trail, na klimmen, na krachttraining en na bergwandelen; en lenigheid voor de heupen, voor hamstrings en kuiten, en voor schouders en rug. Een sjabloon heeft daarvoor een soort (`kind`) en, bij opwarmen en cooling-down, een sport (§6.3).
+- **Aanvulling (oktober 2026, met Oscar):** elf extra sjablonen naast de zes dagelijkse: opwarmen voor hardlopen en trail, boulderen en klimmen, krachttraining en bergwandelen; cooling-down na hardlopen en trail, na klimmen, na krachttraining en na bergwandelen; en lenigheid voor de heupen, voor hamstrings en kuiten, en voor schouders en rug. Een sjabloon heeft daarvoor een soort (`kind`) en, bij opwarmen en cooling-down, een sport (§6.3). Later (oktober 2026) kwamen er twee trainingssjablonen bij, Heupkracht en Enkelstabiliteit, met de trainingsoefeningen uit §3.1 en §5.
 - **Dosis herberekend.** v1 telde een oefening volledig mee voor elke spiergroep die hij raakte. v2 telt een bijbetrokken spiergroep voor 50% mee en splitst "heupbuigers/RF" in twee groepen. Daardoor verschuiven de weektotalen (§6.4.3). Voorbeelden voor het pakket STANDAARD (ochtend 10 + avond 10, dagelijks): hamstrings van 840 naar 630 s per week, soleus van 210 naar 367,5 s per week, en de heupbuigers apart nu 157,5 s per week (statisch).
 - **Validatieregel aangepast.** v1 weigerde elke oefening met meer dan 90° kniebuiging. v2 accepteert die alleen als de oefening vergrendeld is.
 - **Scores na de literatuurtoets, vergeleken met het voorstel in de chat:** de bewijsscore van de quadricepsgroepen ging van 2 naar 3 (een 4-weekse PNF-studie en een RCT bij PFP-patiënten). Gevolg: "Rectus femoris zijlig met band" van 3,50 naar 3,75 (★★★★), "Hiel naar bil staand" van 2,80 naar 3,05, maar door de knie-poort blijft die op 2 sterren.
@@ -386,7 +386,7 @@ Step = {
 
 **Sjablonen**
 
-Elk sjabloon heeft een soort (`kind`); opwarmen en cooling-down hebben ook een sport (`sport`: `hardlopen`, `klimmen`, `kracht` of `wandelen`).
+Elk sjabloon heeft een soort (`kind`); opwarmen en cooling-down hebben ook een sport (`sport`: `hardlopen`, `klimmen`, `kracht` of `wandelen`), training een focus (`focus`: `heupen` of `enkels`).
 
 | Soort | Sjablonen | Opbouw |
 |---|---|---|
@@ -394,8 +394,9 @@ Elk sjabloon heeft een soort (`kind`); opwarmen en cooling-down hebben ook een s
 | `opwarmen` | Hardlopen en trail (OW-LOOP), boulderen en klimmen (OW-KLIM), krachttraining (OW-KRACHT), bergwandelen (OW-WANDEL) | Dynamisch en actief; statisch hooguit 30 s per kant en geen PNF (§2, Behm 2016). Alleen staand of op een stoel, dus zonder mat. Hardlopen staat op "vóór een run" en geeft geen W3. |
 | `cooldown` | Na hardlopen en trail (CD-LOOP), na klimmen (CD-KLIM), na krachttraining (CD-KRACHT), na bergwandelen (CD-WANDEL) | Statisch, 30–60 s per kant, staand of op een stoel. |
 | `lenigheid` | Heupen (LN-HEUP), hamstrings en kuiten (LN-BENEN), schouders en rug (LN-BOVEN) | Statisch en PNF, 's avonds, 5× per week. Elke hoofdgroep komt op 300–600 s per kant per week (geen W5 of W6), en het sjabloon duurt hooguit 15 minuten. |
+| `training` | Heupkracht (TR-HEUP), Enkelstabiliteit (TR-ENKEL) | Kracht, balans en sprongen (§3.1), met sets en rust. Heupkracht: de zes heupoefeningen, 3 sets, 3× per week (~33 min). Enkelstabiliteit: de acht oefeningen uit de video in die volgorde, 1× per week (~18 min), met 15 s overgang waar je van materiaal wisselt. Mag langer zijn dan 15 minuten en mag vergrendelde oefeningen bevatten (§9.2 regel 7). |
 
-`variant` is bij de nieuwe soorten de afgeronde lengte (5, 10 of 15 minuten); de app toont daar de echte duur.
+`variant` is bij de nieuwe soorten de afgeronde lengte in minuten (een veelvoud van 5); de app toont daar de echte duur.
 
 Op het scherm Routines staan de sjablonen als tegels met een icoon en een naam, in deze volgorde:
 
@@ -408,6 +409,8 @@ Op het scherm Routines staan de sjablonen als tegels met een icoon en een naam, 
 | Krachttraining | halter | OW-KRACHT, CD-KRACHT |
 | Bergwandelen | berg | OW-WANDEL, CD-WANDEL |
 | Lenigheid | voorover reiken | LN-HEUP, LN-BENEN, LN-BOVEN |
+| Heupkracht | zijsteun | TR-HEUP |
+| Enkelstabiliteit | op één been op een balanskussen | TR-ENKEL |
 
 Onder de naam staat het aantal routines ("3 routines"). Een tik opent de routines van die tegel, per soort onder een eigen kop met deze uitleg:
 
@@ -415,6 +418,7 @@ Onder de naam staat het aantal routines ("3 routines"). Een tik opent de routine
 - **Opwarmen:** "Het beweeglijke deel van je warming-up. Begin met een paar minuten rustig inlopen, inklimmen of een lichte eerste set."
 - **Cooling-down:** "Om te ontspannen en je bewegingsuitslag te onderhouden. Minder spierpijn of sneller herstel mag je er niet van verwachten."
 - **Lenigheid:** "Langere programma's voor blijvend meer bewegingsuitslag: 5× per week, zo'n 5 minuten per spiergroep per week."
+- **Training:** "Kracht, balans en sprongen in plaats van rekken. Onderzocht zijn heupprogramma's van 3× per week gedurende minstens 6 weken en balansprogramma's van 3× per week gedurende 8 weken; reken pas daarna op effect."
 
 Het startscherm toont alleen de dagelijkse sjablonen (Ochtend en Avond, 5 · 10 · 15 min).
 
@@ -1469,7 +1473,14 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
             "dagelijks",
             "opwarmen",
             "cooldown",
-            "lenigheid"
+            "lenigheid",
+            "training"
+          ]
+        },
+        "focus": {
+          "enum": [
+            "heupen",
+            "enkels"
           ]
         },
         "sport": {
@@ -1488,11 +1499,10 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
           ]
         },
         "variant": {
-          "enum": [
-            5,
-            10,
-            15
-          ]
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 60,
+          "multipleOf": 5
         },
         "template": {
           "const": true
@@ -1515,7 +1525,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
         "expectedTotalSec": {
           "type": "integer",
           "minimum": 60,
-          "maximum": 900
+          "maximum": 3600
         }
       }
     },
@@ -1611,7 +1621,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 4. `scores.K ≤ 2` of `kneeFlexionMaxDeg > 90` ⇒ `locked` moet `true` zijn, en omgekeerd.
 5. `scores.B` = groeps-`bBase`, min 1 voor dynamisch en actief (minimaal 1), tenzij `bNote` aanwezig is. Een trainingsoefening (kracht, balans, plyometrie) heeft altijd een `bNote` en een `focus` (heupen of enkels); B volgt dan de trainingsrubriek (§3.1), niet de groep. Een rekoefening heeft geen `focus`.
 6. Elke spiergroep heeft minstens 2 oefeningen met die groep als primair doel, en minstens 1 niet-vergrendelde. Uitzondering: `quadriceps_vasti` (zie §4).
-7. Elke sjabloonroutine bevat alleen niet-vergrendelde oefeningen, en haar gecompileerde totale tijd (§6.8.1) is gelijk aan `expectedTotalSec`. Een dagelijks sjabloon heeft moment `ochtend` of `avond`; `sport` staat er precies bij de soorten `opwarmen` en `cooldown`, en elke sport heeft precies één opwarm- en één cooling-down-sjabloon. Sets in een stap: niet bij PNF, en vanaf 2 sets een `restSec`; met 1 set geen `restSec`.
+7. Elke sjabloonroutine bevat alleen niet-vergrendelde oefeningen (behalve een trainingssjabloon), en haar gecompileerde totale tijd (§6.8.1) is gelijk aan `expectedTotalSec`; behalve bij een trainingssjabloon is die hooguit 900 s. Een dagelijks sjabloon heeft moment `ochtend` of `avond`; `sport` staat er precies bij de soorten `opwarmen` en `cooldown`, en elke sport heeft precies één opwarm- en één cooling-down-sjabloon. Een `focus` staat er precies bij de soort `training`, en elke focus heeft precies één trainingssjabloon met alleen trainingsoefeningen van die focus. Sets in een stap: niet bij PNF, en vanaf 2 sets een `restSec`; met 1 set geen `restSec`.
 8. Bij een fout: toon een duidelijke foutmelding met de oefening en het veld, en start de app niet met kapotte data.
 
 ---
@@ -4404,6 +4414,32 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
       "preRun": false,
       "steps": [{"exerciseId": "lat_deurpost", "perSideSec": 60}, {"exerciseId": "borst_deurpost", "perSideSec": 45}, {"exerciseId": "thor_rot_staand", "perSideSec": 35, "reps": 8}, {"exerciseId": "thoracaal_handdoekrol", "durationSec": 60}, {"exerciseId": "borst_ruglig_handdoek", "durationSec": 45}, {"exerciseId": "open_boek", "perSideSec": 40, "reps": 6}, {"exerciseId": "sleeper_aangepast", "perSideSec": 60}],
       "expectedTotalSec": 670
+    },
+    {
+      "id": "TR-HEUP",
+      "name": "Heupkracht",
+      "kind": "training",
+      "focus": "heupen",
+      "slot": "vrij",
+      "variant": 35,
+      "template": true,
+      "timesPerWeek": 3,
+      "preRun": false,
+      "steps": [{"exerciseId": "heup_abductie_zij", "perSideSec": 50, "reps": 15, "sets": 3, "restSec": 30}, {"exerciseId": "zijsteun", "perSideSec": 30, "sets": 3, "restSec": 30}, {"exerciseId": "bridge_eenbenig", "perSideSec": 40, "reps": 12, "sets": 3, "restSec": 30}, {"exerciseId": "abductie_band", "perSideSec": 40, "reps": 15, "sets": 3, "restSec": 30}, {"exerciseId": "rdl_eenbenig", "perSideSec": 40, "reps": 10, "sets": 3, "restSec": 45}, {"exerciseId": "squat_eenbenig", "perSideSec": 35, "reps": 8, "sets": 3, "restSec": 45}],
+      "expectedTotalSec": 1970
+    },
+    {
+      "id": "TR-ENKEL",
+      "name": "Enkelstabiliteit",
+      "kind": "training",
+      "focus": "enkels",
+      "slot": "vrij",
+      "variant": 20,
+      "template": true,
+      "timesPerWeek": 1,
+      "preRun": false,
+      "steps": [{"exerciseId": "runners_touch", "perSideSec": 40, "reps": 10, "transitionAfterSec": 15}, {"exerciseId": "bosu_reach", "perSideSec": 30, "transitionAfterSec": 15}, {"exerciseId": "stepup_balans", "perSideSec": 35, "reps": 8, "sets": 2, "restSec": 30, "transitionAfterSec": 15}, {"exerciseId": "bulgarian_bosu", "perSideSec": 40, "reps": 8, "sets": 2, "restSec": 45, "transitionAfterSec": 15}, {"exerciseId": "rdl_rotatie", "perSideSec": 45, "reps": 10, "transitionAfterSec": 15}, {"exerciseId": "band_inuit", "durationSec": 30, "sets": 3, "restSec": 30, "transitionAfterSec": 15}, {"exerciseId": "drop_landing", "perSideSec": 50, "reps": 10}, {"exerciseId": "pogo_eenbenig", "perSideSec": 30}],
+      "expectedTotalSec": 1060
     }
   ],
   "tests": [

@@ -82,6 +82,7 @@ function whereFromPath(lib, path) {
 }
 
 export const SETS_MAX = 5;
+const MAX_TEMPLATE_SEC = 900; // sjablonen behalve training: hooguit 15 minuten
 export const REST_MIN = 10;
 export const REST_MAX = 180;
 
@@ -214,9 +215,15 @@ export function validateLibrary(lib, schema) {
   }
 
   // 7. Sjablonen: alleen niet-vergrendelde oefeningen; gecompileerde tijd =
-  // expectedTotalSec. Een dagelijks sjabloon is voor de ochtend of de avond;
-  // een sport hoort precies bij opwarmen en cooling-down, en elke sport heeft
-  // er van allebei precies één (één tegel per sport, §6.3).
+  // expectedTotalSec, hooguit 900 s. Een dagelijks sjabloon is voor de ochtend
+  // of de avond; een sport hoort precies bij opwarmen en cooling-down, en elke
+  // sport heeft er van allebei precies één (één tegel per sport, §6.3). Een
+  // trainingssjabloon heeft een focus, alleen trainingsoefeningen van die
+  // focus, en mag langer duren en vergrendelde oefeningen bevatten (het
+  // knieslot is verwijderd; een opvlamming houdt ze tegen, W8).
+  const perFocus = new Map();
+  for (const r of lib.routines) if (r.focus) perFocus.set(r.focus, (perFocus.get(r.focus) ?? 0) + 1);
+  for (const [focus, n] of perFocus) if (n !== 1) add(`focus ${focus}`, 'sjablonen', `heeft ${n} trainingssjablonen; verwacht 1`);
   const perSport = new Map();
   for (const r of lib.routines) {
     if (!r.sport) continue;
@@ -232,6 +239,9 @@ export function validateLibrary(lib, schema) {
     if (r.kind === 'dagelijks' && r.slot !== 'ochtend' && r.slot !== 'avond') add(where, 'slot', 'een dagelijks sjabloon is voor de ochtend of de avond');
     const needsSport = r.kind === 'opwarmen' || r.kind === 'cooldown';
     if (needsSport !== (r.sport !== undefined)) add(where, 'sport', needsSport ? 'ontbreekt bij opwarmen of cooling-down' : 'alleen bij opwarmen of cooling-down');
+    const training = r.kind === 'training';
+    if (training !== (r.focus !== undefined)) add(where, 'focus', training ? 'ontbreekt bij een trainingssjabloon' : 'alleen bij een trainingssjabloon');
+    if (!training && r.expectedTotalSec > MAX_TEMPLATE_SEC) add(where, 'expectedTotalSec', `hooguit ${MAX_TEMPLATE_SEC} s (15 minuten); alleen een trainingssjabloon mag langer`);
     let usable = true;
     r.steps.forEach((s, i) => {
       const ex = exercises.get(s.exerciseId);
@@ -240,7 +250,8 @@ export function validateLibrary(lib, schema) {
         usable = false;
         return;
       }
-      if (ex.locked) add(where, `steps[${i}]`, `bevat vergrendelde oefening ${ex.id}`);
+      if (ex.locked && !training) add(where, `steps[${i}]`, `bevat vergrendelde oefening ${ex.id}`);
+      if (training && (!isTraining(ex) || ex.focus !== r.focus)) add(where, `steps[${i}]`, `${ex.id} is geen trainingsoefening voor ${r.focus}`);
       for (const e of stepDoseErrors(s, ex)) {
         add(where, `steps[${i}].${e.field}`, e.message);
         usable = false;
