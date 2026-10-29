@@ -2,9 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultFilters, matches, catalogItems, sortItems, groupItems, activeFilterCount, normalize, NO_EQUIPMENT, equipmentOptions, REGIONS } from '../js/catalog.js';
 import { formatScore, formatStars, formatDuration, formatDose, exerciseDurationSec, evidenceLabel } from '../js/format.js';
+import { isTraining } from '../js/types.js';
 import { lib, schema, ex } from './helpers.js';
 
-const items = catalogItems(lib);
+// De tellingen hieronder gaan over de 70 rekoefeningen; de 14
+// trainingsoefeningen (§3.1) staan in een eigen test onderaan.
+const all = catalogItems(lib);
+const items = all.filter((it) => !isTraining(it.ex));
 const run = (patch) => {
   const f = { ...defaultFilters(), ...patch };
   return items.filter((it) => matches(it.ex, it.rating, f)).map((it) => it.ex.id);
@@ -103,7 +107,8 @@ test('groeperen per regio en spiergroep in de volgorde van §4, binnen een groep
   const grouped = groupItems(items, lib, 'score');
   assert.deepEqual(grouped.map((r) => r.region), REGIONS);
   const order = grouped.flatMap((r) => r.groups.map((g) => g.group.id));
-  assert.deepEqual(order, [...lib.groups.keys()]);
+  // De enkelstabilisatoren train je alleen; er is geen rekoefening voor.
+  assert.deepEqual(order, [...lib.groups.keys()].filter((g) => g !== 'enkel'));
   assert.equal(grouped.flatMap((r) => r.groups.flatMap((g) => g.items)).length, 70);
   const hams = grouped[1].groups.find((g) => g.group.id === 'hamstrings').items.map((it) => it.ex.id);
   assert.deepEqual(hams, ['hamstring_pnf', 'hamstring_staand_trede', 'hamstring_deurpost', 'hamstring_zittend_vouw', 'beenzwaai_va', 'soldier_kick']);
@@ -129,4 +134,20 @@ test('opmaak: score, sterren, tijd, dosis en bewijslabel', () => {
   assert.equal(exerciseDurationSec(ex('spreidzit_muur'), lib.meta.timing), 60);
   assert.equal(evidenceLabel(5, lib.meta), 'sterk');
   assert.equal(evidenceLabel(1, lib.meta), 'geen');
+});
+
+test('trainingsoefeningen: eigen regio per focus, en te filteren op type', () => {
+  const grouped = groupItems(all, lib, 'score');
+  assert.deepEqual(grouped.map((r) => r.region), [...REGIONS, 'Training']);
+  const training = grouped.at(-1).groups;
+  assert.deepEqual(training.map((g) => g.group.label), ['Heupkracht', 'Enkelstabiliteit']);
+  assert.equal(training[0].items.length, 6);
+  assert.equal(training[1].items.length, 8);
+  // Rekgroepen bevatten geen training, ook niet als het doel overlapt.
+  assert.ok(grouped.slice(0, -1).every((r) => r.groups.every((g) => g.items.every((it) => !isTraining(it.ex)))));
+  const runAll = (patch) => all.filter((it) => matches(it.ex, it.rating, { ...defaultFilters(), ...patch })).map((it) => it.ex.id);
+  assert.deepEqual(runAll({ type: 'balans' }).sort(), ['bosu_reach', 'runners_touch']);
+  assert.deepEqual(runAll({ type: 'plyometrie' }).sort(), ['band_inuit', 'drop_landing', 'pogo_eenbenig']);
+  assert.equal(runAll({ type: 'kracht' }).length, 9);
+  assert.equal(all.length, 84);
 });

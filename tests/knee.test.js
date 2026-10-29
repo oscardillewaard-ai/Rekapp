@@ -7,6 +7,7 @@ import {
 import { checkKneeState } from '../js/backup.js';
 import { playableRoutine } from '../js/warnings.js';
 import { compileRoutine } from '../js/timeline.js';
+import { isTraining } from '../js/types.js';
 import { lib, at, ex, HOUR } from './helpers.js';
 
 const K = lib.meta.knee;
@@ -19,7 +20,10 @@ const check = (state, { at: t, pain, context }) => recordKneeCheck(state, { id: 
 test('zonder opvlamming is elke oefening toe te voegen en af te spelen, ook de 10 met K ≤ 2', () => {
   const s = emptyKneeState();
   for (const x of lib.exercises.values()) assert.deepEqual(access(x, s, K), { allowed: true, codes: [] }, x.id);
-  assert.equal([...lib.exercises.values()].filter((x) => x.locked).length, 10);
+  const locked = [...lib.exercises.values()].filter((x) => x.locked);
+  // 10 rekoefeningen, plus 3 trainingsoefeningen (step-up, Bulgarian split squat, drop landing).
+  assert.equal(locked.filter((x) => !isTraining(x)).length, 10);
+  assert.deepEqual(locked.filter(isTraining).map((x) => x.id).sort(), ['bulgarian_bosu', 'drop_landing', 'stepup_balans']);
 });
 
 // §11.1 G. Opvlammingsmodus.

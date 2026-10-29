@@ -36,6 +36,54 @@ PFP"), omdat `data/library.json` niet met de hand verandert.
 de standaardapp. De punten hieronder over de opvlammingsmodus ("blijft
 hard") gelden zolang Kniefuncties aan staan.
 
+### Trainingsoefeningen voor heupen en enkels (aanvulling op §3.1, §4, §5, §6.1–6.5)
+Op basis van twee documenten van Oscar (heupgerichte oefentherapie bij PFP;
+de RunLab-video over enkelstabiliteit) staan er 14 trainingsoefeningen in de
+bibliotheek: 6 voor de heupen, 8 voor de enkels. Keuzes:
+- **Selectie heupen:** de kern van het concrete programma uit het document,
+  over beide vlakken: zijliggende abductie, zijsteun en staande abductie met
+  band (frontaal), eenbenige bridge en eenbenige RDL (sagittaal), en de
+  eenbenige squat voor de spiegel (geïntegreerd, met feedback). Niet
+  opgenomen: hip hitch, hip thrust, isometrische abductie, clamshell,
+  monster walks en lateral step-up (overlappen met deze zes, of vragen een
+  bank en zwaar gewicht), en gait retraining en afdaaltraining (horen bij
+  het lopen, niet in de app). Op verzoek van Oscar zonder filter op
+  kniebelasting.
+- **Enkels:** alle acht uit de video, in de volgorde van de video. De
+  aannames uit het document zijn overgenomen en als "Onzeker" op de kaart
+  gezet (veld `uncertain`): de standknie aantikken, de draairichting bij de
+  RDL, landen zonder terugveren, de band alleen bij de in-uit sprongen.
+- **Sterren:** dezelfde vijf deelscores; B en D met een eigen rubriek voor
+  training (§3.1), de reden voor elke B in `bNote`. B is per oefening voor
+  het doel van het sjabloon, niet het rekbewijs van de groep. Het document
+  geeft eigen sterren ("geen gevalideerde score"); die zijn niet overgenomen.
+  B5 komt nu niet voor: ik heb niet kunnen nagaan welke oefeningen precies in
+  de RCT's van de meta-analyse zaten (alleen Fukuda 2012 via het document),
+  dus hoogstens B4.
+- **Nieuwe spiergroep `enkel`** (stabilisatoren: kuitbeenspieren, tibialis
+  posterior) met een eigen regio op de lichaamskaart (enkels, voor en
+  achter). Er zijn geen rekoefeningen voor; "Mijn week" toont de groep
+  daarom niet.
+- **Rekdosis:** training telt niet mee in de dosis (§6.4.1), niet voor W4
+  (de 15 minuten gaan over rekken) en niet voor W5–W7. W2 en W8 gelden wel.
+- **Doseringen:** uit de documenten (heupen 3 sets; runner's touch 10 per
+  kant; step-up en Bulgarian 2 × 8, een aanvulling). De tijd per set is een
+  schatting van ~3–5 s per herhaling; de timer geeft dat venster, de speler
+  noemt het aantal herhalingen.
+- **Knie:** drie oefeningen zijn vergrendeld volgens §9.2 (step-up K2,
+  Bulgarian split squat K1 en >90°, drop landing K2). Dat blokkeert niets
+  meer (knieslot verwijderd); met Kniefuncties aan houdt een opvlamming ze
+  tegen (W8).
+- **Stokfiguren:** 14 nieuwe, in `js/figures/training.js`; zijlig, zijsteun,
+  eenbenige squat en RDL met rotatie in 3D. Nieuw in de tekening: een
+  gewicht of bal in de hand (`weights`) en een koepel voor de BOSU.
+- Bronnen: Fukuda 2012, Nascimento 2018, Collins 2018, Boren 2011,
+  Distefano 2009, Selkowitz 2013, Moore 2020, Willy 2011, Nunes 2023,
+  Hupperets 2009, Eihara 2022, Llanos-Lagos 2024 en de RunLab-video. Ik heb
+  ze niet zelf nagelezen; de citaten komen uit de documenten van Oscar,
+  aangevuld met de titels zoals ik ze ken. Bij twijfel over auteurs staat er
+  "e.a.".
+
 ### Sets met rusttimer (aanvulling op §6.3, §6.4.1, §6.8)
 Voor de trainingssjablonen ("Sets met rusttimer", keuze Oscar). Een stap
 kan 1–5 sets hebben met 10–180 s rust ertussen (standaard 60 s), voor elke

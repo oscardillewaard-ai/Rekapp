@@ -9,8 +9,9 @@ const row = (rows, g) => rows.find((r) => r.group.id === g);
 
 test('"Mijn week" STANDAARD (O10 + A10): waarden gelijk aan §6.4.3, met kleuren', () => {
   const rows = weekRows(lib, { routines: [tpl('O10'), tpl('A10')], sessions: [], now: at(0) });
+  // Alle groepen met een rekoefening: de enkelstabilisatoren train je alleen.
   assert.equal(rows.length, 24);
-  assert.deepEqual(rows.map((r) => r.group.id), [...lib.groups.keys()]);
+  assert.deepEqual(rows.map((r) => r.group.id), [...lib.groups.keys()].filter((g) => g !== 'enkel'));
   assert.equal(row(rows, 'gastrocnemius').plannedSec, 315);
   assert.equal(row(rows, 'gastrocnemius').plannedStatus, 'groen');
   assert.equal(row(rows, 'soleus').plannedSec, 367.5);

@@ -16,7 +16,7 @@ export function formatDuration(sec) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export const TYPE_LABELS = { static: 'statisch', pnf: 'PNF', dynamic: 'dynamisch', active: 'actief' };
+export const TYPE_LABELS = { static: 'statisch', pnf: 'PNF', dynamic: 'dynamisch', active: 'actief', kracht: 'kracht', balans: 'balans', plyometrie: 'plyometrie' };
 export const SLOT_LABELS = { ochtend: 'ochtend', avond: 'avond', beide: 'ochtend en avond', vrij: 'vrij' };
 export const SIDED_LABELS = { unilateral: 'per kant', bilateral: 'beide kanten tegelijk', alternating: 'afwisselend' };
 

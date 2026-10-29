@@ -3,6 +3,7 @@
 import { compileRoutine } from './timeline.js';
 import { plannedWeekDose, routineDose, secondsPerSide, meterValue } from './dose.js';
 import { access } from './knee.js';
+import { isTraining } from './types.js';
 
 // Teksten letterlijk uit §6.5.
 export const WARNINGS = {
@@ -71,8 +72,10 @@ export function routineWarnings(routine, ctx) {
     }
   }
 
-  // W4: totale tijd > 900 s.
-  const { totalSec } = compileRoutine(own, exercises, { timing: meta.timing, sideSwitchSec: ctx.sideSwitchSec });
+  // W4: totale tijd > 900 s, alleen het rekken: trainingsoefeningen tellen
+  // niet mee voor je grens van 15 minuten rekken.
+  const stretchOnly = { ...own, steps: own.steps.filter((s) => !isTraining(exercises.get(s.exerciseId))) };
+  const { totalSec } = compileRoutine(stretchOnly, exercises, { timing: meta.timing, sideSwitchSec: ctx.sideSwitchSec });
   if (totalSec > MAX_TOTAL_SEC) out.push(warning('W4', { totalSec }));
 
   // W5–W7 gaan over de geplande weekdosis: alle actieve routines samen.
@@ -95,7 +98,9 @@ export function routineWarnings(routine, ctx) {
   if (routine.active !== false) {
     const primary = new Set();
     for (const step of own.steps) {
-      for (const t of exercises.get(step.exerciseId).targets) if (t.weight === 1) primary.add(t.group);
+      const ex = exercises.get(step.exerciseId);
+      if (isTraining(ex)) continue; // rekdosis: training telt niet mee
+      for (const t of ex.targets) if (t.weight === 1) primary.add(t.group);
     }
     for (const group of primary) {
       // Is er in de actieve routines een statische of PNF-oefening die deze

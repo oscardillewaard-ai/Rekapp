@@ -1,4 +1,5 @@
 // Wat de speler per segment zegt en toont (§6.8.2). Puur: geen DOM, geen audio.
+import { isTraining } from './types.js';
 
 // Letterlijk uit §6.8.2.
 export const SPOKEN = {
@@ -36,7 +37,8 @@ export function speechFor(segments, index, exercises, { catchUp = false } = {}) 
       return ex ? `${SPOKEN.next} ${sentence(spokenName(ex))}` : null;
     case 'work':
       // Na een inhaalslag is het blok al bezig: dan geen volle duur noemen.
-      return catchUp ? `${setNo}${extra}${side}${sentence(spokenName(ex))}` : `${setNo}${extra}${side}${sentence(spokenName(ex))} ${seg.durationSec} seconden.`;
+      // Training met herhalingen: "15 herhalingen." in plaats van de seconden.
+      return catchUp ? `${setNo}${extra}${side}${sentence(spokenName(ex))}` : `${setNo}${extra}${side}${sentence(spokenName(ex))} ${seg.reps ? `${seg.reps} herhalingen` : `${seg.durationSec} seconden`}.`;
     case 'contract': {
       const prev = segments[index - 1];
       const firstOfSide = !prev || prev.kind !== 'relax' || prev.side !== seg.side || prev.stepIndex !== seg.stepIndex;
@@ -62,9 +64,11 @@ export function displayFor(segments, index, exercises) {
   const nextEx = seg.kind === 'transition' ? exercises.get(seg.nextExerciseId) : null;
   const sideLabel = seg.side ? SIDE_LABEL[seg.side] : ex ? SIDED_LABEL[ex.sided] ?? '' : '';
   const setLabel = seg.setNo ? `Set ${seg.setNo} van ${seg.setCount}` : '';
+  // Training: "Oefenen" en het aantal herhalingen in plaats van "Rekken".
+  const doing = isTraining(ex) ? (seg.reps ? `${seg.reps} herhalingen` : 'Oefenen') : 'Rekken';
   const label = {
     prep: 'Voorbereiden',
-    work: seg.set === 'extra' ? 'Extra set' : setLabel ? `Rekken · ${setLabel.toLowerCase()}` : 'Rekken',
+    work: seg.set === 'extra' ? 'Extra set' : setLabel ? `${doing} · ${setLabel.toLowerCase()}` : doing,
     contract: 'Aanspannen',
     relax: 'Loslaten en verder rekken',
     switch: SPOKEN.switch,

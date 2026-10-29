@@ -83,15 +83,16 @@ test('W6/W7 alleen in een actieve routine', () => {
 });
 
 test('knieslot verwijderd: de 10 oefeningen met K ≤ 2 spelen af, behalve tijdens een opvlamming (W8)', () => {
+  // De 10 rekoefeningen plus de 3 vergrendelde trainingsoefeningen.
   const low = [...lib.exercises.values()].filter((x) => x.locked);
-  assert.equal(low.length, 10);
+  assert.equal(low.length, 13);
   const flare = activateFlare(emptyKneeState(), at(0)).state;
   for (const x of low) {
     const dose = x.sided === 'unilateral' ? { perSideSec: 30 } : { durationSec: 30 };
     const r = { id: 'x', slot: 'avond', preRun: false, timesPerWeek: 1, steps: [{ exerciseId: 'gastroc_muur', perSideSec: 30 }, { exerciseId: x.id, ...dose }] };
     assert.ok(!routineWarnings(r, ctx()).some((w) => w.severity === 'blokkeert'), x.id);
     assert.equal(playableRoutine(r, ctx()).routine.steps.length, 2, x.id);
-    // Opvlamming: alle tien gaan boven 45°.
+    // Opvlamming: alle dertien gaan boven 45°.
     assert.ok(routineWarnings(r, ctx({ knee: flare })).some((w) => w.code === 'W8' && w.exerciseId === x.id), x.id);
     const play = playableRoutine(r, ctx({ knee: flare }));
     assert.deepEqual(play.routine.steps.map((s) => s.exerciseId), ['gastroc_muur'], x.id);

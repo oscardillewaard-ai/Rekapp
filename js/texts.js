@@ -61,12 +61,42 @@ export const RUBRICS = {
   },
 };
 
+// §3.1 Trainingsoefeningen (kracht, balans, plyometrie): eigen B en D; K, R
+// en P zijn die van RUBRICS.
+export const RUBRICS_TRAINING = {
+  B: {
+    title: 'B — Bewijs (training).',
+    intro: 'Per oefening, voor het doel van het sjabloon: minder pijn en betere functie bij PFP (heupen), of minder vaak zwikken en meer veerkracht (enkels).',
+    levels: {
+      5: "Onderdeel van meerdere programma's met effect in een meta-analyse, of met name aanbevolen in een consensusstatement",
+      4: 'Onderdeel van een programma met effect in minstens één RCT',
+      3: 'Verwant aan een programma met effect in een RCT, maar deze oefening zelf is niet onderzocht',
+      2: 'Alleen EMG- of biomechanisch onderzoek bij gezonde mensen, of een klein of onzeker effect in meta-analyses',
+      1: 'Alleen een video of expertadvies',
+    },
+  },
+  D: {
+    title: 'D — Doelgerichtheid (training).',
+    intro: 'Traint de oefening echt wat ze moet trainen? Een oordeel op basis van anatomie en EMG-onderzoek.',
+    levels: {
+      5: 'Traint aantoonbaar of anatomisch eenduidig de bedoelde spieren of reactie; weinig compensatie',
+      4: 'Traint het doel goed; compensatie is met de cues te voorkomen',
+      3: 'Traint het doel plus veel andere spieren, of compensatie ligt voor de hand',
+      2: 'Traint het doel maar deels; veel compensatie',
+      1: 'Traint het genoemde doel niet',
+    },
+  },
+};
+
 // §6.2 Ademcue per type.
 export const BREATHING = {
   static: '4 tellen in door je neus, 6 tellen uit; zak bij elke uitademing een fractie verder.',
   pnf: 'Span 5 s aan op 20–30% en adem door; adem uit bij het loslaten en zak verder.',
   dynamic: 'Adem rustig door in het ritme van de beweging.',
   active: 'Adem rustig door in het ritme van de beweging.',
+  kracht: 'Adem uit bij het zware deel van de beweging en in bij het terugkomen; houd je adem niet vast.',
+  balans: 'Adem rustig en regelmatig door, ook als je wiebelt.',
+  plyometrie: 'Adem kort en ritmisch mee met de sprongen; houd je adem niet in bij de landing.',
 };
 
 // §6.2 kaart.

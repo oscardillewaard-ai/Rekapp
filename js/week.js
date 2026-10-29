@@ -2,6 +2,7 @@
 // suggestie en onderhoudstip. Puur.
 import { plannedWeekDose, actualWeekDose, meterValue, meterStatus, neededPerSession } from './dose.js';
 import { playableRoutine } from './warnings.js';
+import { isTraining } from './types.js';
 
 const DAY = 24 * 3600 * 1000;
 
@@ -11,14 +12,16 @@ export function suggestionFrequency(activeRoutines) {
   return activeRoutines.reduce((m, r) => Math.max(m, r.timesPerWeek), 0) || 7;
 }
 
-// Alle 24 spiergroepen in de volgorde van §4. Met een kniestatus telt de
-// geplande dosis alleen de stappen die echt worden afgespeeld (zonder W8).
+// Alle spiergroepen met minstens één rekoefening, in de volgorde van §4 (de
+// enkelstabilisatoren train je alleen). Met een kniestatus telt de geplande
+// dosis alleen de stappen die echt worden afgespeeld (zonder W8).
 export function weekRows(lib, { routines, sessions, now, knee = null }) {
+  const stretched = new Set([...lib.exercises.values()].filter((x) => !isTraining(x)).flatMap((x) => x.targets.map((t) => t.group)));
   const active = routines.filter((r) => r.active !== false).map((r) => (knee ? playableRoutine(r, { lib, knee }).routine : r));
   const planned = plannedWeekDose(active, lib.exercises);
   const actual = actualWeekDose(sessions, lib.exercises, now, lib.meta.dose.windowHours);
   const f = suggestionFrequency(active);
-  return [...lib.groups.values()].map((group) => {
+  return [...lib.groups.values()].filter((g) => stretched.has(g.id)).map((group) => {
     const p = planned.get(group.id) ?? null;
     const a = actual.get(group.id) ?? null;
     const plannedSec = meterValue(p);

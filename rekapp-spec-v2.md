@@ -10,7 +10,7 @@
 
 Bouw een installeerbare, offline werkende web-app (PWA) in het Nederlands voor iPhone (Safari) en Android (Chrome). De gebruiker kan ermee:
 
-1. een bibliotheek van **70 stretches voor 24 spiergroepen** doorzoeken, elk met sterren (1–5), vijf deelscores, voor- en nadelen, knie-informatie en bronnen;
+1. een bibliotheek van **70 stretches voor 24 spiergroepen**, plus 14 trainingsoefeningen voor heupen en enkels, doorzoeken, elk met sterren (1–5), vijf deelscores, voor- en nadelen, knie-informatie en bronnen;
 2. **zelf routines samenstellen**, met live totale tijd, een weekdosis per spiergroep en waarschuwingen;
 3. routines begeleid afspelen (timer, kantwissels, geluid, spraak);
 4. sessies, kniechecks en zelftests vastleggen en exporteren.
@@ -114,6 +114,28 @@ Correctie voor de techniek: dynamisch en actief krijgen B −1 (minimaal 1), omd
 | 2 | Kleine rol |
 | 1 | Geen rol |
 
+**Trainingsoefeningen** (kracht, balans, plyometrie; toegevoegd oktober 2026 voor de trainingssjablonen, §6.3). K, R en P zijn hetzelfde als hierboven. B en D hebben een eigen rubriek, omdat het doel geen bewegingsuitslag is maar kracht, controle of veerkracht. De reden voor de B staat bij elke trainingsoefening in het veld `bNote`.
+
+**B — Bewijs (training).** Per oefening, voor het doel van het sjabloon: minder pijn en betere functie bij PFP (heupen), of minder vaak zwikken en meer veerkracht (enkels).
+
+| B | Betekenis |
+|---|---|
+| 5 | Onderdeel van meerdere programma's met effect in een meta-analyse, of met name aanbevolen in een consensusstatement |
+| 4 | Onderdeel van een programma met effect in minstens één RCT |
+| 3 | Verwant aan een programma met effect in een RCT, maar deze oefening zelf is niet onderzocht |
+| 2 | Alleen EMG- of biomechanisch onderzoek bij gezonde mensen, of een klein of onzeker effect in meta-analyses |
+| 1 | Alleen een video of expertadvies |
+
+**D — Doelgerichtheid (training).** Traint de oefening echt wat ze moet trainen? Een oordeel op basis van anatomie en EMG-onderzoek.
+
+| D | Betekenis |
+|---|---|
+| 5 | Traint aantoonbaar of anatomisch eenduidig de bedoelde spieren of reactie; weinig compensatie |
+| 4 | Traint het doel goed; compensatie is met de cues te voorkomen |
+| 3 | Traint het doel plus veel andere spieren, of compensatie ligt voor de hand |
+| 2 | Traint het doel maar deels; veel compensatie |
+| 1 | Traint het genoemde doel niet |
+
 **P — Praktisch.**
 
 | P | Betekenis |
@@ -144,7 +166,7 @@ Rekenvoorbeelden uit de data:
 - **Hiel naar bil staand (klassiek)** (`quad_hiel_bil`): 0,25·3 + 0,25·2 + 0,20·3 + 0,15·3 + 0,15·5 = 3,05 → ★★ → knie-poort: maximaal 2 sterren, vergrendeld
 - **Heupbuiger halfgeknield (op dik kussen)** (`heupbuiger_halfgeknield`): 0,25·4 + 0,25·2 + 0,20·5 + 0,15·5 + 0,15·4 = 3,85 → ★★ → knie-poort: maximaal 2 sterren, vergrendeld
 
-Verdeling over de hele bibliotheek: ★★★★★ (5,0): 3 · ★★★★½ (4,5): 9 · ★★★★ (4,0): 14 · ★★★½ (3,5): 30 · ★★★ (3,0): 4 · ★★ (2,0): 10. Daarvan 10 vergrendeld (maximaal 2 sterren door de knie-poort).
+Verdeling over de 70 rekoefeningen: ★★★★★ (5,0): 3 · ★★★★½ (4,5): 9 · ★★★★ (4,0): 14 · ★★★½ (3,5): 30 · ★★★ (3,0): 4 · ★★ (2,0): 10. Daarvan 10 vergrendeld (maximaal 2 sterren door de knie-poort). De 14 trainingsoefeningen: ★★★★½: 1 · ★★★★: 5 · ★★★½: 3 · ★★★: 2 · ★★: 3, en die drie zijn vergrendeld (step-up, Bulgarian split squat en drop landing: K ≤ 2).
 
 ### 3.3 Wat de sterren wel en niet zeggen
 
@@ -165,6 +187,7 @@ B-basis = bewijsscore voor statisch of PNF rekken in deze groep. R = relevantie 
 | Scheen (`scheen`) | Voet en onderbeen | 1 | 2 | Geen studies gevonden naar meer bewegingsuitslag door het rekken van de scheenspier. | Zelden beperkend bij lopen of klimmen. | — |
 | Kuit: gastrocnemius (`gastrocnemius`) | Voet en onderbeen | 5 | 5 | Meta-analyse van 5 RCT's: kuitrekken vergroot de dorsiflexie, maar het effect is klein (gemiddeld 2–3°). Past in het bredere beeld dat statisch rekken de bewegingsuitslag vergroot. | Dorsiflexie voor steile hellingen, power hiken en aanlooppaden van een klettersteig. | Radford 2006, Konrad 2024 |
 | Kuit: soleus (`soleus`) | Voet en onderbeen | 4 | 5 | Valt onder dezelfde kuit-meta-analyse, maar varianten met gebogen knie zijn apart weinig onderzocht. | Met gebogen knie, zoals bergop, beperkt vooral de soleus je enkel. | Radford 2006 |
+| Enkel: stabilisatoren (kuitbeenspieren, tibialis posterior) (`enkel`) | Voet en onderbeen | 1 | 5 | Deze groep train je, je rekt hem niet: er zijn geen rekoefeningen voor. Een thuisprogramma met balansoefeningen op één been (8 weken, 3× per week) verminderde herhaalde verzwikkingen binnen een jaar van 33% naar 22% (RCT, n = 522). | Zwikken op technisch terrein, vooral als je focus wegzakt; landen en afzetten op één been. | Hupperets 2009 |
 | Hamstrings (`hamstrings`) | Heup en bovenbeen | 5 | 5 | Het best onderzochte gebied: statisch en PNF vergroten de bewegingsuitslag betrouwbaar. Bij PFP-patiënten met stijve hamstrings gaf dynamisch rekken plus kracht betere klinische uitkomsten dan statisch rekken plus kracht. | Heupflexie voor hoge stappen en klimbewegingen. | Konrad 2024, Thomas 2018, Lee 2021 (hamstrings) |
 | Rectus femoris (`rectus_femoris`) | Heup en bovenbeen | 3 | 4 | Gemengd. In een grote meta-analyse was het langetermijneffect bij de quadriceps niet significant, maar dat rustte op slechts 3 metingen. Een 4-weeks PNF-programma gaf +9,2° kniebuiging. Bij PFP-patiënten met stijve quadriceps verbeterden pijn en functie na statisch én dynamisch quadricepsrekken, maar zonder groep die niet rekte. Acuut gaf een lage rekintensiteit (80%) geen winst. | Heupextensie in de looppas. Verminderde quadricepsflexibiliteit ging in een prospectieve studie vooraf aan het ontstaan van PFP. | Konrad 2024, Warneke 2025, Higgs & Winter 2009, Lee 2021 (quadriceps), Nakamura 2021, Witvrouw 2000 |
 | Quadriceps: vasti (`quadriceps_vasti`) | Heup en bovenbeen | 3 | 3 | Zelfde quadricepsbewijs als bij de rectus femoris: gemengd. **Let op:** Elke vasti-stretch vraagt meer dan 90° kniebuiging, dus hier staan alleen vergrendelde opties. Binnen je regels werk je aan deze spieren via kracht over de toegestane range (leg extension 90°→45°) en via de rectus-femorisstretches. | Beperkt; vooral relevant als de quadriceps echt stijf is. | Konrad 2024, Higgs & Winter 2009, Lee 2021 (quadriceps) |
@@ -265,6 +288,25 @@ Gesorteerd per spiergroep, daarbinnen op score. 🔒 = vergrendeld door de knie-
 | Onderarm: polsstrekkers | Polsstrekkers met gestrekte arm (`polsstrekkers`) | ★★★½ | 3,50 | 1·5·4·3·5 | S | O/A | 0° |  |
 | Onderarm: polsstrekkers | Omgekeerde gebedshouding (`omgekeerde_gebed`) | ★★★½ | 3,30 | 1·5·3·3·5 | S | O/A | 0° |  |
 
+**Trainingsoefeningen** (toegevoegd oktober 2026, voor de trainingssjablonen; B en D volgens de trainingsrubriek van §3.1). Type: Kr = kracht, Ba = balans, Pl = plyometrie. Moment: altijd O/A.
+
+| Focus | Oefening | Sterren | Score | B·K·D·R·P | Type | Knie | |
+|---|---|---|---|---|---|---|---|
+| Heupkracht | Zijliggende heupabductie (`heup_abductie_zij`) | ★★★★½ | 4,25 | 4·5·4·4·4 | Kr | 40° |  |
+| Heupkracht | Staande heupabductie met band (`abductie_band`) | ★★★★ | 4,10 | 4·5·4·4·3 | Kr | 10° |  |
+| Heupkracht | Eenbenige squat voor de spiegel (`squat_eenbenig`) | ★★★★ | 3,90 | 4·3·4·5·4 | Kr | 45° |  |
+| Heupkracht | Zijsteun (side plank) (`zijsteun`) | ★★★★ | 3,75 | 2·5·4·4·4 | Kr | 0° |  |
+| Heupkracht | Eenbenige Roemeense deadlift (RDL) (`rdl_eenbenig`) | ★★★½ | 3,65 | 2·4·4·4·5 | Kr | 20° |  |
+| Heupkracht | Eenbenige bridge (`bridge_eenbenig`) | ★★★½ | 3,50 | 2·4·4·4·4 | Kr | 90° |  |
+| Enkelstabiliteit | Runner's touch (`runners_touch`) | ★★★★ | 4,05 | 3·4·4·5·5 | Ba | 40° |  |
+| Enkelstabiliteit | Eenbenige pogo's (zijwaarts en voor-achter) (`pogo_eenbenig`) | ★★★★ | 3,80 | 2·4·4·5·5 | Pl | 20° |  |
+| Enkelstabiliteit | BOSU-reach met medicijnbal (`bosu_reach`) | ★★★½ | 3,60 | 3·4·4·4·3 | Ba | 20° |  |
+| Enkelstabiliteit | Step-up met balans (`stepup_balans`) | ★★ | 3,15 | 2·2·4·5·4 | Kr | 70° | 🔒 |
+| Enkelstabiliteit | Eenbenige RDL met rotatie (`rdl_rotatie`) | ★★★ | 3,15 | 2·4·3·4·3 | Kr | 20° |  |
+| Enkelstabiliteit | Band in-uit sprongen (`band_inuit`) | ★★★ | 3,15 | 2·4·3·4·3 | Pl | 20° |  |
+| Enkelstabiliteit | Eenbenige drop landing (`drop_landing`) | ★★ | 2,90 | 1·2·4·5·4 | Pl | 60° | 🔒 |
+| Enkelstabiliteit | Bulgarian split squat op BOSU (`bulgarian_bosu`) | ★★ | 2,15 | 1·1·3·4·3 | Kr | 100° | 🔒 |
+
 ---
 
 ## 6. Functionele specificatie
@@ -272,7 +314,8 @@ Gesorteerd per spiergroep, daarbinnen op score. 🔒 = vergrendeld door de knie-
 ### 6.1 Bibliotheek
 
 - Lijst gegroepeerd per regio en spiergroep (volgorde zoals §4), te sorteren op score, naam, R of tijd.
-- Filters: spiergroep (meerdere), moment (ochtend, avond, beide), positie (staand, stoel, vloer, liggend), materiaal (meerdere, plus "geen materiaal"), minimum aantal sterren, type (statisch, PNF, dynamisch, actief), "alleen K ≥ 4" (standaard uit), "toon vergrendelde" (standaard aan).
+- Filters: spiergroep (meerdere), moment (ochtend, avond, beide), positie (staand, stoel, vloer, liggend), materiaal (meerdere, plus "geen materiaal"), minimum aantal sterren, type (statisch, PNF, dynamisch, actief, kracht, balans, plyometrie), "alleen K ≥ 4" (standaard uit), "toon vergrendelde" (standaard aan).
+- Trainingsoefeningen staan na het rekken in een eigen regio "Training", per focus: Heupkracht en Enkelstabiliteit.
 - Zoeken op naam.
 - Rij: lichaamskaart-miniatuur, naam, sterren met score, spiergroep, kniebadge (max graden) en een slot-icoon als de oefening vergrendeld is.
 
@@ -293,8 +336,13 @@ Ademcue per type:
 - statisch: "4 tellen in door je neus, 6 tellen uit; zak bij elke uitademing een fractie verder."
 - PNF: "Span 5 s aan op 20–30% en adem door; adem uit bij het loslaten en zak verder."
 - dynamisch en actief: "Adem rustig door in het ritme van de beweging."
+- kracht: "Adem uit bij het zware deel van de beweging en in bij het terugkomen; houd je adem niet vast."
+- balans: "Adem rustig en regelmatig door, ook als je wiebelt."
+- plyometrie: "Adem kort en ritmisch mee met de sprongen; houd je adem niet in bij de landing."
 
-Illustraties, fase 1: één lichaamskaart (`img/body.svg`, voor- en achteraanzicht) met 24 regio's waarvan het `id` gelijk is aan het groeps-id, plus vier positie-iconen (staand, stoel, vloer, liggend). Fase 2, optioneel: eigen eenvoudige stokfiguren per oefening (`img/ex/<id>.svg`); tot die er zijn, valt de app terug op lichaamskaart plus positie-icoon.
+Bij een trainingsoefening (kracht, balans, plyometrie) gelden op de kaart de B- en D-rubriek voor training (§3.1). De bronnen tonen alleen de bronnen van de oefening, niet het rekbewijs van de spiergroep. Twijfel uit de bron (veld `uncertain`) staat onder de uitvoering als "Onzeker: …". In de speler heet een werkblok "Oefenen", of het aantal herhalingen ("15 herhalingen") als de stap herhalingen heeft; de spraak noemt dan ook de herhalingen in plaats van de seconden.
+
+Illustraties, fase 1: één lichaamskaart (`img/body.svg`, voor- en achteraanzicht) met 25 regio's waarvan het `id` gelijk is aan het groeps-id, plus vier positie-iconen (staand, stoel, vloer, liggend). Fase 2, optioneel: eigen eenvoudige stokfiguren per oefening (`img/ex/<id>.svg`); tot die er zijn, valt de app terug op lichaamskaart plus positie-icoon.
 
 ### 6.3 Routinebouwer
 
@@ -381,6 +429,7 @@ function weekdosis(routines, lib):                   // gepland
     f = r.timesPerWeek
     voor elke stap s in r.steps:
       ex  = lib[s.exerciseId]
+      als ex.type in ('kracht', 'balans', 'plyometrie'): sla over   // training is geen rekdosis
       sec = secondenPerKant(s, ex)                   // { L, R }
       voor elk doel t in ex.targets:                 // t.weight is 1 of 0,5
         als ex.type in ('static', 'pnf'):
@@ -447,6 +496,8 @@ Niet in de sjablonen (0 s): Voetzool en tenen, Scheen, Quadriceps: vasti, Onderr
 | W9 | oranje | Oefening in de status `test` of `voorlopig` (§6.6) die minder dan 48 uur na de vorige blootstelling opnieuw in een gestarte routine zit | "Deze oefening is nog in de proefperiode: maximaal één keer per 48 uur." |
 
 W1 en W8 voorkomen toevoegen en afspelen. De andere waarschuwingen informeren alleen; de gebruiker beslist.
+
+Trainingsoefeningen (kracht, balans, plyometrie) tellen niet mee voor W4 (de 15 minuten gaan over rekken: de totale tijd zonder de trainingsstappen) en niet voor W5–W7 (ze zitten niet in de rekdosis, §6.4.1). W2 en W8 gelden wel.
 
 ### 6.6 Knieslot en 48-uurstest
 
@@ -607,7 +658,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 ├── icons/                     # 192, 512, maskable-512, apple-touch-icon-180
 ├── css/app.css                # donker thema, nachtmodus (alleen rood/amber), grote raakvlakken
 ├── data/library.json          # §10, letterlijk
-├── img/body.svg               # lichaamskaart voor/achter, 24 regio's (id = groeps-id)
+├── img/body.svg               # lichaamskaart voor/achter, 25 regio's (id = groeps-id)
 ├── img/pos/*.svg              # staand, stoel, vloer, liggend
 └── js/
     ├── main.js                # hash-router, opstarten, persist-aanvraag
@@ -676,8 +727,8 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
     },
     "groups": {
       "type": "array",
-      "minItems": 24,
-      "maxItems": 24,
+      "minItems": 25,
+      "maxItems": 25,
       "items": {
         "$ref": "#/$defs/group"
       }
@@ -1016,7 +1067,16 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
             "static",
             "pnf",
             "dynamic",
-            "active"
+            "active",
+            "kracht",
+            "balans",
+            "plyometrie"
+          ]
+        },
+        "focus": {
+          "enum": [
+            "heupen",
+            "enkels"
           ]
         },
         "sided": {
@@ -1058,7 +1118,11 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
               "mat",
               "aanrecht",
               "hoek",
-              "bank"
+              "bank",
+              "miniband",
+              "gewicht",
+              "BOSU",
+              "spiegel"
             ]
           }
         },
@@ -1162,6 +1226,9 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
         "progression": {
           "type": "string"
         },
+        "uncertain": {
+          "type": "string"
+        },
         "defaultDose": {
           "$ref": "#/$defs/dose"
         },
@@ -1259,7 +1326,10 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
                 "enum": [
                   "static",
                   "dynamic",
-                  "active"
+                  "active",
+                  "kracht",
+                  "balans",
+                  "plyometrie"
                 ]
               }
             },
@@ -1539,7 +1609,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 2. `score` opnieuw berekenen uit `scores` met `meta.scoring.weights`; afwijking > 0,005 → fout.
 3. `stars` opnieuw berekenen (afronding en knie-poort uit §3.2); afwijking → fout.
 4. `scores.K ≤ 2` of `kneeFlexionMaxDeg > 90` ⇒ `locked` moet `true` zijn, en omgekeerd.
-5. `scores.B` = groeps-`bBase`, min 1 voor dynamisch en actief (minimaal 1), tenzij `bNote` aanwezig is.
+5. `scores.B` = groeps-`bBase`, min 1 voor dynamisch en actief (minimaal 1), tenzij `bNote` aanwezig is. Een trainingsoefening (kracht, balans, plyometrie) heeft altijd een `bNote` en een `focus` (heupen of enkels); B volgt dan de trainingsrubriek (§3.1), niet de groep. Een rekoefening heeft geen `focus`.
 6. Elke spiergroep heeft minstens 2 oefeningen met die groep als primair doel, en minstens 1 niet-vergrendelde. Uitzondering: `quadriceps_vasti` (zie §4).
 7. Elke sjabloonroutine bevat alleen niet-vergrendelde oefeningen, en haar gecompileerde totale tijd (§6.8.1) is gelijk aan `expectedTotalSec`. Een dagelijks sjabloon heeft moment `ochtend` of `avond`; `sport` staat er precies bij de soorten `opwarmen` en `cooldown`, en elke sport heeft precies één opwarm- en één cooling-down-sjabloon. Sets in een stap: niet bij PNF, en vanaf 2 sets een `restSec`; met 1 set geen `restSec`.
 8. Bij een fout: toon een duidelijke foutmelding met de oefening en het veld, en start de app niet met kapotte data.
@@ -1600,6 +1670,16 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
       "evidence": "Valt onder dezelfde kuit-meta-analyse, maar varianten met gebogen knie zijn apart weinig onderzocht.",
       "relevance": "Met gebogen knie, zoals bergop, beperkt vooral de soleus je enkel.",
       "sources": ["radford2006"]
+    },
+    {
+      "id": "enkel",
+      "label": "Enkel: stabilisatoren (kuitbeenspieren, tibialis posterior)",
+      "region": "Voet en onderbeen",
+      "bBase": 1,
+      "rBase": 5,
+      "evidence": "Deze groep train je, je rekt hem niet: er zijn geen rekoefeningen voor. Een thuisprogramma met balansoefeningen op één been (8 weken, 3× per week) verminderde herhaalde verzwikkingen binnen een jaar van 33% naar 22% (RCT, n = 522).",
+      "relevance": "Zwikken op technisch terrein, vooral als je focus wegzakt; landen en afzetten op één been.",
+      "sources": ["hupperets2009"]
     },
     {
       "id": "hamstrings",
@@ -3696,6 +3776,420 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
       "defaultDose": {"durationSec": 30},
       "sources": [],
       "svg": "img/ex/omgekeerde_gebed.svg"
+    },
+    {
+      "id": "heup_abductie_zij",
+      "name": "Zijliggende heupabductie",
+      "targets": [{"group": "heup_buitenkant", "weight": 1}, {"group": "gluteus_max", "weight": 0.5}],
+      "type": "kracht",
+      "focus": "heupen",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "liggend",
+      "equipment": ["mat"],
+      "kneeFlexionMaxDeg": 40,
+      "kneeLoad": "geen",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 4, "K": 5, "D": 4, "R": 4, "P": 4},
+      "bNote": "Onderdeel van een programma met effect op pijn en functie in een RCT bij PFP (Fukuda 2012); hoge activatie van de gluteus medius in EMG-onderzoek (Distefano 2009).",
+      "score": 4.25,
+      "stars": 4.5,
+      "locked": false,
+      "evidenceLevel": "matig",
+      "cues": ["Lig op je zij, onderste knie licht gebogen, bovenste been gestrekt in lijn met je romp.", "Kantel je bekken iets naar voren, heup licht gestrekt, tenen een fractie naar beneden.", "Til het been langzaam tot net boven heuphoogte, houd 2 s vast en laat langzaam zakken."],
+      "pros": ["Onderdeel van een RCT-programma bij PFP (Fukuda 2012).", "Hoge activatie van de gluteus medius zonder kniebelasting (Distefano 2009)."],
+      "cons": ["De TFL neemt het makkelijk over; heup licht gestrekt en tenen iets naar beneden helpt (Selkowitz 2013).", "Open keten: traint het bekken niet in stand, zoals bij lopen."],
+      "pfpsNote": "Bovenste knie gestrekt, onderste licht gebogen (~40°), allebei onbelast: geen druk op de knieschijf.",
+      "regression": "Kleinere uitslag en korter vasthouden bovenin.",
+      "progression": "Enkelgewicht, of 20 herhalingen.",
+      "defaultDose": {"perSideSec": 50, "reps": 15, "sets": 3, "restSec": 30},
+      "sources": ["fukuda2012", "nascimento2018", "collins2018", "distefano2009", "selkowitz2013"],
+      "svg": "img/ex/heup_abductie_zij.svg"
+    },
+    {
+      "id": "zijsteun",
+      "name": "Zijsteun (side plank)",
+      "targets": [{"group": "heup_buitenkant", "weight": 1}, {"group": "zijkant_romp", "weight": 1}],
+      "type": "kracht",
+      "focus": "heupen",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "vloer",
+      "equipment": ["mat"],
+      "kneeFlexionMaxDeg": 0,
+      "kneeLoad": "geen",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 2, "K": 5, "D": 4, "R": 4, "P": 4},
+      "bNote": "Alleen EMG-onderzoek bij gezonde mensen: de hoogste gemeten activatie van de gluteus medius, vooral met het bovenbeen omhoog (Boren 2011). Geen RCT bij PFP.",
+      "score": 3.75,
+      "stars": 4,
+      "locked": false,
+      "evidenceLevel": "zwak",
+      "cues": ["Steun op je onderarm, elleboog onder je schouder, voeten op elkaar.", "Til je bekken op tot je lichaam van hoofd tot voeten één rechte lijn is.", "Houd je bekken hoog; zakt het weg, stop dan de set."],
+      "pros": ["Hoogste gemeten activatie van de gluteus medius in EMG-onderzoek (Boren 2011).", "Traint heup en zijkant romp tegelijk, zonder materiaal."],
+      "cons": ["Geen RCT bij PFP; alleen EMG-onderzoek bij gezonde mensen.", "Zwaar voor schouder en elleboog van de steunarm."],
+      "pfpsNote": "Knieën gestrekt: geen druk op de knieschijf. Op de knie (regressie) is de knie ~90° gebogen en onbelast.",
+      "regression": "Op je onderste knie in plaats van je voeten.",
+      "progression": "Het bovenste been heffen (abductie), 10 per kant; of 45–60 s houden.",
+      "defaultDose": {"perSideSec": 30, "sets": 3, "restSec": 30},
+      "sources": ["boren2011"],
+      "svg": "img/ex/zijsteun.svg"
+    },
+    {
+      "id": "bridge_eenbenig",
+      "name": "Eenbenige bridge",
+      "targets": [{"group": "gluteus_max", "weight": 1}, {"group": "hamstrings", "weight": 0.5}, {"group": "heup_buitenkant", "weight": 0.5}],
+      "type": "kracht",
+      "focus": "heupen",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "liggend",
+      "equipment": ["mat"],
+      "kneeFlexionMaxDeg": 90,
+      "kneeLoad": "laag",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 2, "K": 4, "D": 4, "R": 4, "P": 4},
+      "bNote": "Alleen EMG-onderzoek: hoge activatie van de gluteus medius en maximus (Moore 2020). Geen RCT bij PFP.",
+      "score": 3.5,
+      "stars": 3.5,
+      "locked": false,
+      "evidenceLevel": "zwak",
+      "cues": ["Lig op je rug, één voet plat met de knie ~90° gebogen, het andere been gestrekt omhoog.", "Druk door je hiel en til je bekken op tot schouder, heup en knie op één lijn liggen.", "Houd je bekken waterpas en zak langzaam terug."],
+      "pros": ["Hoge activatie van de bilspieren (Moore 2020), met weinig kniebelasting.", "Traint ook het duurvermogen van de hamstrings, dat je met de bridgetest tot falen kunt volgen."],
+      "cons": ["Geen RCT bij PFP; alleen EMG-onderzoek.", "De hamstrings kunnen krampen; zet de voet dan iets dichter bij je bil."],
+      "pfpsNote": "Knie ~90° gebogen met weinig quadricepsspanning: lage belasting.",
+      "regression": "Dubbelbenige bridge.",
+      "progression": "Herhalingen tot falen (bridgetest), of de voet op een verhoging.",
+      "defaultDose": {"perSideSec": 40, "reps": 12, "sets": 3, "restSec": 30},
+      "sources": ["moore2020"],
+      "svg": "img/ex/bridge_eenbenig.svg"
+    },
+    {
+      "id": "abductie_band",
+      "name": "Staande heupabductie met band",
+      "targets": [{"group": "heup_buitenkant", "weight": 1}, {"group": "gluteus_max", "weight": 0.5}],
+      "type": "kracht",
+      "focus": "heupen",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "staand",
+      "equipment": ["miniband"],
+      "kneeFlexionMaxDeg": 10,
+      "kneeLoad": "laag",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 4, "K": 5, "D": 4, "R": 4, "P": 3},
+      "bNote": "Onderdeel van een programma met effect op pijn en functie in een RCT bij PFP (Fukuda 2012); hoge activatie van de gluteus medius, ook in het standbeen (Moore 2020).",
+      "score": 4.1,
+      "stars": 4,
+      "locked": false,
+      "evidenceLevel": "matig",
+      "cues": ["Band rond je enkels, sta rechtop met een hand licht aan een leuning of muur.", "Breng je been gestrekt zijwaarts naar buiten, tenen recht naar voren; je romp blijft rechtop.", "Langzaam terug. Het standbeen werkt mee en houdt je bekken waterpas."],
+      "pros": ["Onderdeel van een RCT-programma bij PFP (Fukuda 2012).", "Traint beide heupen tegelijk: het bewegende been en het standbeen."],
+      "cons": ["Je hebt een miniband nodig.", "Je romp gaat snel scheef hangen; houd hem rechtop."],
+      "pfpsNote": "Knieën vrijwel gestrekt: lage belasting.",
+      "regression": "Zonder band, of een kleinere uitslag.",
+      "progression": "Een zwaardere band, of zonder steun aan de muur.",
+      "defaultDose": {"perSideSec": 40, "reps": 15, "sets": 3, "restSec": 30},
+      "sources": ["fukuda2012", "nascimento2018", "collins2018", "moore2020"],
+      "svg": "img/ex/abductie_band.svg"
+    },
+    {
+      "id": "rdl_eenbenig",
+      "name": "Eenbenige Roemeense deadlift (RDL)",
+      "targets": [{"group": "hamstrings", "weight": 1}, {"group": "gluteus_max", "weight": 1}, {"group": "heup_buitenkant", "weight": 0.5}],
+      "type": "kracht",
+      "focus": "heupen",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "staand",
+      "equipment": [],
+      "kneeFlexionMaxDeg": 20,
+      "kneeLoad": "laag",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 2, "K": 4, "D": 4, "R": 4, "P": 5},
+      "bNote": "Alleen EMG-onderzoek bij gezonde mensen: hoge activatie van gluteus maximus en medius (Distefano 2009). Geen RCT bij PFP.",
+      "score": 3.65,
+      "stars": 3.5,
+      "locked": false,
+      "evidenceLevel": "zwak",
+      "cues": ["Sta op één been, de knie licht gebogen.", "Kantel vanuit je heup voorover terwijl het vrije been gestrekt naar achteren gaat; rug recht.", "Houd je bekken waterpas (niet openklappen) en kom terug tot rechtop."],
+      "pros": ["Achterketen en heup in één oefening, met balans.", "Hoge activatie van gluteus maximus en medius (Distefano 2009)."],
+      "cons": ["Geen RCT bij PFP; alleen EMG-onderzoek.", "De techniek vraagt oefening: het bekken klapt snel open."],
+      "pfpsNote": "Standknie licht gebogen onder lichaamsgewicht: lage belasting.",
+      "regression": "Met een hand aan de muur, of de tenen van het vrije been licht op de grond.",
+      "progression": "Een gewicht in de hand aan de kant van het vrije been; daarna zwaarder.",
+      "defaultDose": {"perSideSec": 40, "reps": 10, "sets": 3, "restSec": 45},
+      "sources": ["distefano2009"],
+      "svg": "img/ex/rdl_eenbenig.svg"
+    },
+    {
+      "id": "squat_eenbenig",
+      "name": "Eenbenige squat voor de spiegel",
+      "targets": [{"group": "gluteus_max", "weight": 1}, {"group": "heup_buitenkant", "weight": 1}, {"group": "quadriceps_vasti", "weight": 0.5}],
+      "type": "kracht",
+      "focus": "heupen",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "staand",
+      "equipment": ["spiegel"],
+      "kneeFlexionMaxDeg": 45,
+      "kneeLoad": "matig",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 4, "K": 3, "D": 4, "R": 5, "P": 4},
+      "bNote": "Onderdeel van RCT-programma's bij PFP (gesloten keten tot 45°, Fukuda 2012). Oefenen met feedback, zoals een spiegel, verandert ook het bewegingspatroon (Nunes 2023); kracht alleen doet dat niet (Willy 2011).",
+      "score": 3.9,
+      "stars": 4,
+      "locked": false,
+      "evidenceLevel": "matig",
+      "cues": ["Sta op één been voor een spiegel, het andere been licht naar voren.", "Zak langzaam tot ~45° kniebuiging; bekken waterpas, knie boven je tweede teen.", "Kom gecontroleerd omhoog. Zie je je bekken of knie wegzakken, ga dan minder diep."],
+      "pros": ["Met de spiegel als feedback verandert ook je bewegingspatroon (Nunes 2023).", "Eenbenig en functioneel, zoals bij lopen en afdalen."],
+      "cons": ["Meer kniebelasting dan de liggende oefeningen.", "Lastig zonder spiegel; een video van je telefoon werkt ook."],
+      "pfpsNote": "Knie tot ~45° onder lichaamsgewicht met matige quadricepsspanning. De RCT's gebruikten 0–45°.",
+      "regression": "Minder diep, of met een hand aan de muur.",
+      "progression": "Dieper (tot ~60°), of een step-down van een lage trede.",
+      "defaultDose": {"perSideSec": 35, "reps": 8, "sets": 3, "restSec": 45},
+      "sources": ["fukuda2012", "nunes2023", "willy2011"],
+      "svg": "img/ex/squat_eenbenig.svg"
+    },
+    {
+      "id": "runners_touch",
+      "name": "Runner's touch",
+      "targets": [{"group": "enkel", "weight": 1}, {"group": "heup_buitenkant", "weight": 0.5}, {"group": "gluteus_max", "weight": 0.5}],
+      "type": "balans",
+      "focus": "enkels",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "staand",
+      "equipment": [],
+      "kneeFlexionMaxDeg": 40,
+      "kneeLoad": "laag",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 3, "K": 4, "D": 4, "R": 5, "P": 5},
+      "bNote": "Balanstraining op één been, verwant aan het thuisprogramma dat herhaalde verzwikkingen verminderde (Hupperets 2009). Deze oefening zelf is niet onderzocht.",
+      "score": 4.05,
+      "stars": 4,
+      "locked": false,
+      "evidenceLevel": "beperkt",
+      "cues": ["Sta op één been, trek de andere knie op en steek een arm omhoog. Zoek je balans.", "Reik met je hand omlaag en tik de knie van je standbeen aan.", "Kom terug naar de startpositie. Na 10 keer wissel je van been."],
+      "pros": ["Geen materiaal, overal te doen en makkelijk op te schalen.", "Traint de eenbenige reactie van enkel en heup."],
+      "cons": ["Weinig krachtprikkel.", "Onderzocht is balanstraining als programma, niet deze oefening los."],
+      "pfpsNote": "Standknie tot ~40° gebogen onder lichaamsgewicht bij het aantikken: lage belasting. Lager reiken buigt de knie verder.",
+      "regression": "Alleen de startpositie 20–30 s vasthouden, eventueel met een hand bij de muur.",
+      "progression": "Steeds lager reiken, tot de grond vóór je standvoet.",
+      "uncertain": "Welke knie je aantikt, staat niet in het transcript; hier die van je standbeen, omdat de progressie eindigt vóór de standvoet. Het transcript noemt knie en arm aan dezelfde kant omhoog, terwijl die bij lopen tegengesteld bewegen; controleer dat in de video.",
+      "defaultDose": {"perSideSec": 40, "reps": 10},
+      "sources": ["hupperets2009", "runlab"],
+      "svg": "img/ex/runners_touch.svg"
+    },
+    {
+      "id": "bosu_reach",
+      "name": "BOSU-reach met medicijnbal",
+      "targets": [{"group": "enkel", "weight": 1}, {"group": "heup_buitenkant", "weight": 0.5}],
+      "type": "balans",
+      "focus": "enkels",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "staand",
+      "equipment": ["BOSU", "gewicht"],
+      "kneeFlexionMaxDeg": 20,
+      "kneeLoad": "laag",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 3, "K": 4, "D": 4, "R": 4, "P": 3},
+      "bNote": "Verwant aan de balansbordfase van het onderzochte thuisprogramma (Hupperets 2009). Deze oefening zelf is niet onderzocht.",
+      "score": 3.6,
+      "stars": 3.5,
+      "locked": false,
+      "evidenceLevel": "beperkt",
+      "cues": ["Sta op één been op de bolle kant van de BOSU, de bal met twee handen voor je borst.", "Strek de bal langzaam voor je uit, houd je balans en breng hem terug.", "Ga 30 s door en wissel dan van been."],
+      "pros": ["Instabiele ondergrond plus een bewegende last; kort en goed te doseren.", "De opbouw naar een balansbord zat ook in het onderzochte programma (Hupperets 2009)."],
+      "cons": ["Je hebt een BOSU (of balansbord) en een bal of gewicht nodig.", "Of een BOSU meer oplevert dan op de grond met je ogen dicht, is niet bekend."],
+      "pfpsNote": "Knie licht gebogen onder lichaamsgewicht: lage belasting.",
+      "regression": "Op de grond; daarna op de grond met je ogen dicht.",
+      "progression": "Verder uitstrekken, of een zwaardere bal.",
+      "uncertain": "De video noemt ook \"a plate\" als alternatief; wat daarmee bedoeld wordt, is onduidelijk. Welke kant van de BOSU boven ligt, staat er niet; hier de bolle kant, zoals gangbaar.",
+      "defaultDose": {"perSideSec": 30},
+      "sources": ["hupperets2009", "runlab"],
+      "svg": "img/ex/bosu_reach.svg"
+    },
+    {
+      "id": "stepup_balans",
+      "name": "Step-up met balans",
+      "targets": [{"group": "quadriceps_vasti", "weight": 1}, {"group": "gluteus_max", "weight": 1}, {"group": "enkel", "weight": 0.5}, {"group": "heup_buitenkant", "weight": 0.5}],
+      "type": "kracht",
+      "focus": "enkels",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "staand",
+      "equipment": ["trede"],
+      "kneeFlexionMaxDeg": 70,
+      "kneeLoad": "hoog",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 2, "K": 2, "D": 4, "R": 5, "P": 4},
+      "bNote": "Alleen EMG-onderzoek naar step-ups (Moore 2020). De video geeft geen dosering; 2 × 8 per been is een aanvulling.",
+      "score": 3.15,
+      "stars": 2,
+      "locked": true,
+      "evidenceLevel": "zwak",
+      "cues": ["Zet één voet op de trede of box en houd een arm opzij als tegenwicht.", "Druk jezelf omhoog en trek bovenaan de andere knie op. Zoek eerst je balans.", "Zak langzaam terug."],
+      "pros": ["Specifiek voor klimmen op trails: kracht en balans in één beweging.", "Weinig materiaal: een traptrede is genoeg."],
+      "cons": ["Zonder gewicht een lichte krachtprikkel.", "Een hoge box belast de knie flink."],
+      "pfpsNote": "Knie tot ~70° gebogen onder lichaamsgewicht: hoge belasting voor de knieschijf. Een lage trede scheelt veel.",
+      "regression": "Een lagere trede, zonder balansmoment bovenaan.",
+      "progression": "Met een bal of gewicht in de hand.",
+      "uncertain": "De video noemt geen boxhoogte en zegt niet welke arm opzij gaat.",
+      "defaultDose": {"perSideSec": 35, "reps": 8, "sets": 2, "restSec": 30},
+      "sources": ["moore2020", "runlab"],
+      "svg": "img/ex/stepup_balans.svg"
+    },
+    {
+      "id": "bulgarian_bosu",
+      "name": "Bulgarian split squat op BOSU",
+      "targets": [{"group": "quadriceps_vasti", "weight": 1}, {"group": "gluteus_max", "weight": 1}, {"group": "adductoren", "weight": 0.5}, {"group": "enkel", "weight": 0.5}],
+      "type": "kracht",
+      "focus": "enkels",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "staand",
+      "equipment": ["trede", "BOSU"],
+      "kneeFlexionMaxDeg": 100,
+      "kneeLoad": "hoog",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 1, "K": 1, "D": 3, "R": 4, "P": 3},
+      "bNote": "Alleen de video; geen onderzoek naar deze oefening. Voor loopeconomie werkt zwaar krachtwerk op een stabiele ondergrond beter (Eihara 2022, Llanos-Lagos 2024).",
+      "score": 2.15,
+      "stars": 2,
+      "locked": true,
+      "evidenceLevel": "geen",
+      "cues": ["Leg je achterste voet op een trede of box en zet je voorste voet op de BOSU.", "Zak recht omlaag en druk jezelf weer omhoog.", "Je enkel vecht om stabiel te blijven; dat is de bedoeling."],
+      "pros": ["Flinke belasting per been plus enkelstabiliteit.", "Volgens de video specifiek voor heuvel op en af."],
+      "cons": ["Op een instabiele ondergrond kun je minder gewicht gebruiken (aanname, niet nagezocht); voor loopeconomie lijkt juist zwaar belasten te werken.", "De juiste afstand tussen box en BOSU vinden kost even tijd."],
+      "pfpsNote": "Diepe kniebuiging onder lichaamsgewicht: hoge belasting voor de knieschijf.",
+      "regression": "De voorste voet op de grond.",
+      "progression": "Met gewicht in de handen.",
+      "uncertain": "De video noemt geen dosering; 2 × 8 per been is een aanvulling.",
+      "defaultDose": {"perSideSec": 40, "reps": 8, "sets": 2, "restSec": 45},
+      "sources": ["runlab", "eihara2022", "llanoslagos2024"],
+      "svg": "img/ex/bulgarian_bosu.svg"
+    },
+    {
+      "id": "rdl_rotatie",
+      "name": "Eenbenige RDL met rotatie",
+      "targets": [{"group": "hamstrings", "weight": 1}, {"group": "gluteus_max", "weight": 1}, {"group": "enkel", "weight": 0.5}, {"group": "zijkant_romp", "weight": 0.5}],
+      "type": "kracht",
+      "focus": "enkels",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "staand",
+      "equipment": ["gewicht"],
+      "kneeFlexionMaxDeg": 20,
+      "kneeLoad": "laag",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 2, "K": 4, "D": 3, "R": 4, "P": 3},
+      "bNote": "De eenbenige RDL heeft hoge EMG-activatie bij gezonde mensen (Distefano 2009); de variant met rotatie is niet onderzocht.",
+      "score": 3.15,
+      "stars": 3,
+      "locked": false,
+      "evidenceLevel": "zwak",
+      "cues": ["Sta op één been met het gewicht in de hand aan de kant van je vrije been.", "Kantel vanuit je heup voorover en draai het gewicht schuin over je lichaam naar je standvoet.", "Kom terug tot rechtop. Na 10 keer wissel je van been."],
+      "pros": ["Achterketen, heup en enkel in één oefening.", "Thuis te doen met één gewicht."],
+      "cons": ["De rotatie maakt de techniek lastiger.", "Alleen de gewone eenbenige RDL is (met EMG) onderzocht, de variant met rotatie niet."],
+      "pfpsNote": "Standknie licht gebogen onder lichaamsgewicht: lage belasting.",
+      "regression": "Zonder rotatie (gewone eenbenige RDL), of zonder gewicht.",
+      "progression": "Een zwaarder gewicht.",
+      "uncertain": "De draairichting staat niet in het transcript; hier het gewicht in de hand aan de kant van het vrije been, schuin naar de standvoet.",
+      "defaultDose": {"perSideSec": 45, "reps": 10},
+      "sources": ["distefano2009", "runlab"],
+      "svg": "img/ex/rdl_rotatie.svg"
+    },
+    {
+      "id": "band_inuit",
+      "name": "Band in-uit sprongen",
+      "targets": [{"group": "gastrocnemius", "weight": 1}, {"group": "soleus", "weight": 0.5}, {"group": "heup_buitenkant", "weight": 0.5}, {"group": "enkel", "weight": 0.5}],
+      "type": "plyometrie",
+      "focus": "enkels",
+      "sided": "bilateral",
+      "slot": "beide",
+      "position": "staand",
+      "equipment": ["miniband"],
+      "kneeFlexionMaxDeg": 20,
+      "kneeLoad": "matig",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 2, "K": 4, "D": 3, "R": 4, "P": 3},
+      "bNote": "Sprongtraining had in meta-analyses een klein of onzeker effect op loopeconomie (Eihara 2022, Llanos-Lagos 2024). Deze oefening zelf is niet onderzocht.",
+      "score": 3.15,
+      "stars": 3,
+      "locked": false,
+      "evidenceLevel": "zwak",
+      "cues": ["Doe de miniband rond je enkels en kom op je tenen.", "Spring je voeten uit elkaar en weer naar elkaar, steeds op je tenen.", "Kom veerkrachtig van je tenen af: 30 s, rust, 3 keer."],
+      "pros": ["Lage instap voor sprongwerk, met weinig impact.", "Goed als warming-up."],
+      "cons": ["Beperkte belasting per sprong.", "Het effect van sprongtraining op loopeconomie is klein en onzeker (Eihara 2022, Llanos-Lagos 2024)."],
+      "pfpsNote": "Kleine kniebuiging bij het landen: lage belasting voor de knieschijf.",
+      "regression": "Zonder band, in een rustig tempo.",
+      "progression": "Sneller, of een zwaardere band.",
+      "uncertain": "Of de band ook bij de andere twee sprongoefeningen om blijft, is niet duidelijk; hier alleen bij deze.",
+      "defaultDose": {"durationSec": 30, "sets": 3, "restSec": 30},
+      "sources": ["eihara2022", "llanoslagos2024", "runlab"],
+      "svg": "img/ex/band_inuit.svg"
+    },
+    {
+      "id": "drop_landing",
+      "name": "Eenbenige drop landing",
+      "targets": [{"group": "quadriceps_vasti", "weight": 1}, {"group": "gluteus_max", "weight": 1}, {"group": "enkel", "weight": 0.5}, {"group": "heup_buitenkant", "weight": 0.5}],
+      "type": "plyometrie",
+      "focus": "enkels",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "staand",
+      "equipment": ["trede"],
+      "kneeFlexionMaxDeg": 60,
+      "kneeLoad": "hoog",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 1, "K": 2, "D": 4, "R": 5, "P": 4},
+      "bNote": "Alleen de video en expertadvies; geen onderzoek naar deze oefening.",
+      "score": 2.9,
+      "stars": 2,
+      "locked": true,
+      "evidenceLevel": "geen",
+      "cues": ["Sta op een trede of lage box en stap of spring eraf.", "Land gecontroleerd op één been, knie boven je tweede teen, en houd de landing 2 s vast.", "Klim terug en herhaal: 10 per been."],
+      "pros": ["Traint afremmen en landen op één been, zoals bij afdalen (aanname).", "Een traptrede is genoeg."],
+      "cons": ["Hoge belasting per herhaling: bouw op en gebruik een stabiele box.", "Niet onderzocht als losse oefening."],
+      "pfpsNote": "Landen met ~60° kniebuiging onder je hele gewicht en een stoot: hoge belasting voor de knieschijf.",
+      "regression": "Vanaf een traptrede, en eerst op twee benen landen.",
+      "progression": "Een hogere box naarmate je zekerder wordt.",
+      "uncertain": "De video noemt het een drop jump, maar beschrijft een gecontroleerde landing zonder terugveren; daarom heet hij hier drop landing. Controleer in de video of er wel wordt teruggesprongen.",
+      "defaultDose": {"perSideSec": 50, "reps": 10},
+      "sources": ["runlab"],
+      "svg": "img/ex/drop_landing.svg"
+    },
+    {
+      "id": "pogo_eenbenig",
+      "name": "Eenbenige pogo's (zijwaarts en voor-achter)",
+      "targets": [{"group": "enkel", "weight": 1}, {"group": "soleus", "weight": 1}, {"group": "gastrocnemius", "weight": 0.5}],
+      "type": "plyometrie",
+      "focus": "enkels",
+      "sided": "unilateral",
+      "slot": "beide",
+      "position": "staand",
+      "equipment": [],
+      "kneeFlexionMaxDeg": 20,
+      "kneeLoad": "matig",
+      "morningLumbarFlexion": false,
+      "scores": {"B": 2, "K": 4, "D": 4, "R": 5, "P": 5},
+      "bNote": "Sprongtraining had in meta-analyses een klein of onzeker effect op loopeconomie (Eihara 2022, Llanos-Lagos 2024). Deze oefening zelf is niet onderzocht.",
+      "score": 3.8,
+      "stars": 4,
+      "locked": false,
+      "evidenceLevel": "zwak",
+      "cues": ["Sta op één been en zet explosief af vanaf je tenen.", "Maak kleine, gecontroleerde sprongetjes zijwaarts heen en weer, dan direct voor- en achteruit.", "Na 30 s wissel je van been."],
+      "pros": ["Het meest specifiek voor een reactieve enkel in meerdere richtingen.", "Geen materiaal nodig."],
+      "cons": ["Hoge belasting op kuit en achillespees; bouw op.", "Voelt eerst onnatuurlijk; volgens de video een teken dat er iets te verbeteren valt."],
+      "pfpsNote": "Kleine kniebuiging: lage belasting voor de knieschijf, wel veel voor kuit en achillespees.",
+      "regression": "Op twee benen op de plaats.",
+      "progression": "Sneller.",
+      "uncertain": "Of de 30 s voor beide richtingen samen geldt of per richting, staat er niet; hier samen.",
+      "defaultDose": {"perSideSec": 30},
+      "sources": ["eihara2022", "llanoslagos2024", "runlab"],
+      "svg": "img/ex/pogo_eenbenig.svg"
     }
   ],
   "routines": [
@@ -4211,6 +4705,67 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
     {
       "key": "witvrouw2000",
       "citation": "Witvrouw E, Lysens R, Bellemans J, Cambier D, Vanderstraeten G (2000). Intrinsic risk factors for the development of anterior knee pain in an athletic population: a two-year prospective study. Am J Sports Med 28(4):480–489."
+    },
+    {
+      "key": "fukuda2012",
+      "citation": "Fukuda TY, e.a. (2012). Hip posterolateral musculature strengthening in sedentary women with patellofemoral pain syndrome: a randomized controlled clinical trial with 1-year follow-up. J Orthop Sports Phys Ther 42(10):823–830.",
+      "url": "https://cdle.colorado.gov/sites/cdle/files/Fukuda_2012.pdf"
+    },
+    {
+      "key": "nascimento2018",
+      "citation": "Nascimento LR, e.a. (2018). Hip and knee strengthening is more effective than knee strengthening alone for reducing pain and improving activity in individuals with patellofemoral pain: a systematic review with meta-analysis. J Orthop Sports Phys Ther 48(1):19–31.",
+      "url": "https://www.jospt.org/doi/10.2519/jospt.2018.7365"
+    },
+    {
+      "key": "collins2018",
+      "citation": "Collins NJ, Barton CJ, van Middelkoop M, e.a. (2018). 2018 Consensus statement on exercise therapy and physical interventions (orthoses, taping and manual therapy) to treat patellofemoral pain. Br J Sports Med 52(18):1170–1178."
+    },
+    {
+      "key": "boren2011",
+      "citation": "Boren K, e.a. (2011). Electromyographic analysis of gluteus medius and gluteus maximus during rehabilitation exercises. Int J Sports Phys Ther 6(3):206–223."
+    },
+    {
+      "key": "distefano2009",
+      "citation": "Distefano LJ, Blackburn JT, Marshall SW, Padua DA (2009). Gluteal muscle activation during common therapeutic exercises. J Orthop Sports Phys Ther 39(7):532–540.",
+      "url": "https://www.jospt.org/doi/10.2519/jospt.2009.2796"
+    },
+    {
+      "key": "selkowitz2013",
+      "citation": "Selkowitz DM, Beneck GJ, Powers CM (2013). Which exercises target the gluteal muscles while minimizing activation of the tensor fascia lata? Electromyographic assessment using fine-wire electrodes. J Orthop Sports Phys Ther 43(2):54–64.",
+      "url": "https://www.jospt.org/doi/pdf/10.2519/jospt.2013.4116"
+    },
+    {
+      "key": "moore2020",
+      "citation": "Moore D, Semciw AI, Pizzari T (2020). A systematic review and meta-analysis of common therapeutic exercises that generate highest muscle activity in the gluteus medius and gluteus minimus segments. Int J Sports Phys Ther 15(6):856–881."
+    },
+    {
+      "key": "willy2011",
+      "citation": "Willy RW, Davis IS (2011). The effect of a hip-strengthening program on mechanics during running and during a single-leg squat. J Orthop Sports Phys Ther 41(9):625–632.",
+      "url": "https://www.jospt.org/doi/10.2519/jospt.2011.3470"
+    },
+    {
+      "key": "nunes2023",
+      "citation": "Nunes GS, e.a. (2023). Effectiveness of interventions aimed at changing movement patterns in people with patellofemoral pain: a systematic review with network meta-analysis. J Orthop Sports Phys Ther 53(12):748–760.",
+      "url": "https://www.jospt.org/doi/10.2519/jospt.2023.11956"
+    },
+    {
+      "key": "hupperets2009",
+      "citation": "Hupperets MDW, Verhagen EALM, van Mechelen W (2009). Effect of unsupervised home based proprioceptive training on recurrences of ankle sprain: randomised controlled trial. BMJ 339:b2684.",
+      "url": "https://search.pedro.org.au/search-results/record-detail/23915"
+    },
+    {
+      "key": "eihara2022",
+      "citation": "Eihara Y, e.a. (2022). Heavy resistance training versus plyometric training for improving running economy and running time trial performance: a systematic review and meta-analysis. Sports Med Open 8:138.",
+      "url": "https://link.springer.com/article/10.1186/s40798-022-00511-1"
+    },
+    {
+      "key": "llanoslagos2024",
+      "citation": "Llanos-Lagos C, e.a. (2024). The effect of strength training methods on middle-distance and long-distance runners' athletic performance: a systematic review with meta-analysis. Sports Med 54(7):1801–1833.",
+      "url": "https://link.springer.com/article/10.1007/s40279-023-01978-y"
+    },
+    {
+      "key": "runlab",
+      "citation": "RunLab (coach Vlad). Video over enkelstabiliteit voor trailrunners: acht oefeningen in drie blokken (balans, kracht, snelheid). Gelezen via het transcript, oktober 2026; de beelden zijn niet bekeken."
     }
   ]
 }
@@ -4289,7 +4844,7 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 
 ### 11.2 Functioneel
 
-- [ ] De bibliotheek laadt 70 oefeningen en 24 spiergroepen; de validator (§9.2) slaagt; een met de hand verhoogde `score` wordt geweigerd.
+- [ ] De bibliotheek laadt 70 rekoefeningen, 14 trainingsoefeningen en 25 spiergroepen; de validator (§9.2) slaagt; een met de hand verhoogde `score` wordt geweigerd.
 - [ ] Sterren en balkjes op de kaart komen exact overeen met `stars` en `scores`.
 - [ ] Filters en sortering werken samen; "toon vergrendelde" uit verbergt alle 10 vergrendelde oefeningen.
 - [ ] De bouwer toont de totale tijd live en die is gelijk aan de som van de gecompileerde timeline (0 s verschil); slepen, toevoegen en verwijderen werken die direct bij.
@@ -4327,16 +4882,21 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 - Ashoury H, Yalfani A (2024). The effectiveness of exercise programs on the quadratus lumborum muscle in patients with chronic non-specific low back pain: a systematic review. Feyz Med Sci J. <https://doaj.org/article/cd0f24cce7b1410b981244a8ad48dd51>
 - Behm DG, Blazevich AJ, Kay AD, McHugh M (2016). Acute effects of muscle stretching on physical performance, range of motion, and injury incidence in healthy active individuals: a systematic review. Appl Physiol Nutr Metab 41(1):1–11.
 - Bennett e.a. (2025). Multilevel-meta-analyse van rekken en flexibiliteit (189 studies, 6.654 volwassenen). Sports Med 55(3). <https://link.springer.com/article/10.1007/s40279-024-02143-9>
+- Boren K, e.a. (2011). Electromyographic analysis of gluteus medius and gluteus maximus during rehabilitation exercises. Int J Sports Phys Ther 6(3):206–223.
 - Borstad JD, Ludewig PM (2006). Comparison of three stretches for the pectoralis minor muscle. J Shoulder Elbow Surg 15(3):324–330. <https://pubmed.ncbi.nlm.nih.gov/16679233/>
 - Borstrekken 15 min per dag gedurende 8 weken (n=31): schouderbereik +9,8% en bankdrukken 1RM +7,4%. J Sports Sci Med (2023) 22:597–604. <https://www.jssm.org/jssm-22-597.xml-abst>
 - Bybee RF, Mamantov J, Meekins W, Witt J, Byars A, Greenwood M. Repeated extension versus static stretching of the lumbar spine in healthy adults (RCT, n=101). J Back Musculoskelet Rehabil. <https://content.iospress.com/articles/journal-of-back-and-musculoskeletal-rehabilitation/bmr00189>
+- Collins NJ, Barton CJ, van Middelkoop M, e.a. (2018). 2018 Consensus statement on exercise therapy and physical interventions (orthoses, taping and manual therapy) to treat patellofemoral pain. Br J Sports Med 52(18):1170–1178.
 - DiGiovanni BF, e.a. (2003). Tissue-specific plantar fascia-stretching exercise enhances outcomes in patients with chronic heel pain: a prospective, randomized study. J Bone Joint Surg Am 85(7):1270–1277. <https://www.aafp.org/afp/2004/0215/p961.html>
+- Distefano LJ, Blackburn JT, Marshall SW, Padua DA (2009). Gluteal muscle activation during common therapeutic exercises. J Orthop Sports Phys Ther 39(7):532–540. <https://www.jospt.org/doi/10.2519/jospt.2009.2796>
 - Effective stretching positions of the piriformis muscle evaluated using shear wave elastography (21 gezonde mannen). J Sport Rehabil (2024). <https://pubmed.ncbi.nlm.nih.gov/38593993/>
 - Effects of two stretching methods on shoulder range of motion and muscle stiffness in baseball players with posterior shoulder tightness: a randomized controlled trial. J Shoulder Elbow Surg (2016) 25(9):1395–1403. <https://search.pedro.org.au/search-results/record-detail/47639>
+- Eihara Y, e.a. (2022). Heavy resistance training versus plyometric training for improving running economy and running time trial performance: a systematic review and meta-analysis. Sports Med Open 8:138. <https://link.springer.com/article/10.1186/s40798-022-00511-1>
 - Ergezen G, Sahin M. Comparison of self-myofascial release and stretching exercises in individuals with piriformis syndrome: a randomised controlled trial (n=63). <https://citedrive.com/en/discovery/comparison-of-self-myofascial-release-and-stretching-exercises-in-individuals-with-piriformis-syndrome-a-randomised-controlled-trial>
 - Falvey EC, Clark RA, Franklyn-Miller A, Bryant AL, Briggs C, McCrory PR (2010). Iliotibial band syndrome: an examination of the evidence behind a number of treatment options. Scand J Med Sci Sports 20(4):580–587. <https://pubmed.ncbi.nlm.nih.gov/19706004/>
 - Fjerstad B, Hammer RL (2018). Comparison of two static stretching procedures on hip adductor flexibility and strength. Int J Exerc Sci 11(6):1074–1085. <https://pubmed.ncbi.nlm.nih.gov/30338021/>
 - Fredericson M, White JJ, Macmahon JM, Andriacchi TP (2002). Quantitative analysis of the relative effectiveness of 3 iliotibial band stretches. Arch Phys Med Rehabil 83(5):589–592.
+- Fukuda TY, e.a. (2012). Hip posterolateral musculature strengthening in sedentary women with patellofemoral pain syndrome: a randomized controlled clinical trial with 1-year follow-up. J Orthop Sports Phys Ther 42(10):823–830. <https://cdle.colorado.gov/sites/cdle/files/Fukuda_2012.pdf>
 - Gluteal stretching vs. Lightback® on hip rotation range of motion and posterior chain flexibility in healthy subjects: a cross-over clinical trial (2024). PeerJ, doi 10.7717/peerj.18523. <https://peerj.com/articles/18523>
 - González-de-la-Flor Á, e.a. (2024). Comparison of two different stretching strategies to improve hip extension mobility in healthy and active adults: a crossover clinical trial. BMC Musculoskelet Disord. <https://doaj.org/article/51e5a0775e7e4cd1a9f6829b306d56c3>
 - Hanney WJ, Puentedura EJ, Kolber MJ, e.a. (2017). The immediate effects of manual stretching and cervicothoracic junction manipulation on cervical range of motion and upper trapezius pressure pain thresholds. <https://stars.library.ucf.edu/scopus2015/5086>
@@ -4344,14 +4904,19 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 - Herbert RD, de Noronha M, Kamper SJ (2011). Stretching to prevent or reduce muscle soreness after exercise. Cochrane Database Syst Rev (7):CD004577. <https://www.cochrane.org/evidence/CD004577_stretching-prevent-or-reduce-muscle-soreness-after-exercise>
 - Herrington L, Horsley I (2014). Effects of latissimus dorsi length on shoulder flexion in canoeists, swimmers, rugby players, and controls. J Sport Health Sci. <https://doi.org/10.1016/j.jshs.2013.01.004>
 - Higgs F, Winter SL (2009). The effect of a four-week proprioceptive neuromuscular facilitation stretching program on isokinetic torque production. J Strength Cond Res 23(5):1442–1447. <https://kar.kent.ac.uk/47688>
+- Hupperets MDW, Verhagen EALM, van Mechelen W (2009). Effect of unsupervised home based proprioceptive training on recurrences of ankle sprain: randomised controlled trial. BMJ 339:b2684. <https://search.pedro.org.au/search-results/record-detail/23915>
 - Kamankesh S, Tadibi V (2014). Effect of static stretching with different duration on strength and range of motion of wrist in female rock climbers. J Res Sport Rehabil 1(2):59–64. <https://rsr.basu.ac.ir/article_631_en.html>
 - Konrad A, e.a. (2024). Chronic effects of stretching on range of motion with consideration of potential moderating variables: a systematic review with meta-analysis. J Sport Health Sci 13(2):186–194. <https://www.sciencedirect.com/science/article/pii/S2095254623000571>
 - Konrad A, e.a. (2025). Detraining na rektraining: systematische review en meta-analyse (13 studies, n=556). Sports Med Open.
 - Lauersen JB, Bertelsen DM, Andersen LB (2014). The effectiveness of exercise interventions to prevent sports injuries: a systematic review and meta-analysis of randomised controlled trials. Br J Sports Med 48(11):871–877.
 - Lee JH, Jang KM, Kim E, Rhim HC, Kim HD (2021). Effects of static and dynamic stretching with strengthening exercises in patients with patellofemoral pain who have inflexible hamstrings: a randomized controlled trial. Sports Health 13(1):49–56. <https://pmc.ncbi.nlm.nih.gov/articles/PMC7734366>
 - Lee JH, Jang KM, Kim E, Rhim HC, Kim HD (2021). Static and dynamic quadriceps stretching exercises in patients with patellofemoral pain: a randomized controlled trial (44 patiënten, geen controlegroep zonder rekken). <https://pmc.ncbi.nlm.nih.gov/articles/PMC8404765>
+- Llanos-Lagos C, e.a. (2024). The effect of strength training methods on middle-distance and long-distance runners' athletic performance: a systematic review with meta-analysis. Sports Med 54(7):1801–1833. <https://link.springer.com/article/10.1007/s40279-023-01978-y>
 - McClure P, Balaicuis J, Heiland D, Broersma ME, Thorndike CK, Wood A (2007). A randomized controlled comparison of stretching procedures for posterior shoulder tightness. J Orthop Sports Phys Ther 37(3):108–114. <https://search.pedro.org.au/search-results/record-detail/18480>
+- Moore D, Semciw AI, Pizzari T (2020). A systematic review and meta-analysis of common therapeutic exercises that generate highest muscle activity in the gluteus medius and gluteus minimus segments. Int J Sports Phys Ther 15(6):856–881.
 - Nakamura M, e.a. (2021). The comparison of different stretching intensities on the range of motion and muscle stiffness of the quadriceps muscles. Front Physiol 11:628870. <https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2020.628870>
+- Nascimento LR, e.a. (2018). Hip and knee strengthening is more effective than knee strengthening alone for reducing pain and improving activity in individuals with patellofemoral pain: a systematic review with meta-analysis. J Orthop Sports Phys Ther 48(1):19–31. <https://www.jospt.org/doi/10.2519/jospt.2018.7365>
+- Nunes GS, e.a. (2023). Effectiveness of interventions aimed at changing movement patterns in people with patellofemoral pain: a systematic review with network meta-analysis. J Orthop Sports Phys Ther 53(12):748–760. <https://www.jospt.org/doi/10.2519/jospt.2023.11956>
 - Oliveira-Campelo NM, de Melo CA, Alburquerque-Sendín F, Machado JP (2013). Short- and medium-term effects of manual therapy on cervical active range of motion and pressure pain sensitivity in latent myofascial pain of the upper trapezius muscle: a randomized controlled trial. J Manipulative Physiol Ther 36(5):300–309.
 - Powden CJ, Hoch JM, Hoch MC (2015). Reliability and minimal detectable change of the weight-bearing lunge test: a systematic review. Man Ther 20(4):524–532.
 - Powers CM, Ho KY, Chen YJ, Souza RB, Farrokhi S (2014). Patellofemoral joint stress during weight-bearing and non-weight-bearing quadriceps exercises. J Orthop Sports Phys Ther 44(5):320–327.
@@ -4359,10 +4924,13 @@ Geverifieerd in oktober 2026 (uit v1). Controleer dit bij elke grote iOS-update.
 - Radford JA, Burns J, Buchbinder R, Landorf KB, Cook C (2006). Does stretching increase ankle dorsiflexion range of motion? A systematic review. Br J Sports Med 40(10):870–875. <https://bjsm.bmj.com/content/40/10/870>
 - RCT: training- en detrainingseffecten van 8 weken dynamisch heupbuigerrekken bij profvoetballers met lage rugpijn (n=40). J Sports Sci (2025). <https://lida.sport-iat.de/ta/Record/4094529?lng=en>
 - Reiner M, Gabriel A, Sommer D, Bernsteiner D, Tilp M, Konrad A (2023). Effects of a high-volume 7-week pectoralis muscle stretching training on muscle function and muscle stiffness. Sports Med Open 9:40. <https://pubmed.ncbi.nlm.nih.gov/37261567/>
+- RunLab (coach Vlad). Video over enkelstabiliteit voor trailrunners: acht oefeningen in drie blokken (balans, kracht, snelheid). Gelezen via het transcript, oktober 2026; de beelden zijn niet bekeken.
+- Selkowitz DM, Beneck GJ, Powers CM (2013). Which exercises target the gluteal muscles while minimizing activation of the tensor fascia lata? Electromyographic assessment using fine-wire electrodes. J Orthop Sports Phys Ther 43(2):54–64. <https://www.jospt.org/doi/pdf/10.2519/jospt.2013.4116>
 - Snook SH, Webster BS, McGorry RW, Fogleman MT, McCann KB (1998). The reduction of chronic nonspecific low back pain through the control of early morning lumbar flexion. Spine 23(23):2601–2607.
 - Thomas E, Bianco A, Paoli A, Palma A (2018). The relation between stretching typology and stretching duration: the effects on range of motion. Int J Sports Med 39(4):243–254.
 - Warneke K, e.a. (2025). Delphi-consensus van 20 onderzoekers over rekken. J Sport Health Sci. <https://pmc.ncbi.nlm.nih.gov/articles/PMC12305623/>
 - Watt JR, e.a. (2011). Effect of a supervised hip flexor stretching program on gait in elderly individuals. PM R 3(4):324–329. <https://pubmed.ncbi.nlm.nih.gov/21497318/>
+- Willy RW, Davis IS (2011). The effect of a hip-strengthening program on mechanics during running and during a single-leg squat. J Orthop Sports Phys Ther 41(9):625–632. <https://www.jospt.org/doi/10.2519/jospt.2011.3470>
 - Willy RW, e.a. (2019). Patellofemoral pain: clinical practice guidelines. J Orthop Sports Phys Ther 49(9):CPG1–CPG95. <https://www.jospt.org/doi/10.2519/jospt.2019.0302>
 - Winters MV, Blake CG, Trost JS, e.a. (2004). Passive versus active stretching of hip flexor muscles in subjects with limited hip extension: a randomized clinical trial. Phys Ther 84(9):800–807. <https://search.pedro.org.au/search-results/record-detail/11191>
 - Witvrouw E, Lysens R, Bellemans J, Cambier D, Vanderstraeten G (2000). Intrinsic risk factors for the development of anterior knee pain in an athletic population: a two-year prospective study. Am J Sports Med 28(4):480–489.

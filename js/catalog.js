@@ -2,9 +2,12 @@
 // DOM, zodat het in Node te testen is.
 import { rate } from './library.js';
 import { exerciseDurationSec } from './format.js';
+import { isTraining, FOCUS_LABELS } from './types.js';
 
 export const SORTS = ['score', 'naam', 'R', 'tijd'];
 export const REGIONS = ['Voet en onderbeen', 'Heup en bovenbeen', 'Romp en nek', 'Schouder en arm'];
+// Trainingsoefeningen staan in de lijst los van het rekken, per focus.
+export const TRAINING_REGION = 'Training';
 export const NO_EQUIPMENT = 'geen';
 
 export function defaultFilters() {
@@ -89,19 +92,25 @@ export function listGroup(ex, f = defaultFilters()) {
 }
 
 // Groepeert per regio en spiergroep in de volgorde van §4 (= de volgorde van
-// groups in library.json). Lege groepen vallen weg.
+// groups in library.json). Lege groepen vallen weg. De trainingsoefeningen
+// staan daarna in een eigen regio, per focus (Heupkracht, Enkelstabiliteit).
 export function groupItems(items, lib, sort, f = defaultFilters()) {
   const sorted = sortItems(items, sort);
+  const stretches = sorted.filter((it) => !isTraining(it.ex));
   const out = [];
   for (const region of REGIONS) {
     const groups = [];
     for (const g of lib.groups.values()) {
       if (g.region !== region) continue;
-      const list = sorted.filter((it) => listGroup(it.ex, f) === g.id);
+      const list = stretches.filter((it) => listGroup(it.ex, f) === g.id);
       if (list.length) groups.push({ group: g, items: list });
     }
     if (groups.length) out.push({ region, groups });
   }
+  const training = Object.entries(FOCUS_LABELS)
+    .map(([focus, label]) => ({ group: { id: `focus-${focus}`, label }, items: sorted.filter((it) => isTraining(it.ex) && it.ex.focus === focus) }))
+    .filter((g) => g.items.length);
+  if (training.length) out.push({ region: TRAINING_REGION, groups: training });
   return out;
 }
 

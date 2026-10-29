@@ -4,7 +4,8 @@ import { starsWithScore, icon, bodyMap, positionIcon } from './graphics.js';
 import { rate } from '../library.js';
 import { ratingWeights } from '../settings.js';
 import { formatDose, evidenceLabel, SLOT_LABELS, TYPE_LABELS, SIDED_LABELS } from '../format.js';
-import { RUBRICS, BREATHING, CARD } from '../texts.js';
+import { RUBRICS, RUBRICS_TRAINING, BREATHING, CARD } from '../texts.js';
+import { isTraining } from '../types.js';
 import { WARNINGS } from '../warnings.js';
 import { access } from '../knee.js';
 import { hasFigure, figureDemo } from './figure.js';
@@ -32,8 +33,9 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) 
   const rubricSheet = h('dialog', { class: 'sheet', 'aria-labelledby': 'rubric-title' });
   rubricSheet.addEventListener('click', (e) => { if (e.target === rubricSheet) rubricSheet.close(); });
 
+  // Trainingsoefeningen hebben een eigen B- en D-rubriek (§3.1).
   function openRubric(letter, ex) {
-    const r = RUBRICS[letter];
+    const r = (isTraining(ex) && RUBRICS_TRAINING[letter]) || RUBRICS[letter];
     const value = ex.scores[letter];
     fill(rubricSheet, 
       h('div', { class: 'sheet-body' },
@@ -122,7 +124,9 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) 
       h('p', null, h('strong', null, 'Ademhaling: '), BREATHING[ex.type]),
       h('p', null, h('strong', null, 'Standaarddosis: '), formatDose(ex.defaultDose, ex)),
       h('p', null, h('strong', null, 'Regressie: '), ex.regression),
-      h('p', null, h('strong', null, 'Progressie: '), ex.progression)));
+      h('p', null, h('strong', null, 'Progressie: '), ex.progression),
+      // Twijfel uit de bron (§6.2), bv. een transcript zonder beeld.
+      ex.uncertain ? h('p', { class: 'info-bar', role: 'note' }, h('strong', null, 'Onzeker: '), ex.uncertain) : null));
 
     // 6. Doelspieren op de lichaamskaart.
     root.append(section('Doelspieren',
@@ -131,17 +135,21 @@ export function createExerciseScreen({ lib, onBack, getContext, onTry, onAdd }) 
         h('span', null, h('i'), `Primair: ${primary.map((g) => g.label).join(', ')}`),
         secondary.length ? h('span', null, h('i', { class: 'half' }), `Bijbetrokken: ${secondary.map((g) => g.label).join(', ')}`) : null)));
 
-    // 7. Bronnen, uitklapbaar: de oefening plus het groepsbewijs uit §4.
-    const group = lib.groups.get(ex.targets[0].group);
+    // 7. Bronnen, uitklapbaar: de oefening plus het groepsbewijs uit §4. Bij
+    // een trainingsoefening alleen de bronnen van de oefening: het groepsbewijs
+    // gaat over rekken.
+    const group = isTraining(ex) ? null : lib.groups.get(ex.targets[0].group);
     root.append(h('section', { class: 'section' },
       h('details', { class: 'sources' },
         h('summary', null, h('span', null, 'Bronnen'), h('span', { class: 'chev', 'aria-hidden': 'true' }, icon('back'))),
         ex.sources.length ? [h('p', null, h('strong', null, 'Bij deze oefening')), h('ul', null, ex.sources.map((k) => sourceItem(lib.sources.get(k))))] : null,
-        h('p', null, h('strong', null, `Bewijs voor de spiergroep: ${group.label}`)),
-        h('p', null, group.evidence),
-        // §4 zet "Let op:" voor deze notitie.
-        group.note ? h('p', null, h('strong', null, 'Let op: '), group.note) : null,
-        group.sources.length ? h('ul', null, group.sources.map((k) => sourceItem(lib.sources.get(k)))) : null)));
+        group ? [
+          h('p', null, h('strong', null, `Bewijs voor de spiergroep: ${group.label}`)),
+          h('p', null, group.evidence),
+          // §4 zet "Let op:" voor deze notitie.
+          group.note ? h('p', null, h('strong', null, 'Let op: '), group.note) : null,
+          group.sources.length ? h('ul', null, group.sources.map((k) => sourceItem(lib.sources.get(k)))) : null,
+        ] : null)));
 
     // 8. Knoppen, onderaan in de duimzone. Tijdens een opvlamming kan alles
     // boven 45° (W8) niet worden toegevoegd of afgespeeld. Vlak voor de speler start, past main.js (beginRun) dezelfde

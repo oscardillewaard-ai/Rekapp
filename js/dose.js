@@ -1,8 +1,12 @@
 // Weekdosis per spiergroep, gepland en werkelijk (§6.4). Puur: geen DOM.
+// Trainingsoefeningen (kracht, balans, plyometrie) tellen niet mee: dit is de
+// rekdosis.
 //
 // Resultaat: Map groeps-id → { L, R, dyn } in seconden per kant per week.
 // Alleen statisch en PNF tellen voor L/R; dynamisch en actief komen in dyn.
 // Een groep die niet geraakt wordt staat er niet in ("–" in §6.4.3).
+
+import { isTraining } from './types.js';
 
 const COUNTED = new Set(['static', 'pnf']);
 
@@ -16,6 +20,7 @@ function bucket(dose, group) {
 }
 
 function add(dose, ex, sec, factor) {
+  if (isTraining(ex)) return;
   for (const t of ex.targets) {
     const d = bucket(dose, t.group);
     if (COUNTED.has(ex.type)) {

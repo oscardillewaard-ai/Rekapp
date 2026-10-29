@@ -2,6 +2,7 @@
 // (§6.11). Puur: geen DOM, geen opslag.
 import { validateSchema } from './schema.js';
 import { compileRoutine } from './timeline.js';
+import { isTraining } from './types.js';
 
 const LETTERS = ['B', 'K', 'D', 'R', 'P'];
 
@@ -170,6 +171,14 @@ export function validateLibrary(lib, schema) {
     }
 
     // 5. B = bBase van de primaire groep, −1 voor dynamisch/actief, tenzij bNote.
+    // Een trainingsoefening heeft altijd een bNote (B volgt de trainingsrubriek)
+    // en een focus; een rekoefening geen focus.
+    if (isTraining(ex)) {
+      if (ex.bNote === undefined) add(where, 'bNote', 'een trainingsoefening heeft een bNote nodig (waarom deze B)');
+      if (ex.focus === undefined) add(where, 'focus', 'een trainingsoefening heeft een focus nodig (heupen of enkels)');
+    } else if (ex.focus !== undefined) {
+      add(where, 'focus', 'alleen trainingsoefeningen hebben een focus');
+    }
     const group = groups.get(ex.targets[0].group);
     if (group && ex.bNote === undefined) {
       const penalty = meta.scoring.techniquePenalty[ex.type] ?? 0;

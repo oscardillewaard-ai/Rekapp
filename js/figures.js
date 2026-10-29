@@ -9,6 +9,7 @@ import { STAAND } from './figures/staand.js';
 import { STOEL } from './figures/stoel.js';
 import { VLOER } from './figures/vloer.js';
 import { LIGGEND } from './figures/liggend.js';
+import { TRAINING } from './figures/training.js';
 
 import { BONES } from './figures/rig.js';
 
@@ -18,7 +19,7 @@ export { BONES, dir, dist, twoBone, kneeFlexion, at } from './figures/rig.js';
 // viewBox: [x, y, w, h], props, active, bands?, effort?, poses, timelines }.
 // Een opgetild figuur (3D-modus, as3d) heeft view '3d' en lift: 'side' of
 // 'front': de houdingen blijven 2D, de punten gaan via lift.js de ruimte in.
-export const FIGURES = { ...STAAND, ...STOEL, ...VLOER, ...LIGGEND };
+export const FIGURES = { ...STAAND, ...STOEL, ...VLOER, ...LIGGEND, ...TRAINING };
 
 export const hasFigure = (id) => Object.hasOwn(FIGURES, id);
 

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateLibrary, checkedLibrary, rate, computeScore, computeStars, mustBeLocked, weightsToPercent, LibraryError } from '../js/library.js';
+import { isTraining } from '../js/types.js';
 import { rawLibrary, schema, lib } from './helpers.js';
 
 const errorsFor = (mutate) => {
@@ -10,12 +11,16 @@ const errorsFor = (mutate) => {
 };
 const exIn = (data, id) => data.exercises.find((x) => x.id === id);
 
-test('de bibliotheek laadt 70 oefeningen en 24 spiergroepen en de validator slaagt', () => {
+test('de bibliotheek laadt 70 rekoefeningen, 14 trainingsoefeningen en 25 spiergroepen en de validator slaagt', () => {
   const data = rawLibrary();
   assert.deepEqual(validateLibrary(data, schema), []);
-  assert.equal(data.exercises.length, 70);
-  assert.equal(data.groups.length, 24);
-  assert.equal(data.exercises.filter((x) => x.locked).length, 10);
+  const stretches = data.exercises.filter((x) => !isTraining(x));
+  assert.equal(stretches.length, 70);
+  assert.equal(data.exercises.length, 84);
+  assert.deepEqual(Object.fromEntries(['heupen', 'enkels'].map((f) => [f, data.exercises.filter((x) => x.focus === f).length])), { heupen: 6, enkels: 8 });
+  assert.equal(data.groups.length, 25);
+  assert.equal(stretches.filter((x) => x.locked).length, 10);
+  assert.equal(data.exercises.filter((x) => x.locked).length, 13);
   assert.equal(data.routines.length, 17);
   const kinds = {};
   for (const r of data.routines) kinds[r.kind] = (kinds[r.kind] ?? 0) + 1;
@@ -23,9 +28,26 @@ test('de bibliotheek laadt 70 oefeningen en 24 spiergroepen en de validator slaa
 });
 
 test('verdeling van de sterren is zoals in §3.2', () => {
-  const count = {};
-  for (const x of lib.exercises.values()) count[x.stars] = (count[x.stars] ?? 0) + 1;
-  assert.deepEqual(count, { 5: 3, 4.5: 9, 4: 14, 3.5: 30, 3: 4, 2: 10 });
+  const count = (list) => {
+    const c = {};
+    for (const x of list) c[x.stars] = (c[x.stars] ?? 0) + 1;
+    return c;
+  };
+  const all = [...lib.exercises.values()];
+  assert.deepEqual(count(all.filter((x) => !isTraining(x))), { 5: 3, 4.5: 9, 4: 14, 3.5: 30, 3: 4, 2: 10 });
+  assert.deepEqual(count(all.filter(isTraining)), { 4.5: 1, 4: 5, 3.5: 3, 3: 2, 2: 3 });
+});
+
+test('trainingsoefeningen: bNote en focus verplicht, focus alleen bij training, B los van de groep', () => {
+  const noNote = errorsFor((d) => { delete exIn(d, 'zijsteun').bNote; });
+  assert.ok(noNote.some((e) => e.where === 'oefening zijsteun' && e.field === 'bNote'), JSON.stringify(noNote));
+  const noFocus = errorsFor((d) => { delete exIn(d, 'zijsteun').focus; });
+  assert.ok(noFocus.some((e) => e.where === 'oefening zijsteun' && e.field === 'focus'), JSON.stringify(noFocus));
+  const stretchFocus = errorsFor((d) => { exIn(d, 'gastroc_muur').focus = 'enkels'; });
+  assert.ok(stretchFocus.some((e) => e.where === 'oefening gastroc_muur' && e.field === 'focus'), JSON.stringify(stretchFocus));
+  // B4 bij een groep met bBase 2 is in orde: training volgt de eigen rubriek.
+  assert.equal(lib.exercises.get('heup_abductie_zij').scores.B, 4);
+  assert.equal(lib.groups.get('heup_buitenkant').bBase, 2);
 });
 
 // §11.1 A. Scores en sterren (moeten exact zo uit library.js komen). De

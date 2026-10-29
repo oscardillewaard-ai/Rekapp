@@ -107,6 +107,10 @@ export function liftProps(fig) {
           face([[x0, y0, -d], [x0, y0, d], [x0, y1, d], [x0, y1, -d]], [-1, 0, 0]),
         );
       }
+    } else if (p.poly) {
+      // Een vlak in het beeld (bv. de koepel van een BOSU): in het midden van
+      // de diepte, van beide kanten zichtbaar.
+      out.push({ poly: p.poly.map(([x, y]) => (front ? [0, 86 - y, 80 - x] : [x - 80, 86 - y, 0])), solid: p.solid });
     } else if (p.circle) {
       // Een rol (handdoek) dwars onder het figuur: een strook.
       const [cx, cy, r] = p.circle;

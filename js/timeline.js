@@ -1,5 +1,6 @@
 // Routine → lijst segmenten (§6.8.1). De totale tijd in de bouwer is de som van
 // precies deze lijst. Puur: geen DOM, geen opslag.
+import { isTraining } from './types.js';
 
 // Automatische overgang (§6.3): hoog = staand of stoel, laag = vloer of
 // liggend; hoog→hoog 5 s, laag→laag 10 s, hoog↔laag 15 s.
@@ -46,7 +47,10 @@ export function compileRoutine(routine, exercises, { timing, sideSwitchSec = tim
             push({ ...base, kind: 'relax', side, set, round, durationSec: step.pnf.stretchSec });
           }
         } else {
-          push({ ...base, kind: 'work', side, set, ...info, durationSec: unilateral ? step.perSideSec : step.durationSec });
+          // Training met herhalingen: de speler noemt het aantal in plaats van
+          // de seconden.
+          const reps = isTraining(ex) && step.reps ? { reps: step.reps } : {};
+          push({ ...base, kind: 'work', side, set, ...info, ...reps, durationSec: unilateral ? step.perSideSec : step.durationSec });
         }
       });
     }

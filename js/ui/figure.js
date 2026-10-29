@@ -62,6 +62,8 @@ export function createFigure(id, className = '', { mode3d = false, turnable = fa
   const spine = [...SPINE.filter(([name]) => wide || (name !== 'hips' && name !== 'shoulders')), ...TRAPS.filter(([name]) => fig.active.includes(name))].map(line);
   const head = s('circle', { class: fig.active.includes('head') ? 'head active' : 'head', r: BONES.head });
   const bands = (fig.bands ?? []).map(([a, b]) => ({ el: s('line', { class: 'band' }), a, b }));
+  // Gewicht of bal in de hand (training): een schijfje dat met het punt meegaat.
+  const weights = (fig.weights ?? []).map(([a, r]) => ({ el: s('circle', { class: 'weight', r }), a }));
   const effort = fig.effort ? [s('line', { class: 'effort' }), s('line', { class: 'effort' })] : [];
   // Volgorde: verre kant (in zijaanzicht als geheel gedimd, zodat overlappende
   // uiteinden niet lichter worden), romp en hoofd, banden, nabije kant,
@@ -85,7 +87,7 @@ export function createFigure(id, className = '', { mode3d = false, turnable = fa
   layer();
   if (limbs) svg.append(behindLayer);
   else svg.append(front ? s('g', null, ...far.map((l) => l.el)) : s('g', { class: 'far' }, ...far.map((l) => l.el)));
-  svg.append(...spine.map((l) => l.el), head, ...bands.map((b) => b.el));
+  svg.append(...spine.map((l) => l.el), head, ...bands.map((b) => b.el), ...weights.map((w) => w.el));
   svg.append(...(limbs ? [frontLayer] : near.map((l) => l.el)), ...effort);
 
   function place(l, p, q) {
@@ -103,6 +105,11 @@ export function createFigure(id, className = '', { mode3d = false, turnable = fa
     head.setAttribute('cx', f2(pts.head[0]));
     head.setAttribute('cy', f2(pts.head[1]));
     for (const b of bands) place(b, point(pts, b.a), point(pts, b.b));
+    for (const w of weights) {
+      const p = point(pts, w.a);
+      w.el.setAttribute('cx', f2(p[0]));
+      w.el.setAttribute('cy', f2(p[1]));
+    }
     // Inspanning (PNF): twee streepjes voorbij de zool die zacht pulseren.
     if (!effort.length) return;
     const k = fig.effort;

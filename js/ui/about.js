@@ -3,7 +3,7 @@
 // (instelling) zonder K en zonder de kniescores (§6.11).
 import { h, fill } from './dom.js';
 import { icon } from './graphics.js';
-import { ABOUT, STARS_FORMULA, STARS_MEANING, STARS_NO_KNEE, RUBRICS } from '../texts.js';
+import { ABOUT, STARS_FORMULA, STARS_MEANING, STARS_NO_KNEE, RUBRICS, RUBRICS_TRAINING } from '../texts.js';
 import { REGIONS } from '../catalog.js';
 
 const LETTERS = ['B', 'K', 'D', 'R', 'P'];
@@ -32,8 +32,7 @@ export function createAboutScreen({ lib, getSettings }) {
           ? 'Elke oefening krijgt vijf deelscores van 1 tot 5. De score is een gewogen gemiddelde. Deze app toont de sterren zonder knie-poort: het knieslot is op jouw verzoek verwijderd. Kies je liever knievriendelijk, zet dan het filter "alleen K ≥ 4" aan of geef K meer gewicht bij "Weging aanpassen" in de instellingen.'
           : STARS_NO_KNEE.intro),
         h('pre', { class: 'formula' }, (kneeOn ? STARS_FORMULA : STARS_NO_KNEE.formula).join('\n')),
-        ...LETTERS.filter((l) => kneeOn || l !== 'K').map((l) => {
-          const r = RUBRICS[l];
+        ...[...LETTERS.filter((l) => kneeOn || l !== 'K').map((l) => RUBRICS[l]), RUBRICS_TRAINING.B, RUBRICS_TRAINING.D].map((r) => {
           return details(r.title.replace(/\.$/, ''),
             r.intro ? h('p', null, cap(r.intro)) : null,
             h('ol', { class: 'rubric', reversed: true }, [5, 4, 3, 2, 1].map((lvl) => h('li', null, h('b', null, String(lvl)), h('span', null, r.levels[lvl])))),
