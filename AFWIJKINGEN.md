@@ -243,15 +243,20 @@ lichaamskaart blijft, het positie-icoon vervalt waar een figuur staat.
   als hij in beeld is, en heeft een knop "Animatie pauzeren" / "Animatie
   afspelen" (bewegend beeld langer dan 5 s moet te pauzeren zijn). Die twee
   teksten zijn eigen teksten; de spec geeft ze niet.
-- **Speler:** het figuur staat waar het positie-icoon stond, naast de
-  lichaamskaart, en volgt het segment: voorbereiding en wissels in de
+- **Speler:** het figuur volgt het segment: voorbereiding en wissels in de
   beginhouding, statisch rekken gaat in ruim 2 s naar de rekstand, PNF toont
   aanspannen (streepjes bij de voet) en loslaten (been verder), dynamisch
   herhaalt de beweging in het tempo van de standaarddosering.
-- **Instelling "Groot stokfiguur"** (Instellingen → Speler, standaard uit,
-  keuze Oscar): het figuur in de speler wordt groter en de timerring kleiner;
-  de cijfers blijven even groot. Eigen tekst; de spec kent deze instelling
-  niet.
+- **Indeling van de speler (variant A, keuze Oscar 29-10-2026):** het
+  stokfiguur staat bovenaan over de hele breedte en vult de ruimte die
+  overblijft (op een klein scherm kleiner, zodat alles zonder scrollen past);
+  de lichaamskaart klein in de hoek. Daaronder naam, kant en fase, dan de
+  cijfers (96 px, §8.3) met een balk die afloopt in plaats van de ring, in
+  de kleur van de fase (werk, voorbereiden/wisselen/rust in oranje,
+  aanspannen in rood). De ademcue staat niet meer onder de cue maar in het
+  uitlegblad onder een tik op het figuur. De instelling "Groot stokfiguur"
+  (eerdere keuze, standaard uit) is daarmee vervallen; een opgeslagen waarde
+  wordt genegeerd.
 - **Instelling "3D-figuren"** (Instellingen → Weergave, standaard uit, keuze
   Oscar): alle stokfiguren schuin in 3D. Figuren uit zijaanzicht worden
   automatisch opgetild (`js/figures/lift.js`): de nabije kant komt naar

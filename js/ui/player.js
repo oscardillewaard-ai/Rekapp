@@ -15,13 +15,11 @@ import { vibrate } from '../audio.js';
 import { createWakeLock } from '../wakelock.js';
 import { createFigure, hasFigure } from './figure.js';
 
-const RING_R = 45;
-const RING_C = 2 * Math.PI * RING_R;
 const WORKISH = new Set(['work', 'contract', 'relax']);
 
 // Resterende tijd in hele seconden, naar boven afgerond. Een segment duurt
-// hoogstens 180 s, dus nooit meer dan drie cijfers (past in de ring bij
-// ≥ 96 px, §8.3). De spraak noemt de duur ook in seconden.
+// hoogstens 180 s, dus nooit meer dan drie cijfers (≥ 96 px, §8.3). De spraak
+// noemt de duur ook in seconden.
 function clock(ms) {
   return String(Math.max(0, Math.ceil(ms / 1000)));
 }
@@ -53,25 +51,12 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
   const side = h('div', { class: 'player-side' });
   const label = h('div', { class: 'player-label' });
   live.append(exName, side, label);
-  const ringFill = (() => {
-    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    c.setAttribute('cx', '50'); c.setAttribute('cy', '50'); c.setAttribute('r', String(RING_R));
-    c.setAttribute('class', 'ring-fill');
-    c.setAttribute('stroke-dasharray', String(RING_C));
-    return c;
-  })();
-  const ring = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  ring.setAttribute('viewBox', '0 0 100 100');
-  ring.setAttribute('class', 'ring');
-  ring.setAttribute('aria-hidden', 'true');
-  const ringTrack = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  ringTrack.setAttribute('cx', '50'); ringTrack.setAttribute('cy', '50'); ringTrack.setAttribute('r', String(RING_R));
-  ringTrack.setAttribute('class', 'ring-track');
-  ring.append(ringTrack, ringFill);
+  // Resterende tijd: grote cijfers met een balk eronder die afloopt, in de
+  // kleur van de fase (werk, voorbereiden/wisselen/rust, aanspannen).
   const digits = h('div', { class: 'player-digits', role: 'timer', 'aria-live': 'off' });
-  const timer = h('div', { class: 'player-timer' }, ring, digits);
+  const barFill = h('i', { class: 'player-bar-fill' });
+  const timer = h('div', { class: 'player-timer' }, digits, h('div', { class: 'player-bar', 'aria-hidden': 'true' }, barFill));
   const cue = h('p', { class: 'player-cue' });
-  const breath = h('p', { class: 'player-breath' });
   const upNext = h('p', { class: 'player-next' });
 
   const btnBack = h('button', { class: 'btn ctrl', type: 'button', 'aria-label': 'Terug naar het begin van deze oefening', onclick: () => act(back) }, icon('prev'));
@@ -95,7 +80,9 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
   const runView = h('div', { class: 'player-run' },
     h('header', { class: 'player-head' }, btnStop, title, totalLeft),
     banners,
-    h('div', { class: 'player-main' }, visual, live, timer, cue, breath, upNext),
+    // Het stokfiguur bovenaan vult de ruimte die overblijft (variant A, keuze
+    // Oscar); de ademcue staat in het uitlegblad onder een tik op het figuur.
+    h('div', { class: 'player-main' }, visual, live, timer, cue, upNext),
     h('div', { class: 'player-controls' }, btnBack, btnPlay, btnNext));
   const finishView = h('div', { class: 'player-finish', hidden: true });
   root.append(runView, finishView, flash, confirm, detail);
@@ -251,9 +238,7 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
       fill(visual,
         ex ? bodyMap(ex.targets, { crop: 'mini', aspect: 72 / 104, className: 'mini-lg' }) : null,
         figure ? figure.el : ex ? positionIcon(ex.position, 'pos-lg') : null);
-      root.classList.toggle('big-figure', Boolean(figure && getSettings().largeFigure));
       cue.textContent = ex ? ex.cues[0] : '';
-      breath.textContent = ex ? BREATHING[ex.type] : '';
       const after = nextExerciseAfter(state.segments, idx, lib.exercises);
       upNext.textContent = after && after !== ex ? `Volgende: ${after.name}` : '';
       const step = state.segments[idx].stepIndex;
@@ -264,12 +249,9 @@ export function createPlayerScreen({ lib, audio, getSettings, onSave, onFinished
     const seg = v.segment;
     figure?.update(seg.kind, seg.durationSec * 1000 - v.remainingMs, { round: seg.round ?? 1 });
     const frac = seg.durationSec ? Math.min(1, Math.max(0, v.remainingMs / (seg.durationSec * 1000))) : 0;
-    ringFill.setAttribute('stroke-dashoffset', String(RING_C * (1 - frac)));
+    barFill.style.transform = `scaleX(${frac.toFixed(4)})`;
     const text = clock(v.remainingMs);
-    if (digits.textContent !== text) {
-      digits.textContent = text;
-      timer.classList.toggle('wide', text.length > 2);
-    }
+    if (digits.textContent !== text) digits.textContent = text;
     const total = formatDuration(Math.ceil(v.totalRemainingMs / 1000));
     if (total !== shownTotal) { shownTotal = total; totalLeft.textContent = total; }
     // Alleen bij een wissel opnieuw tekenen (anders vallen klikken op het icoon weg).

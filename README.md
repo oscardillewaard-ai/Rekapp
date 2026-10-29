@@ -124,8 +124,9 @@ Handig om ook even te proberen:
       nergens toe te voegen of af te spelen; "Terugdraaien" werkt binnen 24
       uur na het aanzetten.
 - [ ] Stokfiguren: op een paar kaarten loopt de demo vloeiend en stopt hij met
-      de pauzeknop; in de speler volgt het figuur de fasen, ook met "Groot
-      stokfiguur" aan en in de nachtmodus.
+      de pauzeknop; in de speler staat het figuur groot bovenaan en volgt het
+      de fasen, ook in de nachtmodus. Een tik op het figuur toont de uitleg
+      met de ademcue.
 - [ ] Routines → Heupkracht en Enkelstabiliteit: de tegels openen, de
       preview toont sets en rust, en een sessie speelt met "Rust" tussen de
       sets; ⏭ tijdens de rust start meteen de volgende set.

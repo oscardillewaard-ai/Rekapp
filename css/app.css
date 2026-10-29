@@ -441,30 +441,27 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: 1; }
 .player-title { color: var(--text-2); font-size: .9375rem; overflow-wrap: anywhere; }
 .player-total { color: var(--text-2); font-variant-numeric: tabular-nums; }
 .player-main { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; gap: .5rem; padding-bottom: 1rem; }
+/* Het stokfiguur bovenaan vult de ruimte die overblijft (variant A, keuze
+   Oscar); de lichaamskaart klein in de hoek. */
 .player-visual {
-  display: flex; align-items: flex-end; gap: .75rem; padding: .25rem .5rem; min-height: var(--tap);
+  position: relative; flex: 1 1 0; min-height: 9rem; align-self: stretch;
+  display: flex; align-items: center; justify-content: center; padding: .25rem 0;
   border: 0; border-radius: var(--radius); background: transparent; cursor: pointer;
 }
 .player-name { margin: .25rem 0 0; font-size: 1.5rem; line-height: 1.2; overflow-wrap: anywhere; }
 .player-side { font-size: 2.25rem; font-weight: 800; letter-spacing: .02em; color: var(--accent); min-height: 1.2em; }
 .player-label { color: var(--text-2); font-size: 1.0625rem; min-height: 1.4em; }
-.player-timer { position: relative; width: min(68vw, 30dvh, 17rem); min-width: 9.5rem; aspect-ratio: 1; }
-/* Drie cijfers (eigen houdtijd ≥ 100 s): ring breed genoeg voor 96 px. */
-.player-timer.wide { min-width: 12.5rem; }
-.ring { width: 100%; height: 100%; transform: rotate(-90deg); }
-.ring-track { fill: none; stroke: var(--surface-3); stroke-width: 6; }
-.ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; }
-.player[data-kind="switch"] .ring-fill, .player[data-kind="transition"] .ring-fill, .player[data-kind="prep"] .ring-fill, .player[data-kind="rest"] .ring-fill { stroke: var(--warn); }
-.player[data-kind="contract"] .ring-fill { stroke: var(--bad); }
-.player-visual .mini-lg { width: 3.75rem; height: 5.5rem; }
-.player-visual .fig-lg { width: 9.5rem; height: 5.5rem; }
-.player-digits {
-  position: absolute; inset: 0; display: grid; place-items: center;
-  font-size: 6rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1;
-}
+.player-timer { align-self: stretch; display: flex; flex-direction: column; align-items: center; }
+.player-bar { width: 100%; height: .5rem; margin-top: .375rem; border-radius: .25rem; background: var(--surface-3); overflow: hidden; }
+.player-bar-fill { display: block; height: 100%; background: var(--accent); transform-origin: left center; }
+.player[data-kind="switch"] .player-bar-fill, .player[data-kind="transition"] .player-bar-fill, .player[data-kind="prep"] .player-bar-fill, .player[data-kind="rest"] .player-bar-fill { background: var(--warn); }
+.player[data-kind="contract"] .player-bar-fill { background: var(--bad); }
+.player-visual .mini-lg { position: absolute; left: 0; top: 0; width: 2.75rem; height: 4rem; }
+.player-visual .fig-lg { width: 100%; height: 100%; max-height: 26rem; }
+.player-visual .pos-lg { width: 6rem; height: 6rem; }
+.player-digits { font-size: 6rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
 .player.paused .player-digits { color: var(--muted); }
 .player-cue { margin: .25rem 0 0; font-size: 1.0625rem; max-width: 32rem; }
-.player-breath { margin: 0; color: var(--text-2); font-size: .9375rem; max-width: 32rem; }
 .player-next { margin: 0; color: var(--muted); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .player-controls {
   position: sticky; bottom: 0; display: flex; justify-content: center; align-items: center; gap: 1rem;
@@ -482,17 +479,21 @@ textarea::placeholder, input::placeholder { color: var(--muted); opacity: 1; }
 @media (max-height: 900px) {
   .player-head { min-height: 3.25rem; }
   .player-main { gap: .25rem; padding-bottom: .5rem; }
-  .player-visual .mini-lg { width: 2.5rem; height: 3.5rem; }
-  .player-visual .pos-lg { width: 2rem; height: 2rem; }
-  .player-visual .fig-lg { width: 8rem; height: 4.5rem; }
+  .player-visual .mini-lg { width: 2.25rem; height: 3.25rem; }
   .player-name { font-size: 1.125rem; margin: 0; }
   .player-side { font-size: 1.5rem; }
   .player-label { font-size: .9375rem; }
   .player-cue { font-size: .9375rem; }
-  .player-breath { font-size: .8125rem; }
   .player-controls { padding-top: .5rem; gap: .75rem; }
   .btn.ctrl { width: 4rem; height: 4rem; }
   .btn.ctrl.primary { width: 4.75rem; height: 4.75rem; }
+}
+
+/* Heel lage schermen (bv. 320 × 568): het figuur mag kleiner beginnen. */
+@media (max-height: 600px) {
+  .player-visual { min-height: 6.5rem; }
+  .player-name { font-size: 1rem; }
+  .player-side { font-size: 1.25rem; }
 }
 
 /* Visuele flits bij een kantwissel, zodat alles ook zonder geluid werkt. */
@@ -721,19 +722,6 @@ button.log-row { color: var(--text); }
 .figure-panel.turnable { touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
 .figure-panel .turn-hint { position: absolute; right: .5rem; bottom: .375rem; width: 1.5rem; height: 1.5rem; color: var(--muted); pointer-events: none; }
 .figure-panel .turn-hint svg { width: 100%; height: 100%; }
-
-/* Groot stokfiguur (instelling): het figuur krijgt de ruimte, de ring wordt
-   kleiner. De cijfers blijven 96 px (§8.3). */
-.player.big-figure .player-visual { align-self: stretch; justify-content: center; }
-.player.big-figure .player-visual .fig-lg { flex: 1 1 auto; width: auto; max-width: 20rem; height: 10rem; }
-.player.big-figure .player-timer { width: min(50vw, 22dvh, 12rem); }
-@media (max-height: 900px) {
-  .player.big-figure .player-visual .fig-lg { height: 8rem; }
-}
-@media (max-height: 640px) {
-  .player.big-figure .player-visual .fig-lg { height: 6rem; }
-}
-
 
 /* ---------- Tegels met sjablonen (§6.3) ---------- */
 

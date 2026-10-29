@@ -10,7 +10,6 @@ export const DEFAULT_SETTINGS = {
   nightMode: false,
   sideSwitchSec: 5,
   defaultStaticHoldSec: 45,
-  largeFigure: false, // groot stokfiguur in de speler (keuze Oscar), de ring kleiner
   figure3d: false, // alle stokfiguren schuin in 3D (keuze Oscar); op de kaart ronddraaien
   kneeFeatures: false, // kniescore K, kniecheck, opvlammingsmodus en knie-info (keuze Oscar: standaard uit)
   weights: { B: 25, K: 25, D: 20, R: 15, P: 15 }, // procenten, som 100
